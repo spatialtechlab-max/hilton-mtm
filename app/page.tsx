@@ -17,20 +17,18 @@ const collection = [
     href: "/collection#suits",
   },
   {
-    name: "The Oxford",
-    type: "Shoe",
-    price: "From $1,150",
-    image:
-      "https://images.unsplash.com/photo-1614253429340-98120bd6d753?q=80&w=1600&auto=format&fit=crop",
-    href: "/collection#shoes",
+    name: "Vintage Marrone",
+    type: "Shoe · Double Monk",
+    price: "د.ب 1,000",
+    image: "/products/shoes/5308-marrone.png",
+    href: "/library/shoes",
   },
   {
-    name: "Madison Silk Tie",
-    type: "Accessory",
-    price: "From $185",
-    image:
-      "https://images.unsplash.com/photo-1593032580308-d4bafafc4f28?q=80&w=1600&auto=format&fit=crop",
-    href: "/collection#ties",
+    name: "Navy Paisley",
+    type: "Tie · 8-Fold Como Silk",
+    price: "د.ب 100",
+    image: "/products/ties/HBTS082.webp",
+    href: "/library/ties",
   },
   {
     name: "The Evening Shirt",

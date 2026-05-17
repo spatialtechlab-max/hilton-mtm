@@ -75,13 +75,21 @@ export default async function LibraryPage({
             </div>
             <div className="lg:col-span-5">
               <Reveal delay={0.3}>
-                <div className="relative aspect-[4/5] overflow-hidden hover-grow grain">
+                <div
+                  className={`relative aspect-[4/5] overflow-hidden hover-grow ${
+                    lib.heroImage.startsWith("/products/") ? "bg-[var(--color-ivory-200)]" : "grain"
+                  }`}
+                >
                   <Image
                     src={lib.heroImage}
                     alt={lib.heroAlt}
                     fill
                     sizes="(min-width: 1024px) 40vw, 100vw"
-                    className="object-cover"
+                    className={
+                      lib.heroImage.startsWith("/products/")
+                        ? "object-contain p-8 md:p-12"
+                        : "object-cover"
+                    }
                     priority
                   />
                 </div>
@@ -229,16 +237,21 @@ export default async function LibraryPage({
 function ProductCard({ item }: { item: LibraryItem }) {
   const aspect = item.scale === 2 ? "aspect-[5/4]" : "aspect-[4/5]";
 
+  // Real product photos from hiltonmtm are transparent PNGs/WebPs.
+  // Sit them in a calm display-case tile (slightly deeper cream than the
+  // page) and use object-contain so the full product is always visible.
+  const isPhoto = item.media.kind === "photo";
+
   return (
     <Link href="#" className="group block">
       <div className={`relative ${aspect} overflow-hidden bg-[var(--color-ivory-200)] hover-grow`}>
-        {item.media.kind === "photo" ? (
+        {isPhoto ? (
           <Image
             src={item.media.src}
             alt={item.alt}
             fill
             sizes={item.scale === 2 ? "(min-width: 1024px) 67vw, 100vw" : "(min-width: 1024px) 33vw, 50vw"}
-            className="object-cover"
+            className="object-contain p-4 md:p-6"
           />
         ) : (
           <TieIllustration

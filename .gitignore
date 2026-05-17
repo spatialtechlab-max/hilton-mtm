@@ -6,3 +6,8 @@ out
 *.log
 .vercel
 .turbo
+
+# Local backups of original product photos (before bg removal).
+# Re-download from hiltonmtm.com if needed.
+public/products/*-bak/
+

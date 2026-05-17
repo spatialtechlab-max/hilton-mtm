@@ -9,6 +9,8 @@ type Tile = {
   href: string;
   image: string;
   alt: string;
+  /** "cover" for full-bleed editorial images, "contain" for transparent product photos */
+  fit?: "cover" | "contain";
 };
 
 const featured: Tile = {
@@ -18,6 +20,7 @@ const featured: Tile = {
   image:
     "https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=1800&auto=format&fit=crop",
   alt: "A bespoke jacket being shaped on the form",
+  fit: "cover",
 };
 
 const right: Tile[] = [
@@ -25,17 +28,17 @@ const right: Tile[] = [
     category: "Footwear",
     title: "Handmade Shoes",
     href: "/library/shoes",
-    image:
-      "https://images.unsplash.com/photo-1614253429340-98120bd6d753?q=80&w=1600&auto=format&fit=crop",
-    alt: "Hand-welted brown brogue Oxfords",
+    image: "/products/shoes/5308-marrone.png",
+    alt: "Vintage marrone double-monk by Zampiere",
+    fit: "contain",
   },
   {
     category: "Accessories",
     title: "Ties & Silks",
     href: "/library/ties",
-    image:
-      "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=1600&auto=format&fit=crop",
-    alt: "A three-piece suit with a striped silk tie and pocket square",
+    image: "/products/ties/HBTS082.webp",
+    alt: "Navy paisley 8-fold silk necktie",
+    fit: "contain",
   },
 ];
 
@@ -81,10 +84,26 @@ export function Categories() {
 }
 
 function CategoryTile({ tile, large = false }: { tile: Tile; large?: boolean }) {
+  const fit = tile.fit ?? "cover";
+  // Product tiles (transparent png/webp) sit on a slightly deeper cream
+  // so they read as a display case against the page background.
+  const tileBg = fit === "contain" ? "bg-[var(--color-ivory-200)]" : "";
+  const imgClass = fit === "contain" ? "object-contain p-10 md:p-14" : "object-cover";
+
+  // Dark labels read better on transparent-product tiles (no full image to
+  // wash out behind them); the editorial cover tile keeps the white-on-dark
+  // gradient treatment.
+  const labelTone = fit === "contain"
+    ? "text-[var(--color-charcoal-900)]"
+    : "text-[var(--color-ivory-100)]";
+  const labelHover = fit === "contain"
+    ? "group-hover:text-[var(--color-burgundy-700)]"
+    : "group-hover:text-[var(--color-burgundy-300)]";
+
   return (
     <Link
       href={tile.href}
-      className={`group relative block overflow-hidden hover-grow ${
+      className={`group relative block overflow-hidden hover-grow ${tileBg} ${
         large ? "aspect-[4/5] lg:aspect-auto lg:h-full" : "aspect-[16/10]"
       }`}
     >
@@ -92,17 +111,24 @@ function CategoryTile({ tile, large = false }: { tile: Tile; large?: boolean }) 
         src={tile.image}
         alt={tile.alt}
         fill
-        sizes={large ? "(min-width: 1024px) 50vw, 100vw" : "(min-width: 1024px) 50vw, 100vw"}
-        className="object-cover"
+        sizes="(min-width: 1024px) 50vw, 100vw"
+        className={imgClass}
       />
-      {/* Gradient for label legibility */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
 
-      <div className="absolute inset-x-0 bottom-0 p-6 md:p-8 lg:p-10 text-[var(--color-ivory-100)] flex items-end justify-between gap-6">
+      {/* Gradient only on cover tiles — product tiles already have a calm bg */}
+      {fit === "cover" && (
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+      )}
+
+      <div className={`absolute inset-x-0 bottom-0 p-6 md:p-8 lg:p-10 ${labelTone} flex items-end justify-between gap-6`}>
         <div>
-          <span className="text-eyebrow text-[var(--color-ivory-100)]/75">{tile.category}</span>
+          <span className={`text-eyebrow ${
+            fit === "contain" ? "text-[var(--color-charcoal-500)]" : "text-[var(--color-ivory-100)]/75"
+          }`}>
+            {tile.category}
+          </span>
           <h3
-            className={`text-display mt-2 leading-tight transition-colors group-hover:text-[var(--color-burgundy-300)] ${
+            className={`text-display mt-2 leading-tight transition-colors ${labelHover} ${
               large ? "text-[clamp(2rem,4vw,3.5rem)]" : "text-[clamp(1.75rem,2.4vw,2.5rem)]"
             }`}
           >
