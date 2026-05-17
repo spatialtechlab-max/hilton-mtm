@@ -240,12 +240,11 @@ function ProductCard({ item }: { item: LibraryItem }) {
   // Real product photos from hiltonmtm are transparent PNGs/WebPs.
   // Sit them in a calm display-case tile (slightly deeper cream than the
   // page) and use object-contain so the full product is always visible.
-  const isPhoto = item.media.kind === "photo";
-
+  // Inline the discriminator check so TS can narrow the union.
   return (
     <Link href="#" className="group block">
       <div className={`relative ${aspect} overflow-hidden bg-[var(--color-ivory-200)] hover-grow`}>
-        {isPhoto ? (
+        {item.media.kind === "photo" ? (
           <Image
             src={item.media.src}
             alt={item.alt}
