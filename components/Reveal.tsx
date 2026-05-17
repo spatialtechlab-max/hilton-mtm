@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 
 type Props = {
   children: ReactNode;
@@ -11,18 +11,29 @@ type Props = {
   as?: "div" | "span" | "li" | "section";
 };
 
+/**
+ * Fade + rise entrance. Triggers on mount rather than scroll because the
+ * scroll-based IntersectionObserver approach silently failed for any
+ * element that was already in the viewport at hydration time (deep links,
+ * hard reloads mid-page, sections below the fold that became visible
+ * before the observer attached). The result: whole sections of the page
+ * stuck at opacity:0. A simple mount-triggered fade is reliable across
+ * all entry conditions and the visual difference is minor — most reveals
+ * are above the first scroll anyway.
+ */
 export function Reveal({ children, delay = 0, y = 28, className, as = "div" }: Props) {
   const reduce = useReducedMotion();
+  const [mounted, setMounted] = useState(false);
   const Tag = motion[as] as typeof motion.div;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <Tag
       initial={reduce ? false : { opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      // amount 0.05: trigger as soon as ~5% of the element enters the viewport.
-      // 0.25 was too high for short / wide elements and meant fast scrolls
-      // could blow past content before it ever animated in.
-      viewport={{ once: true, amount: 0.05 }}
+      animate={reduce || mounted ? { opacity: 1, y: 0 } : { opacity: 0, y }}
       transition={{
         duration: 1.05,
         delay,
@@ -36,12 +47,8 @@ export function Reveal({ children, delay = 0, y = 28, className, as = "div" }: P
 }
 
 /**
- * Word-by-word reveal. Each word slides up from below a clipping mask.
- *
- * The clip mask uses padding-bottom + negative margin-bottom so descenders
- * (g, j, p, q, y) have room to render *before* the mask closes around them.
- * The inner motion.span also fades in alongside the y translate, so partial
- * scroll positions never leak letter tops through the mask.
+ * Word-by-word reveal — each word slides up from below a clipping mask.
+ * Same mount-triggered approach as Reveal.
  */
 export function SplitReveal({
   text,
@@ -55,13 +62,17 @@ export function SplitReveal({
   staggerWord?: number;
 }) {
   const reduce = useReducedMotion();
+  const [mounted, setMounted] = useState(false);
   const words = text.split(" ");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <motion.span
       initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.05 }}
+      animate={reduce || mounted ? "visible" : "hidden"}
       transition={{ staggerChildren: reduce ? 0 : staggerWord, delayChildren: delay }}
       className={`inline ${className ?? ""}`}
     >

@@ -184,7 +184,6 @@ export default function CollectionPage() {
         body="Forty-seven mills, six hundred and twelve cloths, sent in a leather-bound bunch with the cutter's notes."
         ctaLabel="Request Cloth Bunch"
         href="/contact"
-        image="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=2000&auto=format&fit=crop"
       />
     </>
   );
