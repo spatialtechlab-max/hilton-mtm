@@ -4,7 +4,17 @@ import { PageHero } from "@/components/PageHero";
 import { Reveal } from "@/components/Reveal";
 import { CtaBanner } from "@/components/CtaBanner";
 
-const categories = ["All", "Suits", "Jackets", "Overcoats", "Shirting", "Eveningwear"];
+const categories = [
+  "All",
+  "Suits",
+  "Jackets",
+  "Overcoats",
+  "Shirting",
+  "Shoes",
+  "Ties & Silks",
+  "Accessories",
+  "Eveningwear",
+];
 
 type Item = {
   name: string;
@@ -30,6 +40,20 @@ const items: Item[] = [
     cloth: "Hopsack · Loro Piana",
     price: "From $1,850",
     image: "https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=1400&auto=format&fit=crop",
+  },
+  {
+    name: "The Oxford",
+    cat: "Shoes",
+    cloth: "Hand-welted calf · Northampton",
+    price: "From $1,150",
+    image: "https://images.unsplash.com/photo-1614253429340-98120bd6d753?q=80&w=1400&auto=format&fit=crop",
+  },
+  {
+    name: "Madison Silk Tie",
+    cat: "Ties & Silks",
+    cloth: "Como silk · 8-fold",
+    price: "From $185",
+    image: "https://images.unsplash.com/photo-1593032580308-d4bafafc4f28?q=80&w=1400&auto=format&fit=crop",
   },
   {
     name: "Severn Topcoat",
@@ -61,6 +85,13 @@ const items: Item[] = [
     scale: 2,
   },
   {
+    name: "Cloth Bunches",
+    cat: "Accessories",
+    cloth: "47 mills · 612 swatches",
+    price: "Sent on request",
+    image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=1400&auto=format&fit=crop",
+  },
+  {
     name: "Linden Linen Jacket",
     cat: "Jackets",
     cloth: "Pure linen · Solbiati",
@@ -82,7 +113,7 @@ export default function CollectionPage() {
       <PageHero
         eyebrow="Spring / Summer · N° 01"
         title="The Collection."
-        intro="Eight signature silhouettes, each available to measure. Every garment is a starting point. A conversation about your own."
+        intro="Suits, shirting, footwear, ties and the small things that finish the wardrobe. Every piece is a starting point. A conversation about your own."
         image={{
           src: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=1600&auto=format&fit=crop",
           alt: "A finished bespoke jacket on a wooden form",

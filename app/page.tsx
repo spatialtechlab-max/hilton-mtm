@@ -5,6 +5,7 @@ import { Reveal, SplitReveal } from "@/components/Reveal";
 import { Marquee } from "@/components/Marquee";
 import { Button } from "@/components/Button";
 import { CtaBanner } from "@/components/CtaBanner";
+import { Categories } from "@/components/Categories";
 
 const collection = [
   {
@@ -16,20 +17,20 @@ const collection = [
     href: "/collection#suits",
   },
   {
-    name: "The Topcoat",
-    type: "Overcoat",
-    price: "From $3,200",
+    name: "The Oxford",
+    type: "Shoe",
+    price: "From $1,150",
     image:
-      "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?q=80&w=1600&auto=format&fit=crop",
-    href: "/collection#coats",
+      "https://images.unsplash.com/photo-1614253429340-98120bd6d753?q=80&w=1600&auto=format&fit=crop",
+    href: "/collection#shoes",
   },
   {
-    name: "The Travel Jacket",
-    type: "Sport Coat",
-    price: "From $1,850",
+    name: "Madison Silk Tie",
+    type: "Accessory",
+    price: "From $185",
     image:
-      "https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=1600&auto=format&fit=crop",
-    href: "/collection#jackets",
+      "https://images.unsplash.com/photo-1593032580308-d4bafafc4f28?q=80&w=1600&auto=format&fit=crop",
+    href: "/collection#ties",
   },
   {
     name: "The Evening Shirt",
@@ -104,8 +105,8 @@ export default function HomePage() {
 
             <Reveal delay={0.45}>
               <p className="mt-10 max-w-md text-[1.1rem] text-[var(--color-ivory-200)]/90 leading-relaxed">
-                A made-to-measure atelier on Madison Avenue. Cloth from Huddersfield, Biella,
-                and Como. Cut by hand, shaped over a lifetime.
+                A full bespoke house on Madison Avenue. Suits, shirts, hand-welted shoes,
+                silks and the accessories that finish a wardrobe. Made for one body, kept for life.
               </p>
             </Reveal>
 
@@ -144,6 +145,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* CATEGORIES — full house showcase */}
+      <Categories />
 
       {/* ─────────────────────────── INTRODUCTION ─────────────────────────── */}
       <section id="introduction" className="py-32 md:py-48">

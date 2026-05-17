@@ -3,7 +3,7 @@ export const site = {
   shortName: "Hilton MTM",
   tagline: "Tailored, not merely fitted.",
   description:
-    "A made-to-measure atelier crafting individual wardrobes from the world's finest mills. Cut by hand, shaped over a lifetime.",
+    "A full bespoke menswear house. Suits cut by hand, shirting drawn for one body, hand-welted shoes, and the silks and accessories that finish the wardrobe.",
   url: "https://hiltonmtm.com",
   email: "atelier@hiltonmtm.com",
   phone: "+1 (212) 555 0144",
