@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand palette — Pantone 7421 C */
+  --color-burgundy-50:  #fbf3f5;
+  --color-burgundy-100: #f5e0e5;
+  --color-burgundy-200: #ecbcc7;
+  --color-burgundy-300: #d88a9c;
+  --color-burgundy-400: #b95770;
+  --color-burgundy-500: #8e3a52;
+  --color-burgundy-600: #722b40;
+  --color-burgundy-700: #6e2639;   /* primary — Pantone 7421 C */
+  --color-burgundy-800: #4f1b29;
+  --color-burgundy-900: #381220;
+  --color-burgundy-950: #220b14;
+
+  --color-ivory-50:  #fbf8f3;
+  --color-ivory-100: #f6f1ea;   /* page background */
+  --color-ivory-200: #ede4d6;
+  --color-ivory-300: #ddd0bb;
+  --color-ivory-400: #c4b193;
+
+  --color-charcoal-900: #14110f;
+  --color-charcoal-800: #1f1b18;
+  --color-charcoal-700: #2b2622;
+  --color-charcoal-500: #6b625a;
+  --color-charcoal-400: #968b80;
+
+  --color-gold-400: #c9a961;
+  --color-gold-500: #b8954a;
+
+  --font-display: "Cormorant Garamond", "Times New Roman", serif;
+  --font-sans:    "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+
+  --container-screen-xl: 1440px;
+
+  --animate-marquee:    marquee 40s linear infinite;
+  --animate-marquee-slow: marquee 80s linear infinite;
+  --animate-fade-up:    fade-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-ivory-100);
+    color: var(--color-charcoal-900);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv01", "cv11";
+  }
+
+  ::selection {
+    background: var(--color-burgundy-700);
+    color: var(--color-ivory-100);
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+  }
+}
+
+@layer utilities {
+  /* Editorial display headings — Cormorant with subtle tracking */
+  .text-display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+  }
+
+  .text-overline {
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-weight: 500;
+  }
+
+  .text-eyebrow {
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.32em;
+    font-weight: 500;
+  }
+
+  .grain {
+    position: relative;
+  }
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.045;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  .container-editorial {
+    width: 100%;
+    margin-inline: auto;
+    padding-inline: clamp(1.25rem, 4vw, 3rem);
+    max-width: var(--container-screen-xl);
+  }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: color-mix(in srgb, var(--color-charcoal-900) 12%, transparent);
+  }
+
+  .link-underline {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 100% 1px;
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    transition: background-size 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .link-underline:hover {
+    background-size: 0 1px;
+    background-position: 100% 100%;
+  }
+
+  .hover-grow img {
+    transition: transform 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .hover-grow:hover img {
+    transform: scale(1.06);
+  }
+
+  /* Hide scrollbar but keep functional */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
