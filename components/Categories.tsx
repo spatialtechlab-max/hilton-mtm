@@ -14,7 +14,7 @@ type Tile = {
 const featured: Tile = {
   category: "Tailoring",
   title: "Suits & Jackets",
-  href: "/collection#suits",
+  href: "/library/tailoring",
   image:
     "https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=1800&auto=format&fit=crop",
   alt: "A bespoke jacket being shaped on the form",
@@ -24,7 +24,7 @@ const right: Tile[] = [
   {
     category: "Footwear",
     title: "Handmade Shoes",
-    href: "/collection#shoes",
+    href: "/library/shoes",
     image:
       "https://images.unsplash.com/photo-1614253429340-98120bd6d753?q=80&w=1600&auto=format&fit=crop",
     alt: "Hand-welted brown brogue Oxfords",
@@ -32,10 +32,10 @@ const right: Tile[] = [
   {
     category: "Accessories",
     title: "Ties & Silks",
-    href: "/collection#ties",
+    href: "/library/ties",
     image:
-      "https://images.unsplash.com/photo-1593032580308-d4bafafc4f28?q=80&w=1600&auto=format&fit=crop",
-    alt: "A man in a burgundy blazer with silk tie and pocket square",
+      "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=1600&auto=format&fit=crop",
+    alt: "A three-piece suit with a striped silk tie and pocket square",
   },
 ];
 
