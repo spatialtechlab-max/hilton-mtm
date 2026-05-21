@@ -11,3 +11,6 @@ out
 # Re-download from hiltonmtm.com if needed.
 public/products/*-bak/
 
+
+# TypeScript incremental build cache
+tsconfig.tsbuildinfo

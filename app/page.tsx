@@ -40,36 +40,6 @@ const collection = [
   },
 ];
 
-const press = [
-  "Esquire",
-  "GQ",
-  "Robb Report",
-  "The Rake",
-  "Monocle",
-  "Financial Times",
-];
-
-const testimonials = [
-  {
-    quote:
-      "I have worn bespoke for thirty years. The Hilton cut is the first in a generation that surprised me.",
-    name: "Edward Marsh",
-    role: "Investor, London",
-  },
-  {
-    quote:
-      "Precise, patient, and entirely unrushed. The fitting felt more like a conversation than a transaction.",
-    name: "Daniela Costa",
-    role: "Creative Director, Milan",
-  },
-  {
-    quote:
-      "A dinner jacket that has outlasted three of my watches. That is the only review that matters.",
-    name: "Hiroshi Tanaka",
-    role: "Architect, Tokyo",
-  },
-];
-
 export default function HomePage() {
   return (
     <>
@@ -128,22 +98,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ─────────────────────────── PRESS MARQUEE ─────────────────────────── */}
-      <section className="py-10 border-b border-black/5 bg-[var(--color-ivory-100)]">
-        <div className="container-editorial flex flex-col md:flex-row items-center gap-8 md:gap-16">
-          <span className="text-eyebrow text-[var(--color-charcoal-500)] shrink-0">
-            As featured in
-          </span>
-          <div className="flex flex-wrap items-center gap-x-12 gap-y-4 text-[var(--color-charcoal-700)]">
-            {press.map((p) => (
-              <span key={p} className="text-display text-[1.5rem] tracking-wide opacity-70">
-                {p}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CATEGORIES — full house showcase */}
       <Categories />
 
@@ -171,72 +125,6 @@ export default function HomePage() {
                   Read our heritage
                 </Link>
                 <ArrowRight size={16} className="text-[var(--color-burgundy-700)]" />
-              </div>
-            </Reveal>
-          </div>
-        </div>
-      </section>
-
-      {/* FEATURE / EDITORIAL SPLIT */}
-      <section className="relative bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)] py-32 md:py-44 overflow-hidden">
-        <div className="container-editorial grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
-          <div className="lg:col-span-6 relative">
-            <Reveal>
-              <div className="relative aspect-[4/5] w-full overflow-hidden hover-grow">
-                <Image
-                  src="https://images.unsplash.com/photo-1581338834647-b0fb40704e21?q=80&w=1600&auto=format&fit=crop"
-                  alt="A bespoke jacket in progress at the Hilton atelier"
-                  fill
-                  sizes="(min-width: 1024px) 50vw, 100vw"
-                  className="object-cover"
-                />
-              </div>
-            </Reveal>
-            <Reveal delay={0.2}>
-              <div className="hidden lg:block absolute -bottom-12 -right-12 w-[58%] aspect-[3/4] overflow-hidden border-8 border-[var(--color-charcoal-900)] hover-grow">
-                <Image
-                  src="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=1200&auto=format&fit=crop"
-                  alt="Cloth swatches in a wooden tray"
-                  fill
-                  sizes="30vw"
-                  className="object-cover"
-                />
-              </div>
-            </Reveal>
-          </div>
-
-          <div className="lg:col-span-5 lg:col-start-8">
-            <Reveal>
-              <span className="text-eyebrow text-[var(--color-burgundy-300)]">The Atelier</span>
-            </Reveal>
-            <h2 className="text-display text-[clamp(2.5rem,5vw,4.5rem)] mt-6 leading-[1.02]">
-              <SplitReveal text="Three hundred hours. One garment." />
-            </h2>
-            <Reveal delay={0.3}>
-              <p className="mt-8 text-[1.05rem] text-[var(--color-ivory-200)]/85 leading-relaxed">
-                Every Hilton suit begins as a paper pattern drawn for one body. It is cut by a
-                single hand, basted, fitted, and re-fitted until the cloth answers to the shoulder.
-                Nothing is fused. Nothing is rushed.
-              </p>
-            </Reveal>
-            <Reveal delay={0.45}>
-              <dl className="mt-12 grid grid-cols-2 gap-y-8 gap-x-6">
-                {[
-                  { k: "Hours per suit", v: "≈ 300" },
-                  { k: "Fittings included", v: "3" },
-                  { k: "Mills curated", v: "47" },
-                  { k: "Lead time", v: "8 weeks" },
-                ].map((s) => (
-                  <div key={s.k} className="border-l border-[var(--color-ivory-300)]/25 pl-5">
-                    <dt className="text-eyebrow text-[var(--color-ivory-300)]/70">{s.k}</dt>
-                    <dd className="text-display text-[2rem] mt-2">{s.v}</dd>
-                  </div>
-                ))}
-              </dl>
-            </Reveal>
-            <Reveal delay={0.55}>
-              <div className="mt-12">
-                <Button href="/process" variant="ivory">The Process</Button>
               </div>
             </Reveal>
           </div>
@@ -372,34 +260,6 @@ export default function HomePage() {
               </Reveal>
             ))}
           </ol>
-        </div>
-      </section>
-
-      {/* ─────────────────────────── TESTIMONIALS ─────────────────────────── */}
-      <section className="py-32 md:py-44 bg-[var(--color-ivory-200)]/40 grain">
-        <div className="container-editorial">
-          <Reveal>
-            <span className="text-eyebrow text-[var(--color-burgundy-700)]">In their words</span>
-          </Reveal>
-
-          <div className="mt-16 grid grid-cols-1 lg:grid-cols-3 gap-12">
-            {testimonials.map((t, i) => (
-              <Reveal key={t.name} delay={i * 0.1}>
-                <figure className="flex flex-col h-full">
-                  <span className="text-display text-[5rem] leading-none text-[var(--color-burgundy-700)]/40 -mb-4">
-                    “
-                  </span>
-                  <blockquote className="text-display text-[1.5rem] leading-[1.35] text-[var(--color-charcoal-900)]">
-                    {t.quote}
-                  </blockquote>
-                  <figcaption className="mt-auto pt-10">
-                    <div className="text-eyebrow text-[var(--color-charcoal-900)]">{t.name}</div>
-                    <div className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">{t.role}</div>
-                  </figcaption>
-                </figure>
-              </Reveal>
-            ))}
-          </div>
         </div>
       </section>
 

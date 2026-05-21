@@ -25,6 +25,7 @@ export const site = {
 
 export const nav = [
   { href: "/collection", label: "The Collection" },
+  { href: "/customize", label: "Design Yours" },
   { href: "/process", label: "Made to Measure" },
   { href: "/heritage", label: "Heritage" },
   { href: "/contact", label: "Contact" },
