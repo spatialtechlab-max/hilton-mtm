@@ -11,10 +11,10 @@ const collection = [
   {
     name: "The Two-Piece",
     type: "Suit",
-    price: "From $2,400",
+    price: "From د.ب 800",
     image:
       "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=1600&auto=format&fit=crop",
-    href: "/collection#suits",
+    href: "/library/tailoring",
   },
   {
     name: "Vintage Marrone",
@@ -33,10 +33,10 @@ const collection = [
   {
     name: "The Evening Shirt",
     type: "Shirting",
-    price: "From $290",
+    price: "From د.ب 120",
     image:
       "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=1600&auto=format&fit=crop",
-    href: "/collection#shirts",
+    href: "/library/shirts",
   },
 ];
 
@@ -61,7 +61,7 @@ export default function HomePage() {
           <div className="container-editorial flex-1 flex flex-col justify-end pb-16 md:pb-20 pt-28 text-[var(--color-ivory-100)]">
             <Reveal>
               <span className="text-eyebrow text-[var(--color-ivory-100)]/80">
-                Est. 1962 · Made to Measure
+                Since 1970 · Manama, Bahrain
               </span>
             </Reveal>
 
@@ -73,8 +73,8 @@ export default function HomePage() {
 
             <Reveal delay={0.45}>
               <p className="mt-10 max-w-md text-[1.1rem] text-[var(--color-ivory-200)]/90 leading-relaxed">
-                A full bespoke house on Madison Avenue. Suits, shirts, hand-welted shoes,
-                silks and the accessories that finish a wardrobe. Made for one body, kept for life.
+                Impeccably tailored suits and crisp shirting. Footwear and the finishing touches.
+                At Hilton MTM, we don&rsquo;t just sell garments — we craft them around you.
               </p>
             </Reveal>
 
@@ -112,7 +112,7 @@ export default function HomePage() {
           <div className="lg:col-span-7 lg:col-start-6">
             <h2 className="text-display text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.05]">
               <SplitReveal
-                text="A garment is finished when nothing else can be removed. We measure, we listen, we cut. What remains is yours."
+                text="Every piece in our collection is merely a starting point — the beginning of a conversation about your personal style."
                 staggerWord={0.025}
               />
             </h2>

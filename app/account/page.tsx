@@ -1,0 +1,198 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import {
+  ArrowRight, LogOut, ShoppingBag, Ruler, CalendarClock, ScrollText, Mail,
+} from "lucide-react";
+import { AuthForm } from "@/components/AuthForm";
+import { useAuth } from "@/components/AuthProvider";
+
+const ATELIER_IMG =
+  "https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=1600&auto=format&fit=crop";
+
+export default function AccountPage() {
+  const { user, loading, signOut } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="pt-40 pb-24 min-h-[70vh] flex items-center justify-center">
+        <span className="text-eyebrow text-[var(--color-charcoal-500)]">Loading…</span>
+      </div>
+    );
+  }
+
+  return user ? <AccountDashboard email={user.email ?? ""} onSignOut={signOut} /> : <SignInSplit />;
+}
+
+/* ─────────────────────────── Signed-out: split-screen sign in ─────────────────────────── */
+
+function SignInSplit() {
+  return (
+    <section className="grid grid-cols-1 lg:grid-cols-2 min-h-[100svh]">
+      {/* Editorial visual */}
+      <div className="relative hidden lg:block overflow-hidden bg-[var(--color-charcoal-900)]">
+        <Image
+          src={ATELIER_IMG}
+          alt="The Hilton atelier"
+          fill
+          sizes="50vw"
+          className="object-cover"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-charcoal-900)]/85 via-[var(--color-charcoal-900)]/25 to-[var(--color-charcoal-900)]/40" />
+        <div className="absolute inset-x-0 bottom-0 p-12 xl:p-16 text-[var(--color-ivory-100)]">
+          <span className="text-eyebrow text-[var(--color-ivory-100)]/75">Since 1970 · Made to Measure</span>
+          <h2 className="text-display text-[clamp(2rem,2.6vw,3rem)] mt-4 leading-[1.05] max-w-md">
+            Your bespoke, kept on file for life.
+          </h2>
+          <p className="mt-4 max-w-sm text-[0.95rem] text-[var(--color-ivory-200)]/85 leading-relaxed">
+            Sign in to save your specifications, follow each commission through the atelier, and pick up
+            exactly where you left off.
+          </p>
+        </div>
+      </div>
+
+      {/* Form */}
+      <div className="flex items-center justify-center px-6 sm:px-10 pt-32 pb-20 lg:py-0">
+        <div className="w-full max-w-md">
+          <Link
+            href="/"
+            className="text-eyebrow text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors"
+          >
+            ← The House
+          </Link>
+          <div className="mt-8 mb-8">
+            <span className="text-eyebrow text-[var(--color-burgundy-700)]">Account</span>
+            <h1 className="text-display text-[clamp(2.25rem,5vw,3.25rem)] mt-3 leading-[1.05]">
+              Sign in
+            </h1>
+            <p className="mt-3 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
+              Sign in or create an account to save your bespoke specifications and track your commissions.
+            </p>
+          </div>
+          <AuthForm />
+          <Link
+            href="/customize"
+            className="mt-8 flex items-center justify-center gap-2 text-eyebrow text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors"
+          >
+            Or start designing first <ArrowRight size={14} strokeWidth={1.5} />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────── Signed-in: account dashboard ─────────────────────────── */
+
+function AccountDashboard({ email, onSignOut }: { email: string; onSignOut: () => void }) {
+  const name = email.split("@")[0];
+
+  return (
+    <div className="pt-32 md:pt-40 pb-24 min-h-[80vh]">
+      <div className="container-editorial">
+        <div className="mx-auto max-w-[1100px]">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 border-b border-black/10 pb-10">
+            <div>
+              <span className="text-eyebrow text-[var(--color-burgundy-700)]">Your account</span>
+              <h1 className="text-display text-[clamp(2.5rem,5vw,4rem)] mt-3 leading-[1.02]">
+                Welcome back.
+              </h1>
+              <p className="mt-3 inline-flex items-center gap-2 text-[0.9rem] text-[var(--color-charcoal-500)]">
+                <Mail size={14} strokeWidth={1.5} /> {email}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="self-start md:self-auto text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)]/25 text-[var(--color-charcoal-900)] px-5 py-3 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
+            >
+              <LogOut size={15} strokeWidth={1.5} /> Sign out
+            </button>
+          </div>
+
+          {/* Primary action */}
+          <Link
+            href="/customize"
+            className="group mt-10 block relative overflow-hidden border border-[var(--color-burgundy-700)] bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)]"
+          >
+            <div className="p-8 lg:p-10 flex items-center justify-between gap-6">
+              <div>
+                <div className="text-eyebrow text-[var(--color-ivory-100)]/75">Pick up where you left off</div>
+                <div className="text-display text-[clamp(1.75rem,3vw,2.5rem)] mt-2 leading-tight">
+                  Continue your bespoke
+                </div>
+              </div>
+              <span className="inline-flex items-center justify-center w-12 h-12 rounded-full border border-[var(--color-ivory-100)]/40 group-hover:bg-[var(--color-ivory-100)] group-hover:text-[var(--color-burgundy-700)] transition-colors shrink-0">
+                <ArrowRight size={18} strokeWidth={1.5} />
+              </span>
+            </div>
+          </Link>
+
+          {/* Cards */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <DashCard
+              icon={<ShoppingBag size={18} strokeWidth={1.5} />}
+              title="Your commissions"
+              body="Track each bespoke order through cut, fitting, and delivery."
+              empty="No commissions yet — your first will appear here."
+              cta={{ href: "/customize", label: "Start a commission" }}
+            />
+            <DashCard
+              icon={<Ruler size={18} strokeWidth={1.5} />}
+              title="Saved measurements"
+              body="Your numbers, kept on file so every future order fits the same."
+              empty="No measurements saved yet."
+              cta={{ href: "/customize", label: "Add measurements" }}
+            />
+            <DashCard
+              icon={<ScrollText size={18} strokeWidth={1.5} />}
+              title="Specifications"
+              body="Every spec sheet you’ve designed, ready to revisit or reorder."
+              empty="No saved specifications yet."
+              cta={{ href: "/customize", label: "Design one" }}
+            />
+            <DashCard
+              icon={<CalendarClock size={18} strokeWidth={1.5} />}
+              title="Fittings"
+              body="Book and manage your atelier appointments."
+              empty="No upcoming fittings."
+              cta={{ href: "/book", label: "Book a fitting" }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DashCard({
+  icon, title, body, empty, cta,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  empty: string;
+  cta: { href: string; label: string };
+}) {
+  return (
+    <div className="border border-black/10 bg-[var(--color-ivory-100)] p-7 lg:p-8 flex flex-col">
+      <div className="flex items-center gap-3 text-[var(--color-burgundy-700)]">
+        {icon}
+        <h3 className="text-display text-[1.4rem] text-[var(--color-charcoal-900)]">{title}</h3>
+      </div>
+      <p className="mt-3 text-[0.9rem] text-[var(--color-charcoal-700)] leading-relaxed">{body}</p>
+      <div className="mt-5 py-4 border-t border-black/5 text-[0.85rem] text-[var(--color-charcoal-500)] italic">
+        {empty}
+      </div>
+      <Link
+        href={cta.href}
+        className="mt-auto pt-2 inline-flex items-center gap-2 text-eyebrow text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)] transition-colors"
+      >
+        {cta.label} <ArrowRight size={14} strokeWidth={1.5} />
+      </Link>
+    </div>
+  );
+}

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" preserveAspectRatio="xMidYMid meet">
+  <rect width="400" height="500" fill="#f6f1ea"/>
+  <g transform="translate(200 230)" text-anchor="middle">
+    <text font-size="26" font-style="italic" font-family="Georgia, 'Cormorant Garamond', serif" fill="#6e2639">Photo coming</text>
+    <text y="38" font-size="10" letter-spacing="3" font-family="Helvetica, Inter, sans-serif" fill="#9a8f82">HILTON · MADE TO MEASURE</text>
+  </g>
+</svg>

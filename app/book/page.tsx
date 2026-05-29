@@ -15,9 +15,8 @@ const occasions = [
 ];
 
 const locations = [
-  "Madison Avenue, New York",
-  "Mayfair, London (trunk show)",
-  "Beverly Hills, LA (trunk show)",
+  "Manama Tailoring House",
+  "US Trunk Show",
   "Video consultation",
 ];
 
@@ -184,11 +183,11 @@ export default function BookPage() {
                   <dd className="text-display text-[1.5rem] mt-1">None</dd>
                 </div>
                 <div>
-                  <dt className="text-eyebrow text-[var(--color-charcoal-500)]">Atelier</dt>
+                  <dt className="text-eyebrow text-[var(--color-charcoal-500)]">Tailoring House</dt>
                   <dd className="text-[0.95rem] mt-1 leading-relaxed">
-                    118 Madison Avenue,
+                    Shop No. 119, Shaikh Abdulla Avenue,
                     <br />
-                    Floor 7, New York
+                    Manama, Kingdom of Bahrain
                   </dd>
                 </div>
               </dl>

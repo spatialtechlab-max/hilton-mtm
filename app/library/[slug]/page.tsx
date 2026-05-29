@@ -7,6 +7,7 @@ import { Reveal, SplitReveal } from "@/components/Reveal";
 import { CtaBanner } from "@/components/CtaBanner";
 import { TieIllustration } from "@/components/TieIllustration";
 import { libraries, librarySlugs, type LibraryItem } from "@/lib/libraries";
+import { fetchErpItems, sectionsFromErp, isErpBacked } from "@/lib/erp";
 
 export function generateStaticParams() {
   return librarySlugs.map((slug) => ({ slug }));
@@ -32,8 +33,15 @@ export default async function LibraryPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const lib = libraries[slug];
-  if (!lib) notFound();
+  const baseLib = libraries[slug];
+  if (!baseLib) notFound();
+
+  // ERP-backed libraries (ties / belts / cloths) build their sections at
+  // request time from the live ERP feed (ISR-cached for ~5 min).
+  const sections = isErpBacked(slug)
+    ? sectionsFromErp(slug, await fetchErpItems())
+    : baseLib.sections;
+  const lib = { ...baseLib, sections };
 
   const totalItems = lib.sections.reduce((n, s) => n + s.items.length, 0);
 
@@ -170,7 +178,7 @@ export default async function LibraryPage({
                     delay={(i % 3) * 0.06}
                     className={item.scale === 2 ? "col-span-2 lg:col-span-4" : "lg:col-span-2"}
                   >
-                    <ProductCard item={item} />
+                    <ProductCard item={item} slug={slug} />
                   </Reveal>
                 ))}
               </div>
@@ -234,7 +242,7 @@ export default async function LibraryPage({
 
 /* ──────────────────────── PRODUCT CARD ──────────────────────── */
 
-function ProductCard({ item }: { item: LibraryItem }) {
+function ProductCard({ item, slug }: { item: LibraryItem; slug: string }) {
   const aspect = item.scale === 2 ? "aspect-[5/4]" : "aspect-[4/5]";
 
   // Real product photos from hiltonmtm are transparent PNGs/WebPs.
@@ -242,7 +250,7 @@ function ProductCard({ item }: { item: LibraryItem }) {
   // page) and use object-contain so the full product is always visible.
   // Inline the discriminator check so TS can narrow the union.
   return (
-    <Link href="#" className="group block">
+    <Link href={`/library/${slug}/${item.sku}`} className="group block">
       <div className={`relative ${aspect} overflow-hidden bg-[var(--color-ivory-200)] hover-grow`}>
         {item.media.kind === "photo" ? (
           <Image

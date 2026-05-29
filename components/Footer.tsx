@@ -11,6 +11,7 @@ export function Footer() {
   return (
     <footer className="bg-[var(--color-ivory-200)] text-[var(--color-charcoal-900)] border-t border-black/5">
       <div className="container-editorial pt-24 pb-10">
+       <div className="mx-auto max-w-[1280px]">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           <div className="lg:col-span-5">
             <Logo variant="full" tone="burgundy" href={null} className="-ml-2" />
@@ -100,6 +101,7 @@ export function Footer() {
             <Link href="#" className="hover:text-[var(--color-burgundy-700)] transition-colors">Accessibility</Link>
           </div>
         </div>
+       </div>
       </div>
     </footer>
   );

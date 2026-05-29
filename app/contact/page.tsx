@@ -86,6 +86,14 @@ export default function ContactPage() {
                   {site.phone}
                 </a>
                 <a
+                  href={`https://wa.me/${site.whatsapp.replace(/[^\d]/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-display text-[1.6rem] mt-1 link-underline w-fit"
+                >
+                  {site.whatsapp} · WhatsApp
+                </a>
+                <a
                   href={`mailto:${site.email}`}
                   className="block text-display text-[1.6rem] mt-1 link-underline w-fit"
                 >

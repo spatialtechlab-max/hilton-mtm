@@ -26,6 +26,9 @@ export type PhotoSpec = {
   src: string;
 };
 
+/** Which customization flow a product opens, if any. Absent = buy-only. */
+export type CustomizeCategory = "suit" | "jacket" | "shirt" | "trouser";
+
 export type LibraryItem = {
   sku: string;
   name: string;
@@ -36,6 +39,12 @@ export type LibraryItem = {
   scale?: 1 | 2;
   sale?: string;
   media: PhotoSpec | TieSpec;
+  /** Extra angle images for the product page gallery (placeholders for now). */
+  gallery?: string[];
+  /** One-paragraph product description for the detail page. */
+  description?: string;
+  /** If set, the product page shows a "Customise" CTA into this flow. */
+  customize?: CustomizeCategory;
 };
 
 export type LibrarySection = {
@@ -43,6 +52,8 @@ export type LibrarySection = {
   title: string;
   note: string;
   items: LibraryItem[];
+  /** Default customize flow for items in this section (item can override). */
+  customize?: CustomizeCategory;
 };
 
 export type Library = {
@@ -79,6 +90,7 @@ const tailoring: Library = {
       slug: "suits",
       title: "Suits",
       note: "Two- and three-piece. Drawn for one body, kept for life.",
+      customize: "suit",
       items: [
         { sku: "WLD-201", name: "Walden", type: "Two-Piece", cloth: "Worsted wool · Huddersfield", price: "From $2,400", alt: "Navy worsted two-piece suit", media: { kind: "photo", src: "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=1600&auto=format&fit=crop" } },
         { sku: "BCN-301", name: "Beacon", type: "Three-Piece", cloth: "Tweed · Fox Brothers", price: "From $2,950", alt: "Blue tweed three-piece suit", media: { kind: "photo", src: "https://images.unsplash.com/photo-1593032465175-481ac7f401a0?q=80&w=1600&auto=format&fit=crop" } },
@@ -90,6 +102,7 @@ const tailoring: Library = {
       slug: "jackets",
       title: "Jackets & Sport Coats",
       note: "Standalone tailoring for less formal hours.",
+      customize: "jacket",
       items: [
         { sku: "MRL-110", name: "Marlow", type: "Sport Coat", cloth: "Hopsack · Loro Piana", price: "From $1,850", alt: "Hopsack sport coat", media: { kind: "photo", src: "https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=1600&auto=format&fit=crop" } },
         { sku: "LND-115", name: "Linden Linen", type: "Summer Jacket", cloth: "Pure linen · Solbiati", price: "From $1,650", alt: "Linen summer jacket", media: { kind: "photo", src: "https://images.unsplash.com/photo-1521334884684-d80222895322?q=80&w=1600&auto=format&fit=crop" } },
@@ -185,7 +198,7 @@ const ties: Library = {
     {
       slug: "new",
       title: "New Season",
-      note: "The latest silks to land at the Madison atelier.",
+      note: "The latest silks to land at the Manama tailoring house.",
       items: [
         { sku: "HBTS086", name: "Sienna Paisley", type: "8-Fold Necktie", cloth: "Como silk · paisley", price: "د.ب 100", alt: "Sienna paisley tie", media: { kind: "photo", src: "/products/ties/HBTS086.webp" } },
         { sku: "HBTS085", name: "Indigo Club", type: "8-Fold Necktie", cloth: "Como silk · club stripe", price: "د.ب 100", alt: "Indigo club stripe tie", media: { kind: "photo", src: "/products/ties/HBTS085.webp" } },
@@ -222,10 +235,180 @@ const ties: Library = {
   ],
 };
 
+/* ──────────────────────── SHIRTS ──────────────────────── */
+/* Dummy products + placeholder Unsplash imagery until real shots arrive. */
+
+const U = (id: string, w = 1600) =>
+  `https://images.unsplash.com/${id}?q=80&w=${w}&auto=format&fit=crop`;
+
+const SHIRT_DESC =
+  "Cut from a single pattern and finished by hand — split yokes, mother-of-pearl buttons, and a collar built to your choice. Made to measure in two to three weeks.";
+
+const shirts: Library = {
+  slug: "shirts",
+  eyebrow: "The Shirt Library",
+  title: "Shirts.",
+  intro:
+    "Made-to-measure shirting in two-fold poplins, twills, and Oxford cloths. Choose your collar, your cuff, and the fit — every shirt cut to your own measurements.",
+  heroImage: U("photo-1602810318383-e386cc2a3ccf", 1800),
+  heroAlt: "A crisp white made-to-measure dress shirt",
+  stats: [
+    { label: "Cloths in the library", value: "120+" },
+    { label: "Collar shapes", value: "12" },
+    { label: "Lead time", value: "2–3 weeks" },
+  ],
+  sections: [
+    {
+      slug: "dress",
+      title: "Dress Shirts",
+      note: "For the boardroom and black-tie — poplins, twills, and herringbones.",
+      customize: "shirt",
+      items: [
+        { sku: "SHT-101", name: "Mayfair White", type: "Dress Shirt", cloth: "Two-fold poplin · white", price: "From د.ب 120", alt: "White poplin dress shirt", description: SHIRT_DESC, media: { kind: "photo", src: U("photo-1602810318383-e386cc2a3ccf") }, gallery: [U("photo-1602810318383-e386cc2a3ccf"), U("photo-1598033129183-c4f50c736f10"), U("photo-1620012253295-c15cc3e65df4")] },
+        { sku: "SHT-102", name: "Belgrave Blue", type: "Dress Shirt", cloth: "Two-fold twill · sky", price: "From د.ب 125", alt: "Sky blue twill dress shirt", description: SHIRT_DESC, media: { kind: "photo", src: U("photo-1598033129183-c4f50c736f10") }, gallery: [U("photo-1598033129183-c4f50c736f10"), U("photo-1602810318383-e386cc2a3ccf"), U("photo-1603252109303-2751441dd157")] },
+        { sku: "SHT-103", name: "Eaton Stripe", type: "Dress Shirt", cloth: "Bengal stripe · blue", price: "From د.ب 130", alt: "Blue bengal stripe shirt", description: SHIRT_DESC, media: { kind: "photo", src: U("photo-1620012253295-c15cc3e65df4") }, gallery: [U("photo-1620012253295-c15cc3e65df4"), U("photo-1602810318383-e386cc2a3ccf"), U("photo-1598033129183-c4f50c736f10")] },
+      ],
+    },
+    {
+      slug: "casual",
+      title: "Casual & Weekend",
+      note: "Oxford cloth and brushed cottons for the off-duty hours.",
+      customize: "shirt",
+      items: [
+        { sku: "SHT-201", name: "Harbour Oxford", type: "Casual Shirt", cloth: "Oxford cloth · white", price: "From د.ب 110", alt: "White Oxford cloth shirt", description: SHIRT_DESC, media: { kind: "photo", src: U("photo-1603252109303-2751441dd157") }, gallery: [U("photo-1603252109303-2751441dd157"), U("photo-1620012253295-c15cc3e65df4"), U("photo-1598033129183-c4f50c736f10")] },
+        { sku: "SHT-202", name: "Cove Chambray", type: "Casual Shirt", cloth: "Brushed chambray · indigo", price: "From د.ب 115", alt: "Indigo chambray shirt", description: SHIRT_DESC, media: { kind: "photo", src: U("photo-1598033129183-c4f50c736f10") }, gallery: [U("photo-1598033129183-c4f50c736f10"), U("photo-1603252109303-2751441dd157"), U("photo-1602810318383-e386cc2a3ccf")] },
+      ],
+    },
+  ],
+};
+
+/* ──────────────────────── TROUSERS ──────────────────────── */
+
+const TROUSER_DESC =
+  "Made-to-measure trousers cut to your rise and break — pleats or flat front, cuffs or clean hem, side adjusters or belt loops. Finished by hand in two to three weeks.";
+
+const trousers: Library = {
+  slug: "trousers",
+  eyebrow: "The Trouser Library",
+  title: "Trousers.",
+  intro:
+    "Tailored trousers in worsteds, flannels, and cottons. Pleated or flat-fronted, cuffed or clean — cut to your own rise, seat, and break.",
+  heroImage: U("photo-1624378439575-d8705ad7ae80", 1800),
+  heroAlt: "Tailored wool trousers",
+  stats: [
+    { label: "Cloths in the library", value: "80+" },
+    { label: "Fits", value: "Slim · Tailored · Classic" },
+    { label: "Lead time", value: "2–3 weeks" },
+  ],
+  sections: [
+    {
+      slug: "formal",
+      title: "Formal Trousers",
+      note: "Worsteds and flannels to pair with the jacket or stand alone.",
+      customize: "trouser",
+      items: [
+        { sku: "TRO-101", name: "Sterling Grey", type: "Worsted Trouser", cloth: "Worsted wool · mid-grey", price: "From د.ب 140", alt: "Mid-grey worsted trousers", description: TROUSER_DESC, media: { kind: "photo", src: U("photo-1624378439575-d8705ad7ae80") }, gallery: [U("photo-1624378439575-d8705ad7ae80"), U("photo-1521572163474-6864f9cf17ab"), U("photo-1473966968600-fa801b869a1a")] },
+        { sku: "TRO-102", name: "Navy Flannel", type: "Flannel Trouser", cloth: "Flannel · navy", price: "From د.ب 150", alt: "Navy flannel trousers", description: TROUSER_DESC, media: { kind: "photo", src: U("photo-1521572163474-6864f9cf17ab") }, gallery: [U("photo-1521572163474-6864f9cf17ab"), U("photo-1624378439575-d8705ad7ae80"), U("photo-1473966968600-fa801b869a1a")] },
+      ],
+    },
+    {
+      slug: "casual",
+      title: "Chinos & Casual",
+      note: "Cotton twills and gabardines for relaxed tailoring.",
+      customize: "trouser",
+      items: [
+        { sku: "TRO-201", name: "Stone Chino", type: "Cotton Chino", cloth: "Cotton twill · stone", price: "From د.ب 110", alt: "Stone cotton chinos", description: TROUSER_DESC, media: { kind: "photo", src: U("photo-1473966968600-fa801b869a1a") }, gallery: [U("photo-1473966968600-fa801b869a1a"), U("photo-1624378439575-d8705ad7ae80"), U("photo-1521572163474-6864f9cf17ab")] },
+        { sku: "TRO-202", name: "Olive Gabardine", type: "Cotton Trouser", cloth: "Gabardine · olive", price: "From د.ب 120", alt: "Olive gabardine trousers", description: TROUSER_DESC, media: { kind: "photo", src: U("photo-1624378439575-d8705ad7ae80") }, gallery: [U("photo-1624378439575-d8705ad7ae80"), U("photo-1473966968600-fa801b869a1a"), U("photo-1521572163474-6864f9cf17ab")] },
+      ],
+    },
+  ],
+};
+
+/* ──────────────────────── BELTS (ERP-backed) ──────────────────────── */
+
+const belts: Library = {
+  slug: "belts",
+  eyebrow: "The Belt Library",
+  title: "Belts.",
+  intro:
+    "Hand-finished leather belts from the houses we trust — Magnanni, Gufo and the wider archive. Plain calf, woven, and the dressier finishes for evening.",
+  heroImage: "https://erp.hiltontailoringhouse.com/uploads/item_rawmaterial/679_pic_cropped.jpg",
+  heroAlt: "A leather dress belt",
+  stats: [
+    { label: "Houses",  value: "Magnanni · Gufo" },
+    { label: "Leather", value: "100%" },
+    { label: "Made in", value: "Spain · Italy" },
+  ],
+  // Sections populated at request time from the ERP.
+  sections: [],
+};
+
+/* ──────────────────────── CLOTHS (ERP-backed) ──────────────────────── */
+
+const cloths: Library = {
+  slug: "cloths",
+  eyebrow: "The Cloth Library",
+  title: "Cloths & Suiting.",
+  intro:
+    "The mills behind every Hilton commission — Vitale Barberis Canonico, Delfino, Nobility and the wider house archive. Worsteds, flannels, and the heavier jacketing weights.",
+  heroImage: "https://erp.hiltontailoringhouse.com/uploads/item_rawmaterial/1542_pic_cropped.jpg",
+  heroAlt: "A roll of suiting fabric",
+  stats: [
+    { label: "Mills",       value: "VBC · Delfino · Nobility" },
+    { label: "Composition", value: "100% wool & blends" },
+    { label: "Updated",     value: "Live from the ERP" },
+  ],
+  sections: [],
+};
+
 export const libraries: Record<string, Library> = {
   tailoring,
+  shirts,
+  trousers,
+  cloths,
   shoes,
   ties,
+  belts,
 };
 
 export const librarySlugs = Object.keys(libraries);
+
+/* ──────────────────────── Lookups ──────────────────────── */
+
+export type ProductHit = {
+  item: LibraryItem;
+  library: Library;
+  section: LibrarySection;
+  customize?: CustomizeCategory;
+};
+
+/** Find a product by SKU across every library. */
+export function findProduct(sku: string): ProductHit | null {
+  for (const library of Object.values(libraries)) {
+    for (const section of library.sections) {
+      const item = section.items.find((it) => it.sku === sku);
+      if (item) {
+        return { item, library, section, customize: item.customize ?? section.customize };
+      }
+    }
+  }
+  return null;
+}
+
+/** Gallery images for a product page — explicit gallery, else the single photo. */
+export function productGallery(item: LibraryItem): string[] {
+  if (item.gallery && item.gallery.length) return item.gallery;
+  if (item.media.kind === "photo") return [item.media.src];
+  return [];
+}
+
+/** Every (sku, librarySlug) pair — used to pre-render product pages. */
+export function allProductParams(): { slug: string; sku: string }[] {
+  const out: { slug: string; sku: string }[] = [];
+  for (const library of Object.values(libraries)) {
+    for (const section of library.sections) {
+      for (const item of section.items) out.push({ slug: library.slug, sku: item.sku });
+    }
+  }
+  return out;
+}

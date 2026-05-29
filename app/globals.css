@@ -33,7 +33,7 @@
   --font-sans:    "Inter", system-ui, -apple-system, sans-serif;
   --font-mono:    "JetBrains Mono", ui-monospace, monospace;
 
-  --container-screen-xl: 1440px;
+  --container-screen-xl: 1800px;
 
   --animate-marquee:    marquee 40s linear infinite;
   --animate-marquee-slow: marquee 80s linear infinite;

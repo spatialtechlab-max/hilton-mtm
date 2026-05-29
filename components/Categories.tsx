@@ -23,7 +23,28 @@ const featured: Tile = {
   fit: "cover",
 };
 
-const right: Tile[] = [
+const rightTop: Tile[] = [
+  {
+    category: "Shirting",
+    title: "Shirts",
+    href: "/library/shirts",
+    image:
+      "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=1600&auto=format&fit=crop",
+    alt: "A crisp made-to-measure dress shirt",
+    fit: "cover",
+  },
+  {
+    category: "Tailored",
+    title: "Trousers",
+    href: "/library/trousers",
+    image:
+      "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?q=80&w=1600&auto=format&fit=crop",
+    alt: "Tailored wool trousers",
+    fit: "cover",
+  },
+];
+
+const bottom: Tile[] = [
   {
     category: "Footwear",
     title: "Handmade Shoes",
@@ -72,8 +93,17 @@ export function Categories() {
           </Reveal>
 
           {/* Two stacked tiles — right */}
-          {right.map((tile, i) => (
+          {rightTop.map((tile, i) => (
             <Reveal key={tile.title} delay={0.1 + i * 0.08}>
+              <CategoryTile tile={tile} />
+            </Reveal>
+          ))}
+        </div>
+
+        {/* Footwear + accessories row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mt-6 lg:mt-8">
+          {bottom.map((tile, i) => (
+            <Reveal key={tile.title} delay={i * 0.08}>
               <CategoryTile tile={tile} />
             </Reveal>
           ))}

@@ -3,61 +3,122 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Download, Sparkles, Ruler, Play, Pause } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Download, Sparkles, Ruler, Play, Pause, Pencil, ShoppingBag, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  steps, tiers, findOption, defaultSelections, type Selections,
-  measurementGroups, allMeasurements, defaultMeasurements,
-  type MeasurementValues, type MeasurementUnit, type Measurement,
+  tiers, defaultSelections, type Selections,
+  defaultMeasurements,
+  type MeasurementValues, type MeasurementUnit, type Measurement, type MeasurementGroup,
+  type StepCategory, measurementGroupsForCategory,
+  categoryHasTiers, isCustomizeCategory,
 } from "@/lib/customizer";
+import {
+  type LiveStep, staticLiveSteps, fetchLiveSteps, visibleLiveSteps,
+  surchargeTotal, findLiveOption, parsePrice, formatBhd,
+} from "@/lib/liveConfig";
+import { findProduct } from "@/lib/libraries";
 import { buildSpecPdf } from "@/lib/specSheet";
+import { AuthForm } from "@/components/AuthForm";
+import { useAuth } from "@/components/AuthProvider";
 
-type Phase = "spec" | "measurements" | "tier" | "summary";
+type Phase = "tier" | "spec" | "measurements" | "summary" | "auth" | "cart";
 
-const STORAGE_KEY = "hilton-customizer";
+// Phases that belong to the design flow (show the step progress dock + wizard controls).
+const DESIGN_PHASES: Phase[] = ["tier", "spec", "measurements", "summary"];
+
+const CATEGORY_COPY: Record<StepCategory, { h1: string; intro: string }> = {
+  suit: {
+    h1: "Design Your Own.",
+    intro: "Made to measure, one deliberate decision at a time. Navigate through curated design choices to shape your garment, then select your depth of craft. Once your design is complete, save your specification or send it directly to the Hilton MTM atelier to begin your commission.",
+  },
+  jacket: {
+    h1: "Your jacket, made to measure.",
+    intro: "Choose your commission, then the cut and detail of the jacket and your measurements. At the end, take your specification with you.",
+  },
+  shirt: {
+    h1: "Your shirt, made to measure.",
+    intro: "A few quiet choices — collar, cuff, and fit — then your measurements. At the end, take your specification with you.",
+  },
+  trouser: {
+    h1: "Your trousers, made to measure.",
+    intro: "Choose the cut, the hem, and the waist, then your measurements. At the end, take your specification with you.",
+  },
+};
 
 export default function CustomizePage() {
+  const [category, setCategory] = useState<StepCategory>("suit");
+  const [sku, setSku] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [allSteps, setAllSteps] = useState<LiveStep[]>(staticLiveSteps);
   const [selections,   setSelections]   = useState<Selections>(defaultSelections);
   const [measurements, setMeasurements] = useState<MeasurementValues>(defaultMeasurements);
   const [unit,         setUnit]         = useState<MeasurementUnit>("cm");
   const [stepIdx, setStepIdx]       = useState(0);
-  const [phase, setPhase]           = useState<Phase>("spec");
+  const [phase, setPhase]           = useState<Phase>("tier");
   const [tier, setTier]             = useState<string>("signature");
   const [downloading, setDownloading] = useState(false);
+  const { user } = useAuth();
 
-  // Persist progress to localStorage so a refresh doesn't lose work.
+  const storageKey = `hilton-customizer-${category}`;
+  const hasTiers   = categoryHasTiers(category);
+  const tierObj    = tiers.find((t) => t.slug === tier) ?? tiers[1];
+
+  // Category- and tier-aware config from the live DB config (waistcoat sub-steps conditional)
+  const activeSteps        = useMemo(() => visibleLiveSteps(allSteps, category, tier, selections), [allSteps, category, tier, selections]);
+  const activeGroups       = useMemo(() => measurementGroupsForCategory(category), [category]);
+  const activeMeasurements = useMemo(() => activeGroups.flatMap((g) => g.items), [activeGroups]);
+
+  // Pricing: base (tier for suits/jackets, product price otherwise) + surcharges
+  const product    = useMemo(() => (sku ? findProduct(sku) : null), [sku]);
+  const basePrice  = hasTiers ? parsePrice(tierObj.price) : parsePrice(product?.item.price);
+  const surcharge  = useMemo(() => surchargeTotal(activeSteps, selections), [activeSteps, selections]);
+  const grandTotal = basePrice + surcharge;
+
+  // Pull the live config from Supabase once (falls back to the static default).
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as {
-        selections?: Selections;
-        measurements?: MeasurementValues;
-        unit?: MeasurementUnit;
-        phase?: Phase;
-        stepIdx?: number;
-        tier?: string;
-      };
-      if (saved.selections)   setSelections({ ...defaultSelections(), ...saved.selections });
-      if (saved.measurements) setMeasurements({ ...defaultMeasurements(), ...saved.measurements });
-      if (saved.unit === "cm" || saved.unit === "in") setUnit(saved.unit);
-      if (saved.phase)        setPhase(saved.phase);
-      if (typeof saved.stepIdx === "number") setStepIdx(saved.stepIdx);
-      if (saved.tier)         setTier(saved.tier);
-    } catch { /* ignore */ }
+    fetchLiveSteps().then((s) => { if (s && s.length) setAllSteps(s); });
   }, []);
 
+  // One-time init: read ?category from the URL, then restore that category's saved state.
   useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ selections, measurements, unit, phase, stepIdx, tier }),
-    );
-  }, [selections, measurements, unit, phase, stepIdx, tier]);
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("category");
+    setSku(params.get("sku"));
+    const cat: StepCategory = isCustomizeCategory(raw) ? raw : "suit";
+    setCategory(cat);
+    try {
+      const saved = JSON.parse(localStorage.getItem(`hilton-customizer-${cat}`) || "null") as null | {
+        selections?: Selections; measurements?: MeasurementValues; unit?: MeasurementUnit;
+        phase?: Phase; stepIdx?: number; tier?: string;
+      };
+      if (saved) {
+        if (saved.selections)   setSelections({ ...defaultSelections(), ...saved.selections });
+        if (saved.measurements) setMeasurements({ ...defaultMeasurements(), ...saved.measurements });
+        if (saved.unit === "cm" || saved.unit === "in") setUnit(saved.unit);
+        if (saved.phase)        setPhase(saved.phase);
+        if (typeof saved.stepIdx === "number") setStepIdx(saved.stepIdx);
+        if (saved.tier)         setTier(saved.tier);
+      } else {
+        setPhase(categoryHasTiers(cat) ? "tier" : "spec");
+      }
+    } catch {
+      setPhase(categoryHasTiers(cat) ? "tier" : "spec");
+    }
+    setReady(true);
+  }, []);
 
-  const step = steps[stepIdx];
-  const isLastSpec = stepIdx === steps.length - 1;
+  // Persist (per category) once initialised.
+  useEffect(() => {
+    if (!ready) return;
+    localStorage.setItem(storageKey, JSON.stringify({ selections, measurements, unit, phase, stepIdx, tier }));
+  }, [ready, storageKey, selections, measurements, unit, phase, stepIdx, tier]);
+
+  const safeStepIdx = Math.min(stepIdx, Math.max(activeSteps.length - 1, 0));
+  const step = activeSteps[safeStepIdx];
+  const isLastSpec = safeStepIdx === activeSteps.length - 1;
 
   function pick(value: string) {
+    if (!step) return;
     setSelections((s) => ({ ...s, [step.slug]: value }));
   }
 
@@ -65,31 +126,58 @@ export default function CustomizePage() {
     setMeasurements((m) => ({ ...m, [slug]: value }));
   }
 
+  const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+
+  // Add to cart: signed-in visitors skip the sign-in gate and go straight to cart.
+  function addToCart() {
+    setPhase(user ? "cart" : "auth");
+    scrollTop();
+  }
+
+  // After signing in (incl. returning from Google OAuth) advance the gate to cart.
+  useEffect(() => {
+    if (phase === "auth" && user) {
+      setPhase("cart");
+      scrollTop();
+    }
+  }, [user, phase]);
+
   function next() {
-    if (phase === "spec") {
+    if (phase === "tier") {
+      setStepIdx(0);
+      setPhase("spec");
+    } else if (phase === "spec") {
       if (isLastSpec) setPhase("measurements");
       else setStepIdx((i) => i + 1);
     } else if (phase === "measurements") {
-      setPhase("tier");
-    } else if (phase === "tier") {
       setPhase("summary");
+    } else if (phase === "summary") {
+      addToCart();
+      return;
     }
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollTop();
   }
 
   function back() {
-    if (phase === "summary")           setPhase("tier");
-    else if (phase === "tier")         setPhase("measurements");
-    else if (phase === "measurements") setPhase("spec");
-    else if (stepIdx > 0) setStepIdx((i) => i - 1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (phase === "cart")              setPhase("auth");
+    else if (phase === "auth")         setPhase("summary");
+    else if (phase === "summary")      setPhase("measurements");
+    else if (phase === "measurements") { setStepIdx(activeSteps.length - 1); setPhase("spec"); }
+    else if (phase === "spec") {
+      if (safeStepIdx > 0) setStepIdx(safeStepIdx - 1);
+      else if (hasTiers) setPhase("tier");
+    }
+    scrollTop();
   }
+
+  // Jump straight to a step/phase from the review screen's Edit links.
+  function jumpToStep(idx: number) { setStepIdx(idx); setPhase("spec"); scrollTop(); }
+  function jumpToPhase(p: Phase)   { setPhase(p); scrollTop(); }
 
   async function downloadPdf() {
     setDownloading(true);
     try {
-      const bytes = await buildSpecPdf(selections, tier, undefined, { measurements, unit });
-      // Cast to a fresh Uint8Array (over ArrayBufferLike) so Blob accepts it
+      const bytes = await buildSpecPdf(selections, tier, undefined, { measurements, unit, category });
       const arr = new Uint8Array(bytes);
       const blob = new Blob([arr], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
@@ -106,15 +194,18 @@ export default function CustomizePage() {
   }
 
   function resetAll() {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(storageKey);
     setSelections(defaultSelections());
     setMeasurements(defaultMeasurements());
     setUnit("cm");
     setStepIdx(0);
-    setPhase("spec");
+    setPhase(hasTiers ? "tier" : "spec");
     setTier("signature");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollTop();
   }
+
+  const backDisabled = phase === "tier" || (phase === "spec" && safeStepIdx === 0 && !hasTiers);
+  const copy = CATEGORY_COPY[category];
 
   return (
     <div className="pt-32 md:pt-40 pb-24 min-h-[80vh]">
@@ -133,20 +224,32 @@ export default function CustomizePage() {
         <header className="mb-12 lg:mb-16">
           <span className="text-eyebrow text-[var(--color-burgundy-700)]">Design Yours</span>
           <h1 className="text-display text-[clamp(2.75rem,7vw,6rem)] mt-4 leading-[0.95] text-[var(--color-charcoal-900)]">
-            Bespoke, one decision at a time.
+            {copy.h1}
           </h1>
           <p className="mt-5 max-w-2xl text-[1rem] text-[var(--color-charcoal-700)] leading-relaxed">
-            Twelve quiet choices, then a commission tier. At the end, take your specification with you — printed,
-            or sent straight to the atelier.
+            {copy.intro}
           </p>
         </header>
 
-        {/* ── Progress dock ──────────────────────────────────────────── */}
-        <ProgressDock phase={phase} stepIdx={stepIdx} />
+        {/* ── Progress dock + top controls ───────────────────────────── */}
+        {ready && DESIGN_PHASES.includes(phase) && (
+          <>
+            <ProgressDock phase={phase} stepIdx={safeStepIdx} stepCount={activeSteps.length} hasTiers={hasTiers} />
+            <WizardControls
+              phase={phase}
+              isLastSpec={isLastSpec}
+              backDisabled={backDisabled}
+              onBack={back}
+              onNext={next}
+              className="mt-6"
+            />
+          </>
+        )}
 
         {/* ── Body ───────────────────────────────────────────────────── */}
+        {ready && (
         <AnimatePresence mode="wait">
-          {phase === "spec" && (
+          {phase === "spec" && step && (
             <motion.section
               key={`spec-${step.slug}`}
               initial={{ opacity: 0, y: 16 }}
@@ -156,7 +259,9 @@ export default function CustomizePage() {
               className="mt-12 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16"
             >
               <div className="lg:col-span-4">
-                <span className="text-eyebrow text-[var(--color-burgundy-700)]">{step.eyebrow}</span>
+                <span className="text-eyebrow text-[var(--color-burgundy-700)]">
+                  N° {String(safeStepIdx + 1).padStart(2, "0")}
+                </span>
                 <h2 className="text-display text-[clamp(2rem,3.5vw,3.25rem)] mt-3 leading-[1.05]">
                   {step.title}
                 </h2>
@@ -167,7 +272,7 @@ export default function CustomizePage() {
                   {step.description}
                 </p>
                 <div className="mt-8 hidden lg:block">
-                  <SelectionsSidebar selections={selections} currentIdx={stepIdx} />
+                  <SelectionsSidebar steps={activeSteps} selections={selections} currentIdx={safeStepIdx} />
                 </div>
               </div>
 
@@ -191,6 +296,8 @@ export default function CustomizePage() {
               className="mt-12"
             >
               <MeasurementsPhase
+                groups={activeGroups}
+                allActive={activeMeasurements}
                 values={measurements}
                 unit={unit}
                 onSetUnit={setUnit}
@@ -199,7 +306,7 @@ export default function CustomizePage() {
             </motion.section>
           )}
 
-          {phase === "tier" && (
+          {phase === "tier" && hasTiers && (
             <motion.section
               key="tier"
               initial={{ opacity: 0, y: 16 }}
@@ -209,13 +316,14 @@ export default function CustomizePage() {
               className="mt-12"
             >
               <div className="max-w-3xl">
-                <span className="text-eyebrow text-[var(--color-burgundy-700)]">Final · Commission</span>
+                <span className="text-eyebrow text-[var(--color-burgundy-700)]">First · Choose Your Commission Tier</span>
                 <h2 className="text-display text-[clamp(2.25rem,4vw,3.5rem)] mt-3 leading-[1.05]">
-                  Choose your tier.
+                  One custom garment, three distinct levels of craft.
                 </h2>
                 <p className="mt-5 text-[1rem] text-[var(--color-charcoal-700)] leading-relaxed">
-                  Same garment, three depths of craft. The Signature tier is the house standard. Couture is hand-cut and
-                  hand-stitched, with three fittings.
+                  <strong className="font-normal text-[var(--color-charcoal-900)]">Essentials</strong> is the refined foundation of our made-to-measure tailoring.
+                  {" "}<strong className="font-normal text-[var(--color-charcoal-900)]">Signature</strong> is the impeccable Hilton house standard.
+                  {" "}<strong className="font-normal text-[var(--color-charcoal-900)]">Full Bespoke</strong> is the pinnacle of our art — entirely hand-cut and hand-stitched, with dedicated personal fittings. You&rsquo;ll refine every detail next.
                 </p>
               </div>
 
@@ -233,45 +341,78 @@ export default function CustomizePage() {
               className="mt-12"
             >
               <SummaryPanel
+                steps={activeSteps}
+                groups={activeGroups}
+                hasTiers={hasTiers}
+                category={category}
                 selections={selections}
                 measurements={measurements}
                 unit={unit}
                 tier={tier}
+                basePrice={basePrice}
+                surcharge={surcharge}
+                grandTotal={grandTotal}
                 onDownload={downloadPdf}
                 downloading={downloading}
                 onReset={resetAll}
+                onAddToCart={addToCart}
+                onEditStep={jumpToStep}
+                onEditTier={() => jumpToPhase("tier")}
+                onEditMeasurements={() => jumpToPhase("measurements")}
+              />
+            </motion.section>
+          )}
+
+          {phase === "auth" && (
+            <motion.section
+              key="auth"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-12"
+            >
+              <AuthPanel
+                tier={tier}
+                hasTiers={hasTiers}
+                category={category}
+                selections={selections}
+                allSteps={activeSteps}
+                basePrice={basePrice}
+                surcharge={surcharge}
+                grandTotal={grandTotal}
+                onBack={back}
+                onAuthenticated={() => { setPhase("cart"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              />
+            </motion.section>
+          )}
+
+          {phase === "cart" && (
+            <motion.section
+              key="cart"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-12"
+            >
+              <CartPanel
+                tier={tier}
+                hasTiers={hasTiers}
+                category={category}
+                selections={selections}
+                allSteps={activeSteps}
+                basePrice={basePrice}
+                surcharge={surcharge}
+                grandTotal={grandTotal}
+                onBack={back}
+                onKeepDesigning={resetAll}
               />
             </motion.section>
           )}
         </AnimatePresence>
-
-        {/* ── Footer controls ────────────────────────────────────────── */}
-        {phase !== "summary" && (
-          <nav className="mt-16 lg:mt-20 flex items-center justify-between gap-4">
-            <button
-              type="button"
-              onClick={back}
-              disabled={phase === "spec" && stepIdx === 0}
-              className="text-eyebrow inline-flex items-center gap-3 text-[var(--color-charcoal-800)] hover:text-[var(--color-burgundy-700)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ArrowLeft size={16} strokeWidth={1.5} /> Back
-            </button>
-            <button
-              type="button"
-              onClick={next}
-              className="text-eyebrow inline-flex items-center gap-3 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-8 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors"
-            >
-              {phase === "tier"
-                ? "Review specification"
-                : phase === "measurements"
-                  ? "Choose your tier"
-                  : isLastSpec
-                    ? "Take your measurements"
-                    : "Next"}
-              <ArrowRight size={16} strokeWidth={1.5} />
-            </button>
-          </nav>
         )}
+
       </div>
     </div>
   );
@@ -279,18 +420,26 @@ export default function CustomizePage() {
 
 /* ─────────────────────────── Progress dock ─────────────────────────── */
 
-function ProgressDock({ phase, stepIdx }: { phase: Phase; stepIdx: number }) {
-  // Total = N spec dots + 1 measurements + 1 tier + 1 summary.
-  const total = steps.length + 3;
+function ProgressDock({
+  phase, stepIdx, stepCount, hasTiers,
+}: {
+  phase: Phase;
+  stepIdx: number;
+  stepCount: number;
+  hasTiers: boolean;
+}) {
+  const tierOffset = hasTiers ? 1 : 0;
+  // dots = [tier?] + spec steps + measurements + summary
+  const total = stepCount + tierOffset + 2;
   const currentIndex =
-    phase === "spec"         ? stepIdx :
-    phase === "measurements" ? steps.length :
-    phase === "tier"         ? steps.length + 1 :
-                                steps.length + 2;
+    phase === "tier"         ? 0 :
+    phase === "spec"         ? stepIdx + tierOffset :
+    phase === "measurements" ? stepCount + tierOffset :
+                                stepCount + tierOffset + 1;
   const label =
-    phase === "spec"         ? `Step ${stepIdx + 1} of ${steps.length}` :
-    phase === "measurements" ? "Your measurements" :
     phase === "tier"         ? "Commission tier" :
+    phase === "spec"         ? `Step ${stepIdx + 1} of ${stepCount}` :
+    phase === "measurements" ? "Your measurements" :
                                 "Specification ready";
 
   return (
@@ -314,60 +463,147 @@ function ProgressDock({ phase, stepIdx }: { phase: Phase; stepIdx: number }) {
   );
 }
 
+/* ─────────────────────────── Wizard controls ─────────────────────────── */
+
+function WizardControls({
+  phase, isLastSpec, backDisabled, onBack, onNext, className = "",
+}: {
+  phase: Phase;
+  isLastSpec: boolean;
+  backDisabled: boolean;
+  onBack: () => void;
+  onNext: () => void;
+  className?: string;
+}) {
+  const isCart = phase === "summary";
+  // Full label for ≥sm, compact label for mobile so it never overflows beside Back.
+  const [label, shortLabel] =
+    phase === "tier"         ? ["Begin designing", "Begin"] :
+    phase === "measurements" ? ["Review specification", "Review"] :
+    phase === "summary"      ? ["Add to cart", "Add to cart"] :
+    isLastSpec               ? ["Take your measurements", "Measurements"] :
+                                ["Next", "Next"];
+
+  const ctaText = "text-[0.72rem] font-medium uppercase tracking-[0.16em] whitespace-nowrap";
+
+  return (
+    <nav className={`flex items-center justify-between gap-3 ${className}`}>
+      <button
+        type="button"
+        onClick={onBack}
+        disabled={backDisabled}
+        className={`${ctaText} inline-flex items-center gap-2 sm:gap-3 border border-[var(--color-charcoal-900)]/30 text-[var(--color-charcoal-900)] px-4 sm:px-6 py-3.5 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors disabled:opacity-25 disabled:cursor-not-allowed`}
+      >
+        <ArrowLeft size={16} strokeWidth={1.5} /> Back
+      </button>
+      <button
+        type="button"
+        onClick={onNext}
+        className={`${ctaText} inline-flex items-center gap-2 sm:gap-3 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-5 sm:px-8 py-3.5 hover:bg-[var(--color-burgundy-800)] transition-colors`}
+      >
+        {isCart && <ShoppingBag size={16} strokeWidth={1.5} />}
+        <span className="sm:hidden">{shortLabel}</span>
+        <span className="hidden sm:inline">{label}</span>
+        {!isCart && <ArrowRight size={16} strokeWidth={1.5} />}
+      </button>
+    </nav>
+  );
+}
+
 /* ─────────────────────────── Option grid ─────────────────────────── */
 
 function OptionGrid({
   step, selected, onPick,
 }: {
-  step: typeof steps[number];
+  step: LiveStep;
   selected: string;
   onPick: (value: string) => void;
 }) {
-  const n = step.options.length;
-  // Decide a sensible grid by option count
+  const kind = step.kind ?? "diagram";
   const cols =
-    n <= 2 ? "grid-cols-1 sm:grid-cols-2" :
-    n <= 4 ? "grid-cols-2 lg:grid-cols-2" :
-    n <= 6 ? "grid-cols-2 lg:grid-cols-3" :
-              "grid-cols-2 md:grid-cols-3 lg:grid-cols-4";
+    kind === "choice" ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" :
+    kind === "swatch" ? "grid-cols-3 sm:grid-cols-4 lg:grid-cols-6" :
+                        "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4";
 
   return (
-    <div className={`grid ${cols} gap-5`}>
-      {step.options.map((opt) => {
+    <div className={`grid ${cols} gap-3 md:gap-4`}>
+      {step.options.map((opt, i) => {
         const active = opt.value === selected;
+        const activeBorder = active
+          ? "border-[var(--color-burgundy-700)] bg-[var(--color-ivory-200)]"
+          : "border-black/10 bg-[var(--color-ivory-100)]";
+
+        // Compact text card — no visual (yes/no & multiple-choice options).
+        if (kind === "choice") {
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onPick(opt.value)}
+              className={`group relative border transition-all duration-300 hover:border-[var(--color-burgundy-700)] p-6 min-h-[112px] flex flex-col justify-center text-center ${activeBorder}`}
+            >
+              {active && (
+                <span className="absolute top-2.5 right-2.5 inline-flex items-center justify-center w-6 h-6 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] rounded-full">
+                  <Check size={13} strokeWidth={2} />
+                </span>
+              )}
+              <div className={`text-display text-[1.15rem] leading-tight ${active ? "text-[var(--color-burgundy-700)]" : "text-[var(--color-charcoal-900)]"}`}>
+                {opt.label}
+              </div>
+              {opt.note && (
+                <div className="text-[0.7rem] text-[var(--color-charcoal-500)] mt-1.5 leading-snug">{opt.note}</div>
+              )}
+            </button>
+          );
+        }
+
+        // Visual tile — diagram | swatch | gallery
         return (
           <button
             key={opt.value}
             type="button"
             onClick={() => onPick(opt.value)}
-            className={`group relative flex flex-col items-center text-left border transition-all duration-300 hover:border-[var(--color-burgundy-700)] ${
-              active
-                ? "border-[var(--color-burgundy-700)] bg-[var(--color-ivory-200)]"
-                : "border-black/10 bg-[var(--color-ivory-100)]"
-            }`}
+            className={`group relative flex flex-col items-center text-left border transition-all duration-300 hover:border-[var(--color-burgundy-700)] ${activeBorder}`}
           >
-            <div className="relative w-full aspect-[3/4]">
-              <Image
-                src={`/customizer/${step.slug}/${opt.value}.png`}
-                alt={opt.label}
-                fill
-                sizes="(min-width: 1024px) 25vw, 50vw"
-                className="object-contain p-3 md:p-5"
-              />
+            <div className="relative w-full aspect-[4/5] overflow-hidden">
+              {kind === "diagram" && (
+                <Image
+                  src={`/customizer/${step.slug}/${opt.value}.png`}
+                  alt={opt.label}
+                  fill
+                  sizes="(min-width: 1024px) 18vw, (min-width: 640px) 30vw, 45vw"
+                  loading={i < 4 ? "eager" : "lazy"}
+                  className="object-contain p-2.5 md:p-3.5"
+                />
+              )}
+              {kind === "swatch" && (
+                <span className="absolute inset-4 rounded-sm border border-black/10" style={{ background: opt.color ?? "#ccc" }} />
+              )}
+              {kind === "gallery" && (
+                opt.image ? (
+                  <Image
+                    src={opt.image}
+                    alt={opt.label}
+                    fill
+                    sizes="(min-width: 1024px) 18vw, (min-width: 640px) 30vw, 45vw"
+                    className="object-contain p-3"
+                  />
+                ) : (
+                  <span className="absolute inset-0 flex items-center justify-center text-eyebrow text-[var(--color-charcoal-500)]">Plain</span>
+                )
+              )}
               {active && (
-                <span className="absolute top-3 right-3 inline-flex items-center justify-center w-7 h-7 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] rounded-full">
-                  <Check size={14} strokeWidth={2} />
+                <span className="absolute top-2.5 right-2.5 inline-flex items-center justify-center w-6 h-6 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] rounded-full">
+                  <Check size={13} strokeWidth={2} />
                 </span>
               )}
             </div>
-            <div className="w-full border-t border-black/5 px-4 py-4 text-center">
-              <div className={`text-display text-[1.1rem] leading-tight ${
-                active ? "text-[var(--color-burgundy-700)]" : "text-[var(--color-charcoal-900)]"
-              }`}>
+            <div className="w-full border-t border-black/5 px-3 py-3 text-center">
+              <div className={`text-display text-[0.98rem] leading-tight ${active ? "text-[var(--color-burgundy-700)]" : "text-[var(--color-charcoal-900)]"}`}>
                 {opt.label}
               </div>
               {opt.note && (
-                <div className="text-[0.75rem] text-[var(--color-charcoal-500)] mt-1">{opt.note}</div>
+                <div className="text-[0.7rem] text-[var(--color-charcoal-500)] mt-1 leading-snug">{opt.note}</div>
               )}
             </div>
           </button>
@@ -379,7 +615,7 @@ function OptionGrid({
 
 /* ─────────────────────────── Selections sidebar ─────────────────────────── */
 
-function SelectionsSidebar({ selections, currentIdx }: { selections: Selections; currentIdx: number }) {
+function SelectionsSidebar({ steps, selections, currentIdx }: { steps: LiveStep[]; selections: Selections; currentIdx: number }) {
   // Only show steps the user has already moved past — not future defaults.
   const completed = steps.slice(0, currentIdx);
   if (completed.length === 0) return null;
@@ -388,7 +624,7 @@ function SelectionsSidebar({ selections, currentIdx }: { selections: Selections;
       <div className="text-eyebrow text-[var(--color-charcoal-500)] mb-4">Your specification so far</div>
       <dl className="space-y-2.5">
         {completed.map((s) => {
-          const opt = findOption(s.slug, selections[s.slug]);
+          const opt = s.options.find((o) => o.value === selections[s.slug]);
           if (!opt) return null;
           return (
             <div key={s.slug} className="flex justify-between gap-3 text-[0.85rem]">
@@ -456,27 +692,29 @@ function TierPicker({ tier, onPick }: { tier: string; onPick: (slug: string) => 
 /* ─────────────────────────── Measurements phase ─────────────────────────── */
 
 function MeasurementsPhase({
-  values, unit, onSetUnit, onSetValue,
+  groups, allActive, values, unit, onSetUnit, onSetValue,
 }: {
+  groups: MeasurementGroup[];
+  allActive: Measurement[];
   values: MeasurementValues;
   unit: MeasurementUnit;
   onSetUnit: (u: MeasurementUnit) => void;
   onSetValue: (slug: string, value: string) => void;
 }) {
   const filledCount = useMemo(
-    () => allMeasurements.filter((m) => (values[m.slug] ?? "").trim() !== "").length,
-    [values],
+    () => allActive.filter((m) => (values[m.slug] ?? "").trim() !== "").length,
+    [values, allActive],
   );
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
       <div className="lg:col-span-4">
-        <span className="text-eyebrow text-[var(--color-burgundy-700)]">N° 13 · Measurements</span>
+        <span className="text-eyebrow text-[var(--color-burgundy-700)]">Measurements</span>
         <h2 className="text-display text-[clamp(2rem,3.5vw,3.25rem)] mt-3 leading-[1.05]">
           Take your measurements.
         </h2>
         <p className="mt-4 text-[1.05rem] text-[var(--color-charcoal-700)] italic">
-          A few minutes with a soft tape — fourteen quiet numbers.
+          A few minutes with a soft tape — {allActive.length} quiet numbers.
         </p>
         <p className="mt-5 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
           Each clip is a short loop showing precisely how the tape should sit. Take what you can — anything you skip,
@@ -506,7 +744,7 @@ function MeasurementsPhase({
 
         <div className="mt-6 inline-flex items-center gap-2 text-[0.8rem] text-[var(--color-charcoal-500)]">
           <Ruler size={14} strokeWidth={1.5} />
-          {filledCount} of {allMeasurements.length} entered
+          {filledCount} of {allActive.length} entered
         </div>
 
         <div className="mt-10 p-6 border border-black/10 bg-[var(--color-ivory-200)]">
@@ -525,7 +763,7 @@ function MeasurementsPhase({
       </div>
 
       <div className="lg:col-span-8 flex flex-col gap-12">
-        {measurementGroups.map((group) => (
+        {groups.map((group) => (
           <section key={group.slug}>
             <header className="mb-5 border-b border-black/10 pb-3">
               <div className="text-eyebrow text-[var(--color-burgundy-700)]">{group.title}</div>
@@ -560,21 +798,24 @@ function MeasurementCard({
   onChange: (v: string) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  // Pause when scrolled out of view to keep frame budget light on the 14-card list.
+  // Drive playback from visibility: load + play only when the card nears the
+  // viewport (rootMargin), pause when it leaves. Keeps mobile from fetching
+  // all 14 clips at once and keeps the frame budget light.
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          el.play().catch(() => {});
+          el.play().then(() => setIsPlaying(true)).catch(() => {});
         } else {
           el.pause();
+          setIsPlaying(false);
         }
       },
-      { threshold: 0.35 },
+      { threshold: 0.25, rootMargin: "300px 0px" },
     );
     io.observe(el);
     return () => io.disconnect();
@@ -593,11 +834,11 @@ function MeasurementCard({
         <video
           ref={videoRef}
           src={`/measurements/${item.slug}.mp4`}
-          autoPlay
+          poster={`/measurements/posters/${item.slug}.jpg`}
           loop
           muted
           playsInline
-          preload="metadata"
+          preload="none"
           className="absolute inset-0 w-full h-full object-cover"
         />
         <button
@@ -649,27 +890,44 @@ function MeasurementCard({
 /* ─────────────────────────── Summary ─────────────────────────── */
 
 function SummaryPanel({
-  selections, measurements, unit, tier, onDownload, downloading, onReset,
+  steps, groups, hasTiers, category,
+  selections, measurements, unit, tier,
+  basePrice, surcharge, grandTotal,
+  onDownload, downloading, onReset,
+  onAddToCart, onEditStep, onEditTier, onEditMeasurements,
 }: {
+  steps: LiveStep[];
+  groups: MeasurementGroup[];
+  hasTiers: boolean;
+  category: StepCategory;
   selections: Selections;
   measurements: MeasurementValues;
   unit: MeasurementUnit;
   tier: string;
+  basePrice: number;
+  surcharge: number;
+  grandTotal: number;
   onDownload: () => void;
   downloading: boolean;
   onReset: () => void;
+  onAddToCart: () => void;
+  onEditStep: (idx: number) => void;
+  onEditTier: () => void;
+  onEditMeasurements: () => void;
 }) {
   const tierObj = tiers.find((t) => t.slug === tier) ?? tiers[1];
   const rows = useMemo(
-    () => steps.map((s) => ({ step: s, option: findOption(s.slug, selections[s.slug]) })),
-    [selections],
+    () => steps.map((s, idx) => ({ step: s, idx, option: s.options.find((o) => o.value === selections[s.slug]) })),
+    [selections, steps],
   );
+  const activeMeasurements = useMemo(() => groups.flatMap((g) => g.items), [groups]);
   const measurementRows = useMemo(
-    () => allMeasurements
+    () => activeMeasurements
       .map((m) => ({ m, v: (measurements[m.slug] ?? "").trim() }))
       .filter((r) => r.v !== ""),
-    [measurements],
+    [measurements, activeMeasurements],
   );
+  const categoryNoun = category === "trouser" ? "trousers" : category;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
@@ -679,25 +937,35 @@ function SummaryPanel({
           Your bespoke is set.
         </h2>
         <p className="mt-5 max-w-xl text-[1rem] text-[var(--color-charcoal-700)] leading-relaxed">
-          Download a one-page specification PDF, or take the summary below to your fitting.
-          We keep the pattern on file for life.
+          Review your specification on the right — tap <span className="text-[var(--color-burgundy-700)]">Edit</span> on
+          any line to change just that detail. When you&rsquo;re ready, add it to your cart to proceed to checkout.
         </p>
 
-        <div className="mt-10 flex flex-wrap items-center gap-4">
+        <div className="mt-10 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4">
+          <button
+            type="button"
+            onClick={onAddToCart}
+            className="text-eyebrow inline-flex items-center justify-center gap-3 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-8 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors"
+          >
+            <ShoppingBag size={16} strokeWidth={1.5} />
+            Add to cart
+          </button>
           <button
             type="button"
             onClick={onDownload}
             disabled={downloading}
-            className="text-eyebrow inline-flex items-center gap-3 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-8 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors disabled:opacity-60"
+            className="text-eyebrow inline-flex items-center justify-center gap-3 border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] px-8 py-4 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] transition-colors disabled:opacity-60"
           >
             <Download size={16} strokeWidth={1.5} />
-            {downloading ? "Preparing PDF…" : "Download specification"}
+            {downloading ? "Preparing PDF…" : "Download spec"}
           </button>
+        </div>
+        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2">
           <Link
             href="/book"
-            className="text-eyebrow inline-flex items-center gap-3 border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] px-8 py-4 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] transition-colors"
+            className="text-eyebrow text-[var(--color-charcoal-800)] hover:text-[var(--color-burgundy-700)] transition-colors"
           >
-            Book a fitting
+            Book a fitting instead
           </Link>
           <button
             type="button"
@@ -707,47 +975,309 @@ function SummaryPanel({
             Start over
           </button>
         </div>
+        <p className="mt-6 inline-flex items-center gap-2 text-[0.8rem] text-[var(--color-charcoal-500)]">
+          <Lock size={12} strokeWidth={1.5} /> You&rsquo;ll sign in before checkout.
+        </p>
       </div>
 
-      <div className="lg:col-span-5 bg-[var(--color-ivory-200)] p-8 lg:p-10">
-        <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-1">Commission</div>
-        <div className="text-display text-[2.25rem] text-[var(--color-charcoal-900)]">{tierObj.name}</div>
-        <div className="text-display text-[1.5rem] text-[var(--color-burgundy-700)] mt-1">{tierObj.price}</div>
-        <div className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">
-          {tierObj.lead} · {tierObj.fittings}
-        </div>
+      <div className="lg:col-span-5 bg-[var(--color-ivory-200)] p-6 sm:p-8 lg:p-10">
+        {/* Commission (suits only) or category header */}
+        {hasTiers ? (
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-1">Commission</div>
+              <div className="text-display text-[2.25rem] text-[var(--color-charcoal-900)] leading-none">{tierObj.name}</div>
+              <div className="text-display text-[1.5rem] text-[var(--color-burgundy-700)] mt-1">{tierObj.price}</div>
+              <div className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">
+                {tierObj.lead} · {tierObj.fittings}
+              </div>
+            </div>
+            <EditButton onClick={onEditTier} label="Edit tier" />
+          </div>
+        ) : (
+          <div>
+            <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-1">Your {categoryNoun}</div>
+            <div className="text-display text-[2rem] text-[var(--color-charcoal-900)] leading-tight capitalize">
+              Made to measure
+            </div>
+            <div className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">Priced per specification · 2–3 weeks</div>
+          </div>
+        )}
 
         <div className="my-6 h-px bg-black/10" />
 
+        {/* Specification — per-line edit */}
         <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-4">Specification</div>
-        <dl className="space-y-3">
-          {rows.map(({ step, option }) =>
+        <div className="space-y-1">
+          {rows.map(({ step, idx, option }) =>
             option ? (
-              <div key={step.slug} className="flex justify-between gap-3 text-[0.85rem]">
-                <dt className="text-[var(--color-charcoal-500)]">{step.title}</dt>
-                <dd className="text-[var(--color-charcoal-900)] text-right">{option.label}</dd>
-              </div>
+              <button
+                key={step.slug}
+                type="button"
+                onClick={() => onEditStep(idx)}
+                className="group w-full flex items-center justify-between gap-3 text-[0.85rem] text-left py-1.5 -mx-2 px-2 hover:bg-[var(--color-ivory-100)] transition-colors"
+              >
+                <span className="text-[var(--color-charcoal-500)]">{step.title}</span>
+                <span className="flex items-center gap-2 text-right">
+                  <span className="text-[var(--color-charcoal-900)] group-hover:text-[var(--color-burgundy-700)] transition-colors">
+                    {option.label}
+                    {option.surcharge > 0 && (
+                      <span className="text-[0.72rem] text-[var(--color-burgundy-700)] ml-1.5">+ {formatBhd(option.surcharge)}</span>
+                    )}
+                  </span>
+                  <Pencil size={11} strokeWidth={1.5} className="shrink-0 text-[var(--color-burgundy-700)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                </span>
+              </button>
             ) : null
           )}
-        </dl>
+        </div>
 
-        {measurementRows.length > 0 && (
+        {/* Measurements */}
+        <div className="my-6 h-px bg-black/10" />
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="text-eyebrow text-[var(--color-burgundy-700)]">
+            Measurements{measurementRows.length > 0 ? ` · ${unit}` : ""}
+          </div>
+          <EditButton onClick={onEditMeasurements} label="Edit measurements" />
+        </div>
+        {measurementRows.length > 0 ? (
+          <dl className="space-y-3">
+            {measurementRows.map(({ m, v }) => (
+              <div key={m.slug} className="flex justify-between gap-3 text-[0.85rem]">
+                <dt className="text-[var(--color-charcoal-500)]">{m.label}</dt>
+                <dd className="text-[var(--color-charcoal-900)] text-right">{v} {unit}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="text-[0.82rem] text-[var(--color-charcoal-500)] leading-relaxed">
+            None entered yet — we&rsquo;ll measure you at the fitting, or tap Edit to add them now.
+          </p>
+        )}
+
+        {(basePrice > 0 || surcharge > 0) && (
           <>
             <div className="my-6 h-px bg-black/10" />
-            <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-4">
-              Measurements · {unit}
-            </div>
-            <dl className="space-y-3">
-              {measurementRows.map(({ m, v }) => (
-                <div key={m.slug} className="flex justify-between gap-3 text-[0.85rem]">
-                  <dt className="text-[var(--color-charcoal-500)]">{m.label}</dt>
-                  <dd className="text-[var(--color-charcoal-900)] text-right">{v} {unit}</dd>
+            <dl className="space-y-2 text-[0.88rem]">
+              {basePrice > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-charcoal-500)]">{hasTiers ? "Commission" : "Garment"}</dt>
+                  <dd className="text-[var(--color-charcoal-900)] tabular-nums">{formatBhd(basePrice)}</dd>
                 </div>
-              ))}
+              )}
+              {surcharge > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-charcoal-500)]">Customisation</dt>
+                  <dd className="text-[var(--color-burgundy-700)] tabular-nums">+ {formatBhd(surcharge)}</dd>
+                </div>
+              )}
+              <div className="flex justify-between pt-2 mt-1 border-t border-black/10 text-display text-[1.25rem] text-[var(--color-charcoal-900)]">
+                <dt>Total</dt>
+                <dd className="tabular-nums">{formatBhd(grandTotal)}</dd>
+              </div>
             </dl>
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function EditButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="shrink-0 inline-flex items-center gap-1.5 text-[0.7rem] tracking-[0.18em] uppercase text-[var(--color-burgundy-700)] border border-[var(--color-burgundy-700)]/30 px-3 py-1.5 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] transition-colors"
+    >
+      <Pencil size={11} strokeWidth={1.5} /> Edit
+    </button>
+  );
+}
+
+/* ─────────────────────────── Sign-in (checkout gate) ─────────────────────────── */
+
+function AuthPanel({
+  tier, hasTiers, category, selections, allSteps, surcharge, grandTotal, onBack, onAuthenticated,
+}: {
+  tier: string;
+  hasTiers: boolean;
+  category: StepCategory;
+  selections: Selections;
+  allSteps: LiveStep[];
+  basePrice: number;
+  surcharge: number;
+  grandTotal: number;
+  onBack: () => void;
+  onAuthenticated: () => void;
+}) {
+  const tierObj = tiers.find((t) => t.slug === tier) ?? tiers[1];
+  const catSteps = allSteps;
+  const fit = findLiveOption(allSteps, "fit", selections.fit)?.label ?? "Tailored fit";
+  const categoryNoun = category === "trouser" ? "trousers" : category;
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex items-center gap-2 text-eyebrow text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors"
+      >
+        <ArrowLeft size={14} strokeWidth={1.5} /> Back to review
+      </button>
+
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
+        {/* Order summary — gives the sign-in context */}
+        <div className="bg-[var(--color-ivory-200)] p-7 sm:p-9 order-2 lg:order-1">
+          <span className="text-eyebrow text-[var(--color-burgundy-700)]">Checkout · Your order</span>
+          <div className="mt-5 flex items-start justify-between gap-4">
+            <div>
+              <div className="text-display text-[1.5rem] text-[var(--color-charcoal-900)] leading-tight capitalize">
+                {hasTiers ? "Bespoke commission" : `Made-to-measure ${categoryNoun}`}
+              </div>
+              {hasTiers && <div className="text-display text-[1.25rem] text-[var(--color-burgundy-700)] mt-0.5">{tierObj.name}</div>}
+            </div>
+            {grandTotal > 0 && <div className="text-display text-[1.5rem] text-[var(--color-burgundy-700)] whitespace-nowrap">{formatBhd(grandTotal)}</div>}
+          </div>
+          <div className="mt-3 text-[0.85rem] text-[var(--color-charcoal-500)] leading-relaxed">
+            {fit} · {catSteps.length} details chosen{surcharge > 0 ? `  ·  incl. + ${formatBhd(surcharge)} customisation` : ""}
+          </div>
+          {hasTiers && (
+            <div className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">
+              {tierObj.lead} · {tierObj.fittings}
+            </div>
+          )}
+
+          <div className="my-6 h-px bg-black/10" />
+
+          <ul className="space-y-3 text-[0.85rem] text-[var(--color-charcoal-800)]">
+            <li className="flex gap-2.5"><Check size={15} strokeWidth={1.5} className="text-[var(--color-burgundy-700)] shrink-0" /> Your specification saved to your account</li>
+            <li className="flex gap-2.5"><Check size={15} strokeWidth={1.5} className="text-[var(--color-burgundy-700)] shrink-0" /> Pattern kept on file for life</li>
+            <li className="flex gap-2.5"><Check size={15} strokeWidth={1.5} className="text-[var(--color-burgundy-700)] shrink-0" /> Track your commission through the atelier</li>
+          </ul>
+        </div>
+
+        {/* Sign in */}
+        <div className="w-full max-w-md mx-auto lg:mx-0 order-1 lg:order-2">
+          <span className="text-eyebrow text-[var(--color-burgundy-700)]">Checkout</span>
+          <h2 className="text-display text-[clamp(2rem,4vw,2.75rem)] mt-3 leading-[1.05]">
+            Sign in to continue
+          </h2>
+          <p className="mt-3 mb-7 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
+            Sign in to save your bespoke and proceed to secure checkout.
+          </p>
+          <AuthForm onSuccess={onAuthenticated} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────── Cart ─────────────────────────── */
+
+function CartPanel({
+  tier, hasTiers, category, selections, allSteps, basePrice, surcharge, grandTotal, onBack, onKeepDesigning,
+}: {
+  tier: string;
+  hasTiers: boolean;
+  category: StepCategory;
+  selections: Selections;
+  allSteps: LiveStep[];
+  basePrice: number;
+  surcharge: number;
+  grandTotal: number;
+  onBack: () => void;
+  onKeepDesigning: () => void;
+}) {
+  const tierObj = tiers.find((t) => t.slug === tier) ?? tiers[1];
+  const catSteps = allSteps;
+  const fit = findLiveOption(allSteps, "fit", selections.fit)?.label ?? "Tailored fit";
+  const categoryNoun = category === "trouser" ? "trousers" : category;
+  const lineTitle = hasTiers ? `Bespoke commission — ${tierObj.name}` : `Made-to-measure ${categoryNoun}`;
+  const baseLabel = basePrice > 0 ? formatBhd(basePrice) : "Priced per spec";
+
+  return (
+    <div className="max-w-3xl mx-auto">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex items-center gap-2 text-eyebrow text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors"
+      >
+        <ArrowLeft size={14} strokeWidth={1.5} /> Back
+      </button>
+
+      <div className="mt-8">
+        <span className="text-eyebrow text-[var(--color-burgundy-700)] inline-flex items-center gap-2">
+          <Check size={14} strokeWidth={2} /> Added to your cart
+        </span>
+        <h2 className="text-display text-[clamp(2.25rem,5vw,3.75rem)] mt-3 leading-[1.03]">
+          Ready for checkout.
+        </h2>
+        <p className="mt-4 max-w-xl text-[1rem] text-[var(--color-charcoal-700)] leading-relaxed">
+          Your made-to-measure order is held in your cart. Complete secure payment to begin the make —
+          we&rsquo;ll confirm your first fitting by email.
+        </p>
+      </div>
+
+      {/* Line item */}
+      <div className="mt-8 border border-black/10 bg-[var(--color-ivory-100)] p-5 sm:p-6 flex items-start justify-between gap-4">
+        <div>
+          <div className="text-display text-[1.4rem] sm:text-[1.6rem] text-[var(--color-charcoal-900)] leading-tight capitalize">
+            {lineTitle}
+          </div>
+          <div className="text-[0.85rem] text-[var(--color-charcoal-500)] mt-2">
+            {fit} · {catSteps.length} details chosen
+          </div>
+          {hasTiers && (
+            <div className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">
+              {tierObj.lead} · {tierObj.fittings}
+            </div>
+          )}
+        </div>
+        <div className="text-display text-[1.4rem] sm:text-[1.6rem] text-[var(--color-burgundy-700)] whitespace-nowrap">
+          {baseLabel}
+        </div>
+      </div>
+
+      {/* Totals */}
+      <div className="mt-6 space-y-2.5">
+        <div className="flex justify-between text-[0.9rem] text-[var(--color-charcoal-800)]">
+          <span>{hasTiers ? "Commission" : "Garment"}</span><span className="tabular-nums">{baseLabel}</span>
+        </div>
+        {surcharge > 0 && (
+          <div className="flex justify-between text-[0.9rem] text-[var(--color-charcoal-800)]">
+            <span>Customisation</span><span className="tabular-nums text-[var(--color-burgundy-700)]">+ {formatBhd(surcharge)}</span>
+          </div>
+        )}
+        <div className="flex justify-between text-[0.9rem] text-[var(--color-charcoal-500)]">
+          <span>Fittings &amp; alterations</span><span>Included</span>
+        </div>
+        <div className="h-px bg-black/10 my-3" />
+        <div className="flex justify-between text-display text-[1.35rem] text-[var(--color-charcoal-900)]">
+          <span>Total</span><span className="tabular-nums">{basePrice > 0 ? formatBhd(grandTotal) : (surcharge > 0 ? `${formatBhd(surcharge)} + garment` : baseLabel)}</span>
+        </div>
+      </div>
+
+      <div className="mt-8 flex flex-col sm:flex-row gap-3">
+        <button
+          type="button"
+          className="flex-1 text-eyebrow inline-flex items-center justify-center gap-3 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-8 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors"
+        >
+          <Lock size={16} strokeWidth={1.5} /> Proceed to secure payment
+        </button>
+        <button
+          type="button"
+          onClick={onKeepDesigning}
+          className="text-eyebrow inline-flex items-center justify-center gap-3 border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] px-8 py-4 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] transition-colors"
+        >
+          Design another
+        </button>
+      </div>
+
+      <p className="mt-4 flex items-center gap-2 text-[0.8rem] text-[var(--color-charcoal-500)]">
+        <Lock size={12} strokeWidth={1.5} /> Secure payment is being integrated — your cart stays saved.
+      </p>
     </div>
   );
 }

@@ -14,7 +14,7 @@ import { Reveal, SplitReveal } from "./Reveal";
  */
 export function CtaBanner({
   title = "Begin your wardrobe.",
-  body = "A private fitting at the Madison Avenue atelier, by appointment.",
+  body = "A private fitting at our Manama tailoring house, by appointment.",
   ctaLabel = "Book a Fitting",
   href = "/book",
 }: {

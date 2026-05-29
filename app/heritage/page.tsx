@@ -5,34 +5,34 @@ import { CtaBanner } from "@/components/CtaBanner";
 
 const timeline = [
   {
-    year: "1962",
-    title: "A small room on West 38th",
+    year: "1970",
+    title: "The Foundation",
     body:
-      "Edmund Hilton opens a single-room workshop above a hat-maker on the edge of New York's Garment District with one cutting table and a borrowed iron.",
+      "Master tailor Joseph Francis D'Souza opens the doors to the original Hilton Tailors in the historic Manama Souq, establishing a standard for superior craftsmanship and personal service.",
   },
   {
-    year: "1974",
-    title: "The first commission abroad",
+    year: "2005",
+    title: "A New Generation",
     body:
-      "A standing order from a Boston shipping family takes the firm to London for a season, and the cutting techniques never leave the bench.",
+      "George joins his father in the family business, bringing fresh vision and international training to the company. He opens the first new outlet under the name Hilton Bespoke.",
   },
   {
-    year: "1989",
-    title: "Madison Avenue",
+    year: "2011",
+    title: "The Next Chapter in Zinj",
     body:
-      "Three generations later, the atelier moves to its current floor on Madison: north-facing daylight, oak benches, and a single bell over the door.",
+      "The official birth of the Hilton Bespoke flagship in Zinj — a new space dedicated entirely to high-end, highly personalised bespoke tailoring and premium global fabrics.",
   },
   {
-    year: "2014",
-    title: "The cloth library",
+    year: "2016",
+    title: "Expanding the Vision",
     body:
-      "A permanent library of forty-seven mills is established: Huddersfield, Biella, Como, Yorkshire. Accessible only to clients of the house.",
+      "The Hilton Made to Measure outlet opens, creating a new, streamlined path for clients to experience our custom clothing and signature fit.",
   },
   {
-    year: "Today",
-    title: "The same patient hand",
+    year: "2019",
+    title: "The House is Formed",
     body:
-      "Fourteen people. Three hundred hours per suit. One garment, made well, for one body. Nothing has changed and nothing needs to.",
+      "The official launch of our mother brand, Hilton Tailoring House — unifying Hilton Tailors, Hilton Bespoke and Hilton Made to Measure under one trusted name in Bahrain.",
   },
 ];
 
@@ -63,9 +63,9 @@ export default function HeritagePage() {
   return (
     <>
       <PageHero
-        eyebrow="Since 1962"
+        eyebrow="Since 1970"
         title="Heritage."
-        intro="Six decades on Madison Avenue. Three generations of cutters. One pattern at a time."
+        intro="Three generations of tailors. One workshop, born in the Manama Souq. A passion for the craft that began with a single pair of hands and has only grown."
         image={{
           src: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1600&auto=format&fit=crop",
           alt: "An archive photograph of the original atelier",
@@ -77,16 +77,31 @@ export default function HeritagePage() {
         <div className="container-editorial grid grid-cols-1 lg:grid-cols-12 gap-12">
           <div className="lg:col-span-4">
             <Reveal>
-              <span className="text-eyebrow text-[var(--color-burgundy-700)]">Our position</span>
+              <span className="text-eyebrow text-[var(--color-burgundy-700)]">Our story</span>
             </Reveal>
           </div>
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-8 space-y-8">
             <h2 className="text-display text-[clamp(2rem,4vw,3.75rem)] leading-[1.15]">
               <SplitReveal
-                text="We are not a brand of the moment. We are a small house that believes the quietest garment in the room is also the most considered. Tailoring is the practice of removing what is not necessary. What remains, when done well, is the wearer."
+                text="Founded in 1970 by master tailor Joseph Francis D'Souza, our company began as Hilton Tailors in the vibrant heart of the Manama Souq."
                 staggerWord={0.02}
               />
             </h2>
+            <Reveal delay={0.2}>
+              <p className="text-[1.05rem] text-[var(--color-charcoal-700)] leading-relaxed max-w-2xl">
+                Teaching himself the complex art of cutting at an early age, Joseph built a lasting reputation through his meticulous nature, hard work, and a genuine dedication to his clients.
+              </p>
+            </Reveal>
+            <Reveal delay={0.28}>
+              <p className="text-[1.05rem] text-[var(--color-charcoal-700)] leading-relaxed max-w-2xl">
+                Joseph's son, George, grew up immersed in the family business. After studying the trade abroad, George returned to build upon his father's legacy — introducing international fabric brands and a more personalised, high-end experience to a discerning clientele.
+              </p>
+            </Reveal>
+            <Reveal delay={0.36}>
+              <p className="text-[1.05rem] text-[var(--color-charcoal-700)] leading-relaxed max-w-2xl">
+                Today, under the banner of Hilton Tailoring House, we take pride in a dedicated team of master craftsmen — many of whom were personally trained by Joseph himself. Every skilled professional in our workshop specialises in a particular aspect of tailoring. Together, we work toward a single goal: exceptional, comfortable, perfectly fitted garments that elevate your personal style.
+              </p>
+            </Reveal>
           </div>
         </div>
       </section>
@@ -96,7 +111,7 @@ export default function HeritagePage() {
         <div className="relative h-[60vh] min-h-[420px] w-full">
           <Image
             src="https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=2400&auto=format&fit=crop"
-            alt="The Madison Avenue atelier floor"
+            alt="The Hilton Tailoring House atelier floor in Manama"
             fill
             sizes="100vw"
             className="object-cover"
@@ -109,10 +124,10 @@ export default function HeritagePage() {
         <div className="container-editorial grid grid-cols-1 lg:grid-cols-12 gap-12">
           <div className="lg:col-span-4">
             <Reveal>
-              <span className="text-eyebrow text-[var(--color-burgundy-700)]">Six decades</span>
+              <span className="text-eyebrow text-[var(--color-burgundy-700)]">Five decades</span>
             </Reveal>
             <h2 className="text-display text-[clamp(2.25rem,4.5vw,4rem)] mt-6 leading-[1.02]">
-              <SplitReveal text="A chronology." />
+              <SplitReveal text="The Evolution of Hilton Tailoring House." />
             </h2>
           </div>
           <ol className="lg:col-span-7 lg:col-start-6 border-t border-black/10">

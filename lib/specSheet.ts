@@ -8,8 +8,9 @@
 
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import {
-  steps, tiers, findOption, type Selections,
-  measurementGroups, type MeasurementValues, type MeasurementUnit,
+  tiers, findOption, type Selections,
+  type MeasurementValues, type MeasurementUnit,
+  type StepCategory, visibleSteps, measurementGroupsForCategory, categoryHasTiers,
 } from "./customizer";
 
 // Pantone 7421 C burgundy + ivory page tone, expressed as pdf-lib rgb (0..1).
@@ -31,6 +32,7 @@ const toLatin = (s: string) => s.replace(/د\.?ب\.?/g, "BHD").trim();
 export type SpecPdfExtras = {
   measurements?: MeasurementValues;
   unit?: MeasurementUnit;
+  category?: StepCategory;
 };
 
 export async function buildSpecPdf(
@@ -101,13 +103,17 @@ export async function buildSpecPdf(
   let cursorY     = A4.h - 220;
   const rowH      = 22;
 
+  const category = extras?.category ?? "suit";
+  const specSteps = visibleSteps(category, tierSlug, selections);
+  const showCommission = categoryHasTiers(category);
+
   // Section header
   drawSectionHeader(page, "GARMENT SPECIFICATION", colLeftX, cursorY, serifBold);
   cursorY -= 20;
   drawRule(page, colLeftX, cursorY, A4.w - colLeftX * 2);
   cursorY -= 18;
 
-  for (const step of steps) {
+  for (const step of specSteps) {
     const value = selections[step.slug];
     const option = findOption(step.slug, value);
     if (!option) continue;
@@ -138,37 +144,50 @@ export async function buildSpecPdf(
   cursorY -= 12;
   drawRule(page, colLeftX, cursorY, A4.w - colLeftX * 2);
 
-  // ── Tier block ─────────────────────────────────────────────────────────
+  // ── Commission / tier block (suits & jackets only) ──────────────────────
   cursorY -= 30;
   const tier = tiers.find((t) => t.slug === tierSlug) ?? tiers[1];
 
-  drawSectionHeader(page, "COMMISSION", colLeftX, cursorY, serifBold);
-  cursorY -= 28;
+  if (showCommission) {
+    drawSectionHeader(page, "COMMISSION", colLeftX, cursorY, serifBold);
+    cursorY -= 28;
 
-  page.drawText(tier.name.toUpperCase(), {
-    x: colLeftX, y: cursorY, size: 18, font: serif, color: BURGUNDY,
-  });
-  const priceText = toLatin(tier.price);
-  const priceWidth = serifBold.widthOfTextAtSize(priceText, 18);
-  page.drawText(priceText, {
-    x: A4.w - colLeftX - priceWidth, y: cursorY, size: 18, font: serifBold, color: CHARCOAL,
-  });
-  cursorY -= 16;
-  page.drawText(tier.tagline, {
-    x: colLeftX, y: cursorY, size: 10, font: serif, color: MUTED,
-  });
-
-  cursorY -= 22;
-  page.drawText(`Lead time  ${tier.lead}    ·    Fittings  ${tier.fittings}`, {
-    x: colLeftX, y: cursorY, size: 9, font: sans, color: CHARCOAL,
-  });
-
-  cursorY -= 18;
-  for (const f of tier.features) {
-    page.drawText(`·  ${f}`, {
-      x: colLeftX + 8, y: cursorY, size: 9.5, font: sans, color: CHARCOAL,
+    page.drawText(tier.name.toUpperCase(), {
+      x: colLeftX, y: cursorY, size: 18, font: serif, color: BURGUNDY,
     });
-    cursorY -= 14;
+    const priceText = toLatin(tier.price);
+    const priceWidth = serifBold.widthOfTextAtSize(priceText, 18);
+    page.drawText(priceText, {
+      x: A4.w - colLeftX - priceWidth, y: cursorY, size: 18, font: serifBold, color: CHARCOAL,
+    });
+    cursorY -= 16;
+    page.drawText(tier.tagline, {
+      x: colLeftX, y: cursorY, size: 10, font: serif, color: MUTED,
+    });
+
+    cursorY -= 22;
+    page.drawText(`Lead time  ${tier.lead}    ·    Fittings  ${tier.fittings}`, {
+      x: colLeftX, y: cursorY, size: 9, font: sans, color: CHARCOAL,
+    });
+
+    cursorY -= 18;
+    for (const f of tier.features) {
+      page.drawText(`·  ${f}`, {
+        x: colLeftX + 8, y: cursorY, size: 9.5, font: sans, color: CHARCOAL,
+      });
+      cursorY -= 14;
+    }
+  } else {
+    drawSectionHeader(page, "COMMISSION", colLeftX, cursorY, serifBold);
+    cursorY -= 28;
+    page.drawText(`MADE TO MEASURE ${category.toUpperCase()}`, {
+      x: colLeftX, y: cursorY, size: 18, font: serif, color: BURGUNDY,
+    });
+    cursorY -= 16;
+    page.drawText("Priced per specification  ·  2–3 weeks", {
+      x: colLeftX, y: cursorY, size: 10, font: serif, color: MUTED,
+    });
+    cursorY -= 18;
   }
 
   // ── Footer ─────────────────────────────────────────────────────────────
@@ -176,10 +195,10 @@ export async function buildSpecPdf(
   centerText(page, "HILTON MADE TO MEASURE", 72, {
     font: sans, size: 8, color: BURGUNDY, tracking: 3,
   });
-  centerText(page, "118 Madison Avenue, Floor 7  ·  New York, NY 10016", 58, {
+  centerText(page, "Shop No. 119, Shaikh Abdulla Avenue  ·  Manama, Kingdom of Bahrain", 58, {
     font: sans, size: 8, color: MUTED, tracking: 1.5,
   });
-  centerText(page, "atelier@hiltonmtm.com  ·  +1 (212) 555 0144", 46, {
+  centerText(page, "atelier@hiltonmtm.com  ·  +973 17 245 689", 46, {
     font: sans, size: 8, color: MUTED, tracking: 1.5,
   });
   void colMidX; // kept for future split-column layouts
@@ -219,7 +238,7 @@ export async function buildSpecPdf(
     const mLeftX = colLeftX;
     const mRowH  = 18;
 
-    for (const group of measurementGroups) {
+    for (const group of measurementGroupsForCategory(category)) {
       drawSectionHeader(m, group.title.toUpperCase(), mLeftX, mY, serifBold);
       mY -= 18;
       drawRule(m, mLeftX, mY, A4.w - mLeftX * 2);
@@ -249,10 +268,10 @@ export async function buildSpecPdf(
     centerText(m, "HILTON MADE TO MEASURE", 72, {
       font: sans, size: 8, color: BURGUNDY, tracking: 3,
     });
-    centerText(m, "118 Madison Avenue, Floor 7  ·  New York, NY 10016", 58, {
+    centerText(m, "Shop No. 119, Shaikh Abdulla Avenue  ·  Manama, Kingdom of Bahrain", 58, {
       font: sans, size: 8, color: MUTED, tracking: 1.5,
     });
-    centerText(m, "atelier@hiltonmtm.com  ·  +1 (212) 555 0144", 46, {
+    centerText(m, "atelier@hiltonmtm.com  ·  +973 17 245 689", 46, {
       font: sans, size: 8, color: MUTED, tracking: 1.5,
     });
   }

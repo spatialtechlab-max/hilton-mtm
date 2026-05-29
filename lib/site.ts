@@ -3,18 +3,18 @@ export const site = {
   shortName: "Hilton MTM",
   tagline: "Tailored, not merely fitted.",
   description:
-    "A full bespoke menswear house. Suits cut by hand, shirting drawn for one body, hand-welted shoes, and the silks and accessories that finish the wardrobe.",
+    "The Collection by Hilton MTM. From impeccably tailored suits and crisp shirting to footwear and the finishing touches — every piece is the starting point of a conversation about your personal style.",
   url: "https://hiltonmtm.com",
   email: "atelier@hiltonmtm.com",
-  phone: "+1 (212) 555 0144",
+  phone: "+973 17 245 689",
+  whatsapp: "+973 33 330 675",
   address: {
-    line1: "118 Madison Avenue, Floor 7",
-    city: "New York, NY 10016",
+    line1: "Shop No. 119, Shaikh Abdulla Avenue",
+    city: "Manama, Kingdom of Bahrain",
   },
   hours: [
-    { day: "Tuesday to Friday", time: "10:00 to 19:00" },
-    { day: "Saturday", time: "10:00 to 18:00" },
-    { day: "Sunday & Monday", time: "By appointment" },
+    { day: "Saturday – Thursday", time: "9:00 – 12:30 · 16:00 – 20:30" },
+    { day: "Friday", time: "Closed" },
   ],
   social: {
     instagram: "https://instagram.com/hiltonmtm",
