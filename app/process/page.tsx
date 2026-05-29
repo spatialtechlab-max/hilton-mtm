@@ -165,7 +165,7 @@ export default function ProcessPage() {
               </Reveal>
               <Reveal delay={0.3}>
                 <div className="mt-10">
-                  <Button href="/customize" variant="primary">Start designing</Button>
+                  <Button href="/customize" variant="solid">Start designing</Button>
                 </div>
               </Reveal>
             </div>
