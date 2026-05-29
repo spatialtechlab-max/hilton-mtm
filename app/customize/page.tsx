@@ -207,29 +207,43 @@ export default function CustomizePage() {
   const backDisabled = phase === "tier" || (phase === "spec" && safeStepIdx === 0 && !hasTiers);
   const copy = CATEGORY_COPY[category];
 
+  // The big "Design Your Own" hero only makes sense at the very start
+  // (tier picker). Once the user is choosing options or measuring, shrink
+  // it to a compact crumb so the controls reach the viewport without scroll.
+  const showFullHero = phase === "tier";
+
   return (
-    <div className="pt-32 md:pt-40 pb-24 min-h-[80vh]">
+    <div className={`${showFullHero ? "pt-32 md:pt-40" : "pt-24 md:pt-28"} pb-24 min-h-[80vh]`}>
       <div className="container-editorial">
 
         {/* ── Back to House link ─────────────────────────────────────── */}
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-eyebrow text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors mb-8"
+          className="inline-flex items-center gap-2 text-eyebrow text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors mb-6"
         >
           <ArrowLeft size={14} strokeWidth={1.5} />
           The House
         </Link>
 
         {/* ── Hero / intro ───────────────────────────────────────────── */}
-        <header className="mb-12 lg:mb-16">
-          <span className="text-eyebrow text-[var(--color-burgundy-700)]">Design Yours</span>
-          <h1 className="text-display text-[clamp(2.75rem,7vw,6rem)] mt-4 leading-[0.95] text-[var(--color-charcoal-900)]">
-            {copy.h1}
-          </h1>
-          <p className="mt-5 max-w-2xl text-[1rem] text-[var(--color-charcoal-700)] leading-relaxed">
-            {copy.intro}
-          </p>
-        </header>
+        {showFullHero ? (
+          <header className="mb-12 lg:mb-16">
+            <span className="text-eyebrow text-[var(--color-burgundy-700)]">Design Yours</span>
+            <h1 className="text-display text-[clamp(2.75rem,7vw,6rem)] mt-4 leading-[0.95] text-[var(--color-charcoal-900)]">
+              {copy.h1}
+            </h1>
+            <p className="mt-5 max-w-2xl text-[1rem] text-[var(--color-charcoal-700)] leading-relaxed">
+              {copy.intro}
+            </p>
+          </header>
+        ) : (
+          <header className="mb-6 flex items-baseline gap-4">
+            <span className="text-eyebrow text-[var(--color-burgundy-700)]">Design Yours</span>
+            <h1 className="text-display text-[1.5rem] leading-none text-[var(--color-charcoal-900)] hidden md:inline">
+              {copy.h1}
+            </h1>
+          </header>
+        )}
 
         {/* ── Progress dock + top controls ───────────────────────────── */}
         {ready && DESIGN_PHASES.includes(phase) && (
