@@ -10,7 +10,13 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = Boolean(url && anonKey);
 
-export const supabase = createClient(url ?? "", anonKey ?? "", {
+// Fall back to harmless placeholders so the production build never throws
+// when env vars aren't set yet (Supabase's constructor rejects empty URLs).
+// Callers gate real usage on isSupabaseConfigured.
+const SAFE_URL = url || "https://placeholder.supabase.co";
+const SAFE_KEY = anonKey || "placeholder-anon-key";
+
+export const supabase = createClient(SAFE_URL, SAFE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
