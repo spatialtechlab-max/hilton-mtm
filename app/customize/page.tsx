@@ -126,7 +126,9 @@ export default function CustomizePage() {
   // skip fabric pick — they already chose one. Otherwise start at "fabric".
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const raw = params.get("category");
+    // Accept both ?category= and ?garment= so inbound links from any
+    // surface (homepage tiles, library PDPs, marketing links) resolve.
+    const raw = params.get("category") ?? params.get("garment");
     const skuParam = params.get("sku");
     setSku(skuParam);
     const cat: StepCategory = isCustomizeCategory(raw) ? raw : "suit";
