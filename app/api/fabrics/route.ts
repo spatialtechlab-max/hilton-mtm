@@ -83,25 +83,9 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const category = (searchParams.get("category") || "suit").toLowerCase();
   const includeDisabled = searchParams.get("includeDisabled") === "1";
-  const debug = searchParams.get("debug") === "1";
   const wanted = ERP_CATEGORIES_FOR_GARMENT[category] ?? [];
 
   const [items, disabled] = await Promise.all([fetchErpItems(), fetchDisabledSkus()]);
-
-  if (debug) {
-    return NextResponse.json({
-      env: {
-        base: process.env.ERP_BASE_URL ? "set" : "MISSING",
-        key:  process.env.ERP_API_KEY  ? "set" : "MISSING",
-        sec:  process.env.ERP_SECRET_KEY ? "set" : "MISSING",
-      },
-      itemsFromErp: items.length,
-      categoryNames: Array.from(new Set(items.map((i) => i.categoryName))),
-      wanted,
-      filtered: items.filter((i) => wanted.includes(i.categoryName.toUpperCase())).length,
-      disabledOverrideCount: disabled.size,
-    });
-  }
 
   const fabrics = items
     .filter((i) => wanted.includes(i.categoryName.toUpperCase()))
