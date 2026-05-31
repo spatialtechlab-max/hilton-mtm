@@ -95,21 +95,54 @@ function cleanSrc(src: string | undefined): string {
   return src;
 }
 
+/** Normalise an ERP free-text value: title-case, trim, treat blanks as undefined. */
+function clean(v: string | number | undefined | null): string | undefined {
+  if (v === undefined || v === null) return undefined;
+  const s = String(v).trim();
+  return s ? titleCase(s) : undefined;
+}
+
 function mapItem(item: ErpItem): LibraryItem {
-  const cloth = item.description ? titleCase(item.description) : undefined;
-  const detail = [item.brandName, item.design, item.origin].filter(Boolean).map(titleCase).join(" · ");
+  const composition = clean(item.description); // "100% Silk", "70% Wool & 30% Polyester"
+  const brand       = clean(item.brandName);
+  const pattern     = clean(item.design);
+  const color       = clean(item.color);
+  const shade       = clean(item.shade);
+  const origin      = clean(item.origin);
+  const weight      = clean(item.weight);     // "240 Grams", "270 Grams"
+  const size        = clean(item.size);
+  const code        = clean(item.code);
+
+  // The "cloth" line shown under the product name — composition is the most
+  // useful summary (everyone wants to know "is this 100% silk?").
+  const cloth = composition ?? ([brand, pattern].filter(Boolean).join(" · ") || undefined);
+
+  // Short editorial detail string used as the alt + description summary.
+  const detail = [brand, pattern, origin].filter(Boolean).join(" · ");
+
   const thumb = cleanSrc(item.thumbnail);
   const cleanGallery = (item.images ?? []).map(cleanSrc).filter((g) => g !== FALLBACK_SRC);
+
   return {
     sku: String(item.id),
     name: prettyName(item.name, item.categoryName),
     type: titleCase(item.categoryName),
-    cloth: cloth ?? detail,
+    cloth,
     price: `د.ب ${item.sellingPrice}`,
-    alt: `${titleCase(item.brandName)} ${titleCase(item.design)} ${titleCase(item.color)}`.trim(),
+    alt: [brand, pattern, color].filter(Boolean).join(" ").trim(),
     description: detail,
     media: { kind: "photo", src: thumb },
     gallery: cleanGallery.length ? cleanGallery : thumb !== FALLBACK_SRC ? [thumb] : undefined,
+    // Richer spec fields surfaced on the PDP details table.
+    brand,
+    code,
+    composition,
+    pattern,
+    color,
+    shade,
+    weight,
+    size,
+    origin,
   };
 }
 

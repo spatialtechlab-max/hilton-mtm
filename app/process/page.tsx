@@ -3,6 +3,7 @@ import { PageHero } from "@/components/PageHero";
 import { Reveal, SplitReveal } from "@/components/Reveal";
 import { CtaBanner } from "@/components/CtaBanner";
 import { Button } from "@/components/Button";
+import { PlaceholderBadge } from "@/components/PlaceholderBadge";
 
 const inStore = [
   {
@@ -96,7 +97,7 @@ export default function ProcessPage() {
       />
 
       {/* ─────────────── IN-STORE ─────────────── */}
-      <section className="py-24 md:py-36 border-t border-black/10">
+      <section className="py-14 md:py-20 border-t border-black/10">
         <div className="container-editorial">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 mb-16">
             <div className="lg:col-span-5">
@@ -115,6 +116,7 @@ export default function ProcessPage() {
             <div className="lg:col-span-6 lg:col-start-7">
               <Reveal delay={0.2}>
                 <div className="relative aspect-[4/5] overflow-hidden hover-grow">
+                  <PlaceholderBadge />
                   <Image
                     src="https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=1600&auto=format&fit=crop"
                     alt="The master tailor at work"
@@ -148,7 +150,7 @@ export default function ProcessPage() {
       </section>
 
       {/* ─────────────── ONLINE ─────────────── */}
-      <section className="py-24 md:py-36 bg-[var(--color-ivory-200)]">
+      <section className="py-14 md:py-20 bg-[var(--color-ivory-200)]">
         <div className="container-editorial">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 mb-16">
             <div className="lg:col-span-6 lg:order-2 lg:col-start-7">
@@ -172,6 +174,7 @@ export default function ProcessPage() {
             <div className="lg:col-span-5 lg:order-1">
               <Reveal delay={0.2}>
                 <div className="relative aspect-[4/5] overflow-hidden hover-grow">
+                  <PlaceholderBadge />
                   <Image
                     src="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=1600&auto=format&fit=crop"
                     alt="A bespoke jacket detail"
@@ -205,7 +208,7 @@ export default function ProcessPage() {
       </section>
 
       {/* ─────────────── TIERS ─────────────── */}
-      <section className="bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)] py-32">
+      <section className="bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)] py-16">
         <div className="container-editorial">
           <Reveal>
             <span className="text-eyebrow text-[var(--color-burgundy-300)]">Three levels of craft</span>

@@ -18,13 +18,14 @@ export const site = {
   ],
   social: {
     instagram: "https://instagram.com/hiltonmtm",
-    linkedin: "https://linkedin.com/company/hiltonmtm",
-    pinterest: "https://pinterest.com/hiltonmtm",
+    // LinkedIn and Pinterest hidden until the client provides real accounts.
   },
 };
 
 export const nav = [
-  { href: "/collection", label: "The Collection" },
+  // "The Collection" is hidden for now — it isn't in the client brief and the
+  // category libraries cover the same purpose. Uncomment to bring it back.
+  // { href: "/collection", label: "The Collection" },
   { href: "/customize", label: "Design Yours" },
   { href: "/process", label: "Made to Measure" },
   { href: "/heritage", label: "Heritage" },

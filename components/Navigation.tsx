@@ -8,10 +8,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Logo } from "./Logo";
 import { nav } from "@/lib/site";
 import { useAuth } from "./AuthProvider";
+import { useCart } from "@/lib/cart";
 
 export function Navigation() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { count: cartCount } = useCart();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -75,32 +77,37 @@ export function Navigation() {
           </nav>
 
           <div className="flex items-center gap-3 lg:gap-5">
+            {/* Cart — always visible, with item-count badge */}
+            <Link
+              href="/cart"
+              aria-label={`Your cart, ${cartCount} item${cartCount === 1 ? "" : "s"}`}
+              className={`hidden lg:inline-flex relative items-center justify-center w-10 h-10 transition-colors ${
+                onDark
+                  ? "text-[var(--color-ivory-100)]/85 hover:text-[var(--color-ivory-100)]"
+                  : "text-[var(--color-charcoal-800)] hover:text-[var(--color-burgundy-700)]"
+              }`}
+            >
+              <ShoppingBag size={20} strokeWidth={1.5} />
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center text-[0.6rem] font-medium tracking-normal bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] rounded-full">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+
             {/* Account / Sign in (desktop) */}
             {user ? (
-              <>
-                <Link
-                  href="/customize"
-                  aria-label="Your cart"
-                  className={`hidden lg:inline-flex items-center justify-center w-10 h-10 transition-colors ${
-                    onDark
-                      ? "text-[var(--color-ivory-100)]/85 hover:text-[var(--color-ivory-100)]"
-                      : "text-[var(--color-charcoal-800)] hover:text-[var(--color-burgundy-700)]"
-                  }`}
-                >
-                  <ShoppingBag size={20} strokeWidth={1.5} />
-                </Link>
-                <Link
-                  href="/account"
-                  aria-label="Your account"
-                  className={`hidden lg:inline-flex items-center justify-center w-10 h-10 transition-colors ${
-                    onDark
-                      ? "text-[var(--color-ivory-100)]/85 hover:text-[var(--color-ivory-100)]"
-                      : "text-[var(--color-charcoal-800)] hover:text-[var(--color-burgundy-700)]"
-                  }`}
-                >
-                  <User size={20} strokeWidth={1.5} />
-                </Link>
-              </>
+              <Link
+                href="/account"
+                aria-label="Your account"
+                className={`hidden lg:inline-flex items-center justify-center w-10 h-10 transition-colors ${
+                  onDark
+                    ? "text-[var(--color-ivory-100)]/85 hover:text-[var(--color-ivory-100)]"
+                    : "text-[var(--color-charcoal-800)] hover:text-[var(--color-burgundy-700)]"
+                }`}
+              >
+                <User size={20} strokeWidth={1.5} />
+              </Link>
             ) : (
               <Link
                 href="/account"
@@ -125,18 +132,21 @@ export function Navigation() {
               Book a Fitting
             </Link>
 
-            {/* Cart icon on mobile too when signed in */}
-            {user && (
-              <Link
-                href="/customize"
-                aria-label="Your cart"
-                className={`lg:hidden inline-flex items-center justify-center w-10 h-10 ${
-                  onDark ? "text-[var(--color-ivory-100)]" : "text-[var(--color-charcoal-900)]"
-                }`}
-              >
-                <ShoppingBag size={20} strokeWidth={1.5} />
-              </Link>
-            )}
+            {/* Cart icon on mobile — always visible */}
+            <Link
+              href="/cart"
+              aria-label={`Your cart, ${cartCount} item${cartCount === 1 ? "" : "s"}`}
+              className={`lg:hidden relative inline-flex items-center justify-center w-10 h-10 ${
+                onDark ? "text-[var(--color-ivory-100)]" : "text-[var(--color-charcoal-900)]"
+              }`}
+            >
+              <ShoppingBag size={20} strokeWidth={1.5} />
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center text-[0.6rem] font-medium tracking-normal bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] rounded-full">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}

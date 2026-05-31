@@ -45,6 +45,16 @@ export type LibraryItem = {
   description?: string;
   /** If set, the product page shows a "Customise" CTA into this flow. */
   customize?: CustomizeCategory;
+  /** Raw spec fields surfaced on the PDP details table — populated from ERP. */
+  brand?: string;
+  code?: string;
+  composition?: string;
+  pattern?: string;
+  color?: string;
+  shade?: string;
+  weight?: string;
+  size?: string;
+  origin?: string;
 };
 
 export type LibrarySection = {

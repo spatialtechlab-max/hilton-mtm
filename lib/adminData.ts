@@ -53,6 +53,16 @@ export async function updateOption(id: string, patch: OptionPatch): Promise<void
   if (error) throw error;
 }
 
+export type StepPatch = Partial<Pick<DbStep, "tier" | "active" | "title">>;
+
+export async function updateStep(slug: string, patch: StepPatch): Promise<void> {
+  const { error } = await supabase
+    .from("mtm_steps")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("slug", slug);
+  if (error) throw error;
+}
+
 export async function insertOption(row: {
   step_slug: string; value: string; label: string;
   note?: string | null; color?: string | null; image_url?: string | null;

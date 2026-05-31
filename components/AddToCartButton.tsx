@@ -2,17 +2,22 @@
 
 import { useState } from "react";
 import { ShoppingBag, Check } from "lucide-react";
+import { addToCart, type CartItem } from "@/lib/cart";
 
 /**
- * Frontend-only add-to-cart for now — gives visual confirmation. A real cart
- * store + persistence lands with the backend work.
+ * Adds the current product to the persistent cart (lib/cart.ts) and gives a
+ * brief visual confirmation. The nav's cart-count badge updates automatically
+ * via the cart-changed event.
  */
 export function AddToCartButton({
   label = "Add to cart",
   variant = "solid",
+  product,
 }: {
   label?: string;
   variant?: "solid" | "outline";
+  /** Product info to add to the cart. Pass omit `qty/id` — those are generated. */
+  product?: Omit<CartItem, "id" | "qty"> & { qty?: number };
 }) {
   const [added, setAdded] = useState(false);
 
@@ -27,6 +32,7 @@ export function AddToCartButton({
     <button
       type="button"
       onClick={() => {
+        if (product) addToCart(product);
         setAdded(true);
         window.setTimeout(() => setAdded(false), 2200);
       }}

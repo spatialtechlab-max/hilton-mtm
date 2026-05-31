@@ -1,8 +1,12 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
 import { Reveal } from "@/components/Reveal";
 import { CtaBanner } from "@/components/CtaBanner";
+import { PlaceholderBadge, isPlaceholder } from "@/components/PlaceholderBadge";
 
 const categories = [
   "All",
@@ -15,6 +19,19 @@ const categories = [
   "Accessories",
   "Eveningwear",
 ];
+
+// Each category routes the visitor to the matching library page so they
+// can shop the real catalogue (with real ERP-fetched products where present).
+const CATEGORY_HREF: Record<string, string> = {
+  "Suits":        "/library/tailoring#suits",
+  "Jackets":      "/library/tailoring#jackets",
+  "Overcoats":    "/library/tailoring#overcoats",
+  "Shirting":     "/library/shirts",
+  "Shoes":        "/library/shoes",
+  "Ties & Silks": "/library/ties",
+  "Accessories":  "/library/belts",
+  "Eveningwear":  "/library/tailoring",
+};
 
 type Item = {
   name: string;
@@ -108,6 +125,9 @@ const items: Item[] = [
 ];
 
 export default function CollectionPage() {
+  const [active, setActive] = useState<string>("All");
+  const visible = active === "All" ? items : items.filter((it) => it.cat === active);
+
   return (
     <>
       <PageHero
@@ -123,59 +143,67 @@ export default function CollectionPage() {
       {/* Filter row */}
       <section className="border-y border-black/10">
         <div className="container-editorial flex items-center gap-2 overflow-x-auto py-5 no-scrollbar">
-          {categories.map((c, i) => (
-            <button
-              key={c}
-              className={`text-eyebrow shrink-0 px-5 py-2 border transition-colors ${
-                i === 0
-                  ? "border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] bg-[var(--color-burgundy-50)]"
-                  : "border-transparent text-[var(--color-charcoal-700)] hover:text-[var(--color-burgundy-700)]"
-              }`}
-            >
-              {c}
-            </button>
-          ))}
+          {categories.map((c) => {
+            const isActive = c === active;
+            return (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setActive(c)}
+                className={`text-eyebrow shrink-0 px-5 py-2 border transition-colors ${
+                  isActive
+                    ? "border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] bg-[var(--color-burgundy-50)]"
+                    : "border-transparent text-[var(--color-charcoal-700)] hover:text-[var(--color-burgundy-700)]"
+                }`}
+              >
+                {c}
+              </button>
+            );
+          })}
         </div>
       </section>
 
       {/* Editorial grid */}
-      <section className="py-24 md:py-32">
+      <section className="py-16 md:py-24">
         <div className="container-editorial">
-          <div className="grid grid-cols-2 lg:grid-cols-6 gap-x-6 gap-y-16">
-            {items.map((item, i) => (
-              <Reveal
-                key={item.name}
-                delay={(i % 3) * 0.08}
-                className={`${
-                  item.scale === 2 ? "col-span-2 lg:col-span-3" : "col-span-1 lg:col-span-2"
-                }`}
-              >
-                <Link href="#" className="group block">
-                  <div className={`relative ${item.scale === 2 ? "aspect-[4/5]" : "aspect-[3/4]"} overflow-hidden bg-[var(--color-ivory-200)] hover-grow`}>
-                    <Image
-                      src={item.image}
-                      alt={item.name}
-                      fill
-                      sizes={item.scale === 2 ? "(min-width: 1024px) 50vw, 100vw" : "(min-width: 1024px) 33vw, 50vw"}
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="mt-6 flex items-start justify-between gap-4">
-                    <div>
-                      <span className="text-eyebrow text-[var(--color-charcoal-500)]">{item.cat}</span>
-                      <h3 className="text-display text-[1.85rem] mt-2 text-[var(--color-charcoal-900)] group-hover:text-[var(--color-burgundy-700)] transition-colors">
-                        {item.name}
-                      </h3>
-                      <p className="text-[0.875rem] text-[var(--color-charcoal-500)] mt-1">{item.cloth}</p>
-                    </div>
-                    <span className="text-[0.875rem] text-[var(--color-charcoal-700)] shrink-0 mt-1">
-                      {item.price}
-                    </span>
-                  </div>
-                </Link>
-              </Reveal>
-            ))}
-          </div>
+          {visible.length === 0 ? (
+            <p className="text-eyebrow text-[var(--color-charcoal-500)]">Nothing here yet.</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10">
+              {visible.map((item, i) => {
+                const href = CATEGORY_HREF[item.cat] ?? "/library/tailoring";
+                return (
+                  <Reveal key={item.name} delay={(i % 4) * 0.05}>
+                    <Link href={href} className="group block">
+                      <div className="relative aspect-[3/4] overflow-hidden bg-[var(--color-ivory-200)] hover-grow">
+                        {isPlaceholder(item.image) && <PlaceholderBadge />}
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="mt-4">
+                        <span className="text-eyebrow text-[var(--color-charcoal-500)]">{item.cat}</span>
+                        <h3 className="text-display text-[1.25rem] mt-1.5 leading-tight text-[var(--color-charcoal-900)] group-hover:text-[var(--color-burgundy-700)] transition-colors">
+                          {item.name}
+                        </h3>
+                        <p className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">{item.cloth}</p>
+                        <div className="mt-3 flex items-center justify-between border-t border-black/10 pt-3">
+                          <span className="text-[0.875rem] text-[var(--color-charcoal-900)]">{item.price}</span>
+                          <span className="text-eyebrow text-[var(--color-burgundy-700)] group-hover:underline">
+                            View →
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  </Reveal>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 

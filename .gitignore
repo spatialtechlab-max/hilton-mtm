@@ -14,3 +14,4 @@ public/products/*-bak/
 
 # TypeScript incremental build cache
 tsconfig.tsbuildinfo
+public/booklet/

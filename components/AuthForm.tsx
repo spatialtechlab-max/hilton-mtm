@@ -65,6 +65,17 @@ export function AuthForm({
     }
   }
 
+  async function handleForgot() {
+    setError(null); setNotice(null);
+    if (!email.trim()) { setError("Enter your email above first."); return; }
+    if (!isSupabaseConfigured) { setError("Authentication isn't configured yet."); return; }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: redirect });
+    setLoading(false);
+    if (error) { setError(error.message); return; }
+    setNotice("Check your email for a password reset link.");
+  }
+
   async function handleGoogle() {
     setError(null);
     if (!isSupabaseConfigured) {
@@ -120,7 +131,12 @@ export function AuthForm({
 
         {mode === "signin" && (
           <div className="text-right">
-            <button type="button" className="text-[0.8rem] text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors">
+            <button
+              type="button"
+              onClick={handleForgot}
+              disabled={loading}
+              className="text-[0.8rem] text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors disabled:opacity-60"
+            >
               Forgot password?
             </button>
           </div>

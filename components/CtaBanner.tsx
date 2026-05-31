@@ -25,7 +25,7 @@ export function CtaBanner({
 }) {
   return (
     <section className="bg-[var(--color-ivory-100)] border-t border-black/10">
-      <div className="container-editorial py-32 md:py-44 grid grid-cols-1 lg:grid-cols-12 gap-12 items-end">
+      <div className="container-editorial py-16 md:py-24 grid grid-cols-1 lg:grid-cols-12 gap-12 items-end">
         <div className="lg:col-span-8">
           <Reveal>
             <span className="text-eyebrow text-[var(--color-burgundy-700)]">An invitation</span>

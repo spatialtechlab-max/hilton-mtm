@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, Sparkles, Truck, Ruler, ShieldCheck, Scissors } 
 import { Reveal } from "@/components/Reveal";
 import { ProductGallery } from "@/components/ProductGallery";
 import { AddToCartButton } from "@/components/AddToCartButton";
+import { PlaceholderBadge, isPlaceholder } from "@/components/PlaceholderBadge";
 import {
   findProduct, productGallery, allProductParams, libraries,
   type CustomizeCategory, type ProductHit,
@@ -76,14 +77,30 @@ export default async function ProductPage({
     .slice(0, 4);
 
   const tailored = customize === "suit" || customize === "jacket";
+
+  // Build the spec table dynamically — every ERP field that's populated gets
+  // a row. For non-ERP items the static defaults still appear. Only fields
+  // with real data are rendered (no "—" placeholders).
+  const row = (label: string, value: string | undefined | null): { label: string; value: string } | null =>
+    value && String(value).trim() !== "" ? { label, value: String(value) } : null;
+
   const specs: { label: string; value: string }[] = [
-    { label: "Style", value: item.type },
-    ...(item.cloth ? [{ label: "Cloth", value: item.cloth }] : []),
-    { label: "Fabric weight", value: "Mid-weight" },
-    { label: "Collection", value: library.eyebrow.replace(/^The\s+/, "") },
-    { label: "Construction", value: tailored ? "Half-canvas · full canvas on Bespoke" : "Made to measure" },
-    { label: "Lead time", value: "2–4 weeks" },
-  ];
+    row("Style",        item.type),
+    row("Brand",        item.brand),
+    row("Composition",  item.composition ?? item.cloth),
+    row("Pattern",      item.pattern),
+    row("Color",        item.color),
+    row("Shade",        item.shade),
+    row("Weight",       item.weight),
+    row("Size",         item.size),
+    row("Origin",       item.origin),
+    row("Style code",   item.code),
+    row("SKU",          item.sku),
+    row("Collection",   library.eyebrow.replace(/^The\s+/, "")),
+    // House info — kept on every product regardless of source
+    row("Construction", tailored ? "Half-canvas · full canvas on Bespoke" : undefined),
+    row("Lead time",    "2–4 weeks"),
+  ].filter((r): r is { label: string; value: string } => r !== null);
 
   const howItWorks = [
     { icon: <Sparkles size={20} strokeWidth={1.4} />, title: "Refine your design", body: "Choose your fit, cloth, lapels, buttons, lining and more — every detail is yours." },
@@ -132,27 +149,30 @@ export default async function ProductPage({
               {/* CTAs */}
               <div className="mt-9 space-y-3">
                 {customize ? (
-                  <>
-                    <Link
-                      href={`/customize?category=${customize}&sku=${item.sku}`}
-                      className="w-full text-eyebrow inline-flex items-center justify-center gap-3 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-8 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors"
-                    >
-                      <Sparkles size={16} strokeWidth={1.5} /> {CUSTOMIZE_LABEL[customize]}
-                      <ArrowRight size={16} strokeWidth={1.5} />
-                    </Link>
-                    <AddToCartButton label="Add as shown" variant="outline" />
-                  </>
+                  <Link
+                    href={`/customize?category=${customize}&sku=${item.sku}`}
+                    className="w-full text-eyebrow inline-flex items-center justify-center gap-3 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-8 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors"
+                  >
+                    <Sparkles size={16} strokeWidth={1.5} /> {CUSTOMIZE_LABEL[customize]}
+                    <ArrowRight size={16} strokeWidth={1.5} />
+                  </Link>
                 ) : (
-                  <AddToCartButton label="Add to cart" variant="solid" />
+                  <AddToCartButton
+                    label="Add to cart"
+                    variant="solid"
+                    product={{
+                      sku: item.sku,
+                      name: item.name,
+                      type: item.type,
+                      price: item.price,
+                      priceNum: (() => { const m = String(item.price).match(/[\d,]+(?:\.\d+)?/); return m ? Number(m[0].replace(/,/g, "")) : 0; })(),
+                      image: gallery[0] ?? "/products/no-image.svg",
+                      contain,
+                      href: `/library/${library.slug}/${item.sku}`,
+                    }}
+                  />
                 )}
               </div>
-
-              {customize && (
-                <p className="mt-4 text-[0.82rem] text-[var(--color-charcoal-500)] leading-relaxed">
-                  “Add as shown” orders this piece in its house specification. “Customise” lets you
-                  choose every detail and your measurements.
-                </p>
-              )}
 
               {/* Reassurance */}
               <ul className="mt-9 pt-7 border-t border-black/10 space-y-3.5 text-[0.85rem] text-[var(--color-charcoal-700)]">
@@ -236,6 +256,7 @@ export default async function ProductPage({
                 return (
                   <Link key={it.sku} href={`/library/${library.slug}/${it.sku}`} className="group block">
                     <div className={`relative aspect-[4/5] overflow-hidden bg-[var(--color-ivory-200)] hover-grow`}>
+                      {it.media.kind === "photo" && isPlaceholder(it.media.src) && <PlaceholderBadge />}
                       {it.media.kind === "photo" && (
                         <Image
                           src={it.media.src}

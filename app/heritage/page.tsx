@@ -2,6 +2,7 @@ import Image from "next/image";
 import { PageHero } from "@/components/PageHero";
 import { Reveal, SplitReveal } from "@/components/Reveal";
 import { CtaBanner } from "@/components/CtaBanner";
+import { PlaceholderBadge } from "@/components/PlaceholderBadge";
 
 const timeline = [
   {
@@ -73,7 +74,7 @@ export default function HeritagePage() {
       />
 
       {/* Statement */}
-      <section className="py-24 md:py-36 border-t border-black/10">
+      <section className="py-14 md:py-20 border-t border-black/10">
         <div className="container-editorial grid grid-cols-1 lg:grid-cols-12 gap-12">
           <div className="lg:col-span-4">
             <Reveal>
@@ -109,6 +110,7 @@ export default function HeritagePage() {
       {/* Atelier image full bleed */}
       <section>
         <div className="relative h-[60vh] min-h-[420px] w-full">
+          <PlaceholderBadge />
           <Image
             src="https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=2400&auto=format&fit=crop"
             alt="The Hilton Tailoring House atelier floor in Manama"
@@ -120,7 +122,7 @@ export default function HeritagePage() {
       </section>
 
       {/* Timeline */}
-      <section className="py-32 md:py-44">
+      <section className="py-16 md:py-24">
         <div className="container-editorial grid grid-cols-1 lg:grid-cols-12 gap-12">
           <div className="lg:col-span-4">
             <Reveal>
@@ -153,7 +155,7 @@ export default function HeritagePage() {
       </section>
 
       {/* Values */}
-      <section className="py-32 md:py-44 bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)]">
+      <section className="py-16 md:py-24 bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)]">
         <div className="container-editorial">
           <Reveal>
             <span className="text-eyebrow text-[var(--color-burgundy-300)]">The house rules</span>

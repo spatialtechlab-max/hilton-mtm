@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import { Check } from "lucide-react";
 import { Logo } from "./Logo";
 import { nav, site } from "@/lib/site";
 
@@ -8,6 +12,18 @@ import { nav, site } from "@/lib/site";
  * background so the visitor can still see where the page ends.
  */
 export function Footer() {
+  const [email, setEmail] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
+
+  function handleSubscribe(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    // Frontend-only confirmation for now — wire to a real list when chosen.
+    setSubscribed(true);
+    setEmail("");
+    window.setTimeout(() => setSubscribed(false), 4000);
+  }
+
   return (
     <footer className="bg-[var(--color-ivory-200)] text-[var(--color-charcoal-900)] border-t border-black/5">
       <div className="container-editorial pt-24 pb-10">
@@ -66,28 +82,28 @@ export function Footer() {
             <p className="text-[0.95rem] text-[var(--color-charcoal-800)] leading-relaxed mb-5">
               A quarterly letter on cloth, craft, and the things we are working on.
             </p>
-            <form className="flex border-b border-[var(--color-charcoal-900)]/25 focus-within:border-[var(--color-burgundy-700)] transition-colors">
+            <form
+              onSubmit={handleSubscribe}
+              className="flex border-b border-[var(--color-charcoal-900)]/25 focus-within:border-[var(--color-burgundy-700)] transition-colors"
+            >
               <input
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="Your email"
+                required
                 className="flex-1 bg-transparent py-3 text-[0.95rem] placeholder:text-[var(--color-charcoal-500)]/70 focus:outline-none"
               />
               <button
                 type="submit"
-                className="text-eyebrow text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)] transition-colors py-3 pl-4"
+                className="text-eyebrow text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)] transition-colors py-3 pl-4 inline-flex items-center gap-2"
               >
-                Subscribe
+                {subscribed ? <><Check size={14} strokeWidth={1.5} /> Thank you</> : "Subscribe"}
               </button>
             </form>
             <div className="flex gap-6 mt-8 text-eyebrow text-[var(--color-charcoal-700)]">
               <a href={site.social.instagram} className="hover:text-[var(--color-burgundy-700)] transition-colors">
                 Instagram
-              </a>
-              <a href={site.social.linkedin} className="hover:text-[var(--color-burgundy-700)] transition-colors">
-                LinkedIn
-              </a>
-              <a href={site.social.pinterest} className="hover:text-[var(--color-burgundy-700)] transition-colors">
-                Pinterest
               </a>
             </div>
           </div>
@@ -96,9 +112,9 @@ export function Footer() {
         <div className="mt-24 pt-8 border-t border-black/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-[0.78rem] text-[var(--color-charcoal-500)]">
           <span>© {new Date().getFullYear()} {site.name}. All rights reserved.</span>
           <div className="flex gap-6">
-            <Link href="#" className="hover:text-[var(--color-burgundy-700)] transition-colors">Privacy</Link>
-            <Link href="#" className="hover:text-[var(--color-burgundy-700)] transition-colors">Terms</Link>
-            <Link href="#" className="hover:text-[var(--color-burgundy-700)] transition-colors">Accessibility</Link>
+            <Link href="/contact" className="hover:text-[var(--color-burgundy-700)] transition-colors">Privacy</Link>
+            <Link href="/contact" className="hover:text-[var(--color-burgundy-700)] transition-colors">Terms</Link>
+            <Link href="/contact" className="hover:text-[var(--color-burgundy-700)] transition-colors">Accessibility</Link>
           </div>
         </div>
        </div>

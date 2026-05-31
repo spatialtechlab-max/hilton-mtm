@@ -12,6 +12,8 @@ export type Option = {
   color?: string;
   /** For "gallery" steps — an image src. */
   image?: string;
+  /** Add-on price for picking this option, in BHD. 0 = included. Admin can override. */
+  surcharge?: number;
 };
 
 /** How a step's options are rendered. */
@@ -67,9 +69,9 @@ export const steps: Step[] = [
     description:
       "The Two-Button Jacket is the foundation of any wardrobe — versatile, balanced, and at home in any setting. The Three-Button speaks of heritage and tradition; the One-Button is sleeker, made for cleaner lines and a slightly more relaxed jacket.",
     options: [
-      { value: "one",   label: "One button" },
-      { value: "two",   label: "Two buttons", note: "The classic" },
-      { value: "three", label: "Three buttons" },
+      { value: "one",   label: "One button",   surcharge: 20 },
+      { value: "two",   label: "Two buttons",  note: "The classic", surcharge: 0 },
+      { value: "three", label: "Three buttons", surcharge: 20 },
     ],
     defaultValue: "two",
   },
@@ -81,10 +83,10 @@ export const steps: Step[] = [
     description:
       "The Notch Lapel is the most common and the most quietly correct — at home in business and beyond. The Peak Lapel carries more drama and is associated with formal and evening wear. The Slim variants narrow the spread for a sharper, more contemporary line.",
     options: [
-      { value: "notch",      label: "Notch lapel" },
-      { value: "notch-slim", label: "Notch slim" },
-      { value: "peak",       label: "Peak lapel" },
-      { value: "peak-slim",  label: "Peak slim" },
+      { value: "notch",      label: "Notch lapel", surcharge: 0 },
+      { value: "notch-slim", label: "Notch slim",  surcharge: 15 },
+      { value: "peak",       label: "Peak lapel",  surcharge: 60 },
+      { value: "peak-slim",  label: "Peak slim",   surcharge: 60 },
     ],
   },
   {
@@ -95,9 +97,9 @@ export const steps: Step[] = [
     description:
       "No Vents keeps the silhouette seamless and is closest to the original tailoring tradition. A Single Vent is unfussy and works well across most builds. Double Vents (the most common today) flatter movement, sitting cleanly when the hands are in the pockets.",
     options: [
-      { value: "none", label: "No vents" },
-      { value: "one",  label: "Single vent" },
-      { value: "two",  label: "Double vents", note: "The modern default" },
+      { value: "none", label: "No vents",     surcharge: 0 },
+      { value: "one",  label: "Single vent",  surcharge: 25 },
+      { value: "two",  label: "Double vents", note: "The modern default", surcharge: 35 },
     ],
     defaultValue: "two",
   },
@@ -109,11 +111,11 @@ export const steps: Step[] = [
     description:
       "Flat pockets sit clean inside the line of the jacket. Flapped pockets are the most traditional choice. Slanted pockets — sometimes with a small Ticket pocket above — were a hacking-jacket detail that has stayed because it elongates the torso.",
     options: [
-      { value: "flat-noflap",    label: "Flat — no flap" },
-      { value: "flat-flap",      label: "Flat with flap" },
-      { value: "slant-noflap",   label: "Slanted — no flap" },
-      { value: "slant-flap",     label: "Slanted with flap" },
-      { value: "slant-ticket",   label: "Slanted with ticket pocket" },
+      { value: "flat-noflap",    label: "Flat — no flap",            surcharge: 0 },
+      { value: "flat-flap",      label: "Flat with flap",            surcharge: 0 },
+      { value: "slant-noflap",   label: "Slanted — no flap",         surcharge: 20 },
+      { value: "slant-flap",     label: "Slanted with flap",         surcharge: 25 },
+      { value: "slant-ticket",   label: "Slanted with ticket pocket", surcharge: 45 },
     ],
     defaultValue: "flat-flap",
   },
@@ -124,10 +126,10 @@ export const steps: Step[] = [
     subtitle: "A small extra pocket above the right hip.",
     description:
       "The ticket pocket — a smaller pocket set just above the right-hand pocket — is a British sporting detail. Add it for character, or leave it for the cleaner line.",
-    kind: "choice",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
     options: [
-      { value: "none", label: "No ticket pocket" },
-      { value: "with", label: "Add ticket pocket" },
+      { value: "none", label: "Without ticket pocket", surcharge: 0 },
+      { value: "with", label: "With ticket pocket",    surcharge: 40 },
     ],
   },
   {
@@ -156,9 +158,9 @@ export const steps: Step[] = [
     description:
       "No Pleats is the modern, sleek-fronted trouser. A Single Pleat adds room through the hip without breaking the line. Double Pleats restore the classic English drape — they reward heavier cloths and slightly looser cuts.",
     options: [
-      { value: "none",   label: "No pleats" },
-      { value: "single", label: "Single pleat" },
-      { value: "double", label: "Double pleats" },
+      { value: "none",   label: "No pleats",     surcharge: 0 },
+      { value: "single", label: "Single pleat",  surcharge: 15 },
+      { value: "double", label: "Double pleats", surcharge: 25 },
     ],
   },
   {
@@ -167,14 +169,16 @@ export const steps: Step[] = [
     title: "Slip in the back pocket",
     subtitle: "The rear pocket of the trouser.",
     description:
-      "A welted back pocket — with or without a button to close it. Useful, discreet, and entirely your call.",
-    kind: "choice",
+      "The left or right single pocket is ideal for minimalists; the double pocket option suits those with a penchant for pockets. The single or double pockets with buttons are for those who like an extra bit of detailing.",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
     options: [
-      { value: "button", label: "Welted · with button" },
-      { value: "plain",  label: "Welted · no button" },
-      { value: "none",   label: "No back pocket" },
+      { value: "left-single",    label: "Left single pocket",     surcharge: 0  },
+      { value: "right-single",   label: "Right single pocket",    surcharge: 0  },
+      { value: "double",         label: "Double pocket",          surcharge: 20 },
+      { value: "single-button",  label: "Single pocket · button", surcharge: 25 },
+      { value: "double-buttons", label: "Double pocket · buttons", surcharge: 40 },
     ],
-    defaultValue: "button",
+    defaultValue: "left-single",
   },
   {
     slug: "add-waistcoat",
@@ -185,8 +189,8 @@ export const steps: Step[] = [
       "Add a matching waistcoat to your commission. A three-piece reads more formal and keeps its line even with the jacket off. Priced as an add-on.",
     kind: "choice",
     options: [
-      { value: "no",  label: "No waistcoat" },
-      { value: "yes", label: "Add a waistcoat", note: "+ add-on cost" },
+      { value: "no",  label: "No waistcoat",   surcharge: 0 },
+      { value: "yes", label: "Add a waistcoat", note: "+ add-on cost", surcharge: 250 },
     ],
     defaultValue: "no",
   },
@@ -197,12 +201,14 @@ export const steps: Step[] = [
     subtitle: "The cut of the waistcoat front.",
     description:
       "Single- or double-breasted, with a straight or shawl lapel — the waistcoat sets the tone of the three-piece.",
-    kind: "choice",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
     options: [
-      { value: "single", label: "Single-breasted" },
-      { value: "double", label: "Double-breasted" },
-      { value: "shawl",  label: "Shawl lapel" },
+      { value: "three-buttons", label: "Three buttons", surcharge: 0  },
+      { value: "four-buttons",  label: "Four buttons",  surcharge: 15 },
+      { value: "five-buttons",  label: "Five buttons",  surcharge: 25 },
+      { value: "four-lapel",    label: "Four · lapel",  surcharge: 40 },
     ],
+    defaultValue: "five-buttons",
   },
   {
     slug: "waistcoat-lining",
@@ -211,11 +217,12 @@ export const steps: Step[] = [
     subtitle: "The back and lining of the waistcoat.",
     description:
       "A matching self-cloth back for a refined finish, or a satin back in the traditional manner.",
-    kind: "choice",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
     options: [
-      { value: "cloth", label: "Self-cloth back" },
-      { value: "satin", label: "Satin back" },
+      { value: "with-lining", label: "Waistcoat with lining", surcharge: 0  },
+      { value: "with-fabric", label: "Waistcoat with fabric", surcharge: 30 },
     ],
+    defaultValue: "with-lining",
   },
   {
     slug: "cuffs-trouser",
@@ -225,8 +232,8 @@ export const steps: Step[] = [
     description:
       "Trousers without cuffs read cleaner and more contemporary. Trousers with cuffs (turn-ups) hold a sharper fold and add a quiet weight to the trouser — recommended on medium and tall builds, and the natural partner to a pleated front.",
     options: [
-      { value: "none", label: "Without cuffs" },
-      { value: "with", label: "With cuffs" },
+      { value: "none", label: "Without cuffs", surcharge: 0 },
+      { value: "with", label: "With cuffs",    surcharge: 25 },
     ],
   },
   {
@@ -236,10 +243,10 @@ export const steps: Step[] = [
     subtitle: "Buttons for braces inside the waistband.",
     description:
       "Add interior buttons for braces (suspenders) — the traditional way to hold a trouser, and kinder to the waistband than a belt.",
-    kind: "choice",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
     options: [
-      { value: "none", label: "No brace buttons" },
-      { value: "with", label: "Add brace buttons" },
+      { value: "none", label: "Without suspender buttons", surcharge: 0  },
+      { value: "with", label: "With suspender buttons",    surcharge: 30 },
     ],
   },
   {
@@ -250,8 +257,8 @@ export const steps: Step[] = [
     description:
       "With Belt Loops is for those who wear a belt as part of their tailoring — accentuating the line at the waist. Without Belt Loops gives a cleaner waistband and is the choice for braces, side-adjusters, or the unbroken visual line of a properly fitted trouser.",
     options: [
-      { value: "with", label: "With belt loops" },
-      { value: "none", label: "Without belt loops" },
+      { value: "with", label: "With belt loops",    surcharge: 0 },
+      { value: "none", label: "Without belt loops", surcharge: 0 },
     ],
   },
   {
@@ -261,12 +268,12 @@ export const steps: Step[] = [
     subtitle: "The working cuff of the jacket.",
     description:
       "How many working buttons sit at the cuff — and whether they kiss or stack. A quiet mark of hand tailoring.",
-    kind: "choice",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
     options: [
-      { value: "two",          label: "Two buttons" },
-      { value: "three",        label: "Three buttons" },
-      { value: "four",         label: "Four · kissing" },
-      { value: "four-stacked", label: "Four · stacked" },
+      { value: "three",        label: "Three buttons",    surcharge: 0  },
+      { value: "four",         label: "Four buttons",     surcharge: 15 },
+      { value: "four-kissing", label: "Four · kissing",   surcharge: 30 },
+      { value: "five",         label: "Five buttons",     surcharge: 25 },
     ],
     defaultValue: "four",
   },
@@ -278,9 +285,54 @@ export const steps: Step[] = [
     description:
       "With hand-picked stitching, a fine line of pick-stitch follows the lapel, the lining edges, and the breast pocket — the discreet signature of hand-finished tailoring. Without keeps the lines clean and seamless, in the modern Italian tradition.",
     options: [
-      { value: "with",    label: "With hand stitching" },
-      { value: "without", label: "Without" },
+      { value: "with",    label: "With hand stitching", surcharge: 90 },
+      { value: "without", label: "Without",             surcharge: 0 },
     ],
+  },
+  {
+    slug: "double-breasted",
+    eyebrow: "Double Breasted",
+    title: "Go double breasted",
+    subtitle: "Two rows of buttons, twice the presence.",
+    description:
+      "Double Breasted Suits spell sophistication and attention to detail — perfect for formal and business occasions. Meant to be worn buttoned up, they have an array of buttons on both halves of the jacket. The Patch Pocket variation is a daring amalgamation of formal and casual. The Patch Valet Pocket adds a neat breast pocket on top.",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
+    options: [
+      { value: "regular",      label: "Double breasted",             surcharge: 0   },
+      { value: "patch-pocket", label: "With patch pocket",           surcharge: 40  },
+      { value: "patch-valet",  label: "With patch + valet pocket",   surcharge: 65  },
+    ],
+    defaultValue: "regular",
+  },
+  {
+    slug: "tuxedo",
+    eyebrow: "Tuxedo",
+    title: "What's your tuxedo type?",
+    subtitle: "Satin detailing for the evening.",
+    description:
+      "Tuxedos stand apart from suits by making use of satin in the lapels, buttons and side-strip on the pants. The Peak Lapel Tuxedo is for a complete formal look and considered a 'power-dressing' move. The Shawl Collar Tuxedo seamlessly runs around the neck, ideal for evening wear at high-end events. The Slim Shawl Collar variation best suits leaner figures.",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
+    options: [
+      { value: "peak-lapel",  label: "Peak lapel tuxedo",       surcharge: 0   },
+      { value: "shawl-collar",label: "Shawl collar tuxedo",     surcharge: 30  },
+      { value: "slim-shawl",  label: "Slim shawl collar tuxedo",surcharge: 50  },
+    ],
+    defaultValue: "peak-lapel",
+  },
+  {
+    slug: "sport-jacket",
+    eyebrow: "Sport a Jacket",
+    title: "Sport a jacket",
+    subtitle: "The casual side of tailoring.",
+    description:
+      "The Sports Jacket embodies a more rugged feel with sturdier fabrics, designed for looser fits than suit jackets. Patch pockets break up the lines and keep you from looking overdressed. Hand stitching adds unobtrusive detailing across key areas of the jacket.",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
+    options: [
+      { value: "regular",        label: "Sports jacket",         surcharge: 0   },
+      { value: "patch-pocket",   label: "With patch pocket",     surcharge: 40  },
+      { value: "hand-stitching", label: "With hand stitching",   surcharge: 90  },
+    ],
+    defaultValue: "regular",
   },
   {
     slug: "lining",
@@ -290,9 +342,9 @@ export const steps: Step[] = [
     description:
       "A Full Lining gives the jacket its structure and the classic formal feel. A Half Lining keeps the back light — ideal for warmer climates without losing the line. Unlined is at its most relaxed: a summer-weight, travel-ready garment.",
     options: [
-      { value: "full", label: "Full lining" },
-      { value: "half", label: "Half lining" },
-      { value: "none", label: "No lining" },
+      { value: "full", label: "Full lining", surcharge: 0 },
+      { value: "half", label: "Half lining", surcharge: 0 },
+      { value: "none", label: "No lining",   surcharge: 0 },
     ],
   },
   {
@@ -304,11 +356,11 @@ export const steps: Step[] = [
       "Beyond the house basics — patterned and printed silks for the lining, seen only when the jacket opens. (Placeholder swatches; the house gallery uploads via the admin panel.)",
     kind: "gallery",
     options: [
-      { value: "none",      label: "Keep it plain" },
-      { value: "paisley",   label: "Cardinal Paisley", image: "/products/ties/HBTS001.webp" },
-      { value: "botanical", label: "Botanical Print",  image: "/products/ties/HBTS002.webp" },
-      { value: "foulard",   label: "Estate Foulard",   image: "/products/ties/HBTS003.webp" },
-      { value: "medallion", label: "Garnet Medallion", image: "/products/ties/HBTS080.webp" },
+      { value: "none",      label: "Keep it plain",     surcharge: 0 },
+      { value: "paisley",   label: "Cardinal Paisley",  image: "/products/ties/HBTS001.webp", surcharge: 80 },
+      { value: "botanical", label: "Botanical Print",   image: "/products/ties/HBTS002.webp", surcharge: 80 },
+      { value: "foulard",   label: "Estate Foulard",    image: "/products/ties/HBTS003.webp", surcharge: 80 },
+      { value: "medallion", label: "Garnet Medallion",  image: "/products/ties/HBTS080.webp", surcharge: 80 },
     ],
     defaultValue: "none",
   },
@@ -321,10 +373,70 @@ export const steps: Step[] = [
       "A full floating canvas runs the length of the jacket and moulds to the body over time — the hallmark of the finest tailoring. A half canvas structures the chest and lapel only. (Illustration to be provided.)",
     kind: "choice",
     options: [
-      { value: "full", label: "Full canvas" },
-      { value: "half", label: "Half canvas" },
+      { value: "full", label: "Full canvas", surcharge: 150 },
+      { value: "half", label: "Half canvas", surcharge: 0 },
     ],
     defaultValue: "full",
+  },
+  {
+    slug: "tux-shirt",
+    eyebrow: "Tuxedo shirt",
+    title: "Tux your shirt",
+    subtitle: "For black-tie evenings.",
+    description:
+      "Choose between the Tuxedo Shirt or Tuxedo Shirt with Studs. The former is the traditional style — sharp wing-tipped collar with a pleated bib down the front. The latter offers an ornamental upgrade, replacing the first four buttons with stylish studs.",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
+    options: [
+      { value: "tuxedo",       label: "Tuxedo shirt",            surcharge: 0  },
+      { value: "tuxedo-studs", label: "Tuxedo shirt with studs", surcharge: 35 },
+    ],
+    defaultValue: "tuxedo",
+  },
+  {
+    slug: "back-pleats",
+    eyebrow: "Back pleats",
+    title: "Pleats on your six",
+    subtitle: "How the back of the shirt sits.",
+    description:
+      "Without Back Pleats is the minimalist's choice for a clean, slim-fit shirt. Single Pleat is ideal for sloping shoulders — the most common style, allowing for mobility. Side Pleats are a subtler way of having back pleats, tailored to align with the wearer's back. Side Pleats with Darts add folded fabric on either side for a better-contoured fit.",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
+    options: [
+      { value: "without",    label: "Without pleats",       surcharge: 0  },
+      { value: "single",     label: "Single pleat",         surcharge: 10 },
+      { value: "side",       label: "Side pleats",          surcharge: 15 },
+      { value: "side-darts", label: "Side pleats with darts", surcharge: 25 },
+    ],
+    defaultValue: "single",
+  },
+  {
+    slug: "shirt-pocket",
+    eyebrow: "Shirt pocket",
+    title: "Search our pockets",
+    subtitle: "The detail on the chest.",
+    description:
+      "Shirt pockets, though mostly ceremonial, add depth, detail and utility. Without Pocket is best for very formal occasions — elegance and order. With Pocket or Pocket with Flap shirts are ideal for more casual settings.",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
+    options: [
+      { value: "without",    label: "Without pocket",    surcharge: 0  },
+      { value: "with",       label: "With pocket",       surcharge: 10 },
+      { value: "with-flaps", label: "Pockets with flaps",surcharge: 20 },
+    ],
+    defaultValue: "without",
+  },
+  {
+    slug: "placket",
+    eyebrow: "Placket",
+    title: "Placket your shirt",
+    subtitle: "How the buttons sit on the front.",
+    description:
+      "Without Placket (or Invisible Placket) is a French-style tailored placket that folds the fabric inside to disguise the button stitches — clean and contemporary. With Placket (or Front Placket) is for traditionalists, outlining the button strip. Hidden Button (or Fly Front Placket) covers the buttons completely — perfect for highlighting bow-ties.",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
+    options: [
+      { value: "without", label: "Without placket", surcharge: 0  },
+      { value: "with",    label: "With placket",    surcharge: 0  },
+      { value: "hidden",  label: "Hidden button",   surcharge: 20 },
+    ],
+    defaultValue: "with",
   },
   {
     slug: "collar",
@@ -456,15 +568,15 @@ export const measurementGroups: MeasurementGroup[] = [
     intro:
       "Jacket and shirt measurements. Stand naturally — let the tape sit on the skin or over a thin shirt.",
     items: [
-      { slug: "shirt-neck",          label: "Shirt neck",            helper: "Around the base of the neck with one finger of room." },
-      { slug: "shoulder",            label: "Shoulder",              helper: "Across the back, from one shoulder seam to the other." },
-      { slug: "chest",               label: "Chest",                 helper: "Around the fullest part of the chest, under the arms." },
-      { slug: "stomach",             label: "Stomach",               helper: "Around the navel — relaxed, not pulled in." },
-      { slug: "jacket-hips",         label: "Jacket hips",           helper: "Around the seat, where the jacket will sit." },
-      { slug: "jacket-shirt-length", label: "Jacket / shirt length", helper: "From the base of the neck, down the spine, to the desired hem." },
-      { slug: "sleeve-length",       label: "Sleeve length",         helper: "From the shoulder bone to the wrist bone, arm slightly bent." },
-      { slug: "bicep",               label: "Bicep",                 helper: "Around the fullest part of the relaxed bicep." },
-      { slug: "wrist",               label: "Wrist",                 helper: "Snug around the wrist bone." },
+      { slug: "shirt-neck",          label: "Neck",                  helper: "Measure around the neck at the height of your collar, just under the Adam's apple — taken along the lower section of the neck." },
+      { slug: "shoulder",            label: "Shoulder",              helper: "Measure across the upper back, from the edge of one shoulder to the other." },
+      { slug: "chest",               label: "Chest",                 helper: "Position the tape around the fullest part of the chest — usually just under the armpits and across the shoulder blades, level with the nipples." },
+      { slug: "stomach",             label: "Stomach",               helper: "With the tape parallel to your navel, wrap it around the waist." },
+      { slug: "jacket-hips",         label: "Jacket hips",           helper: "Take the circumference around your hips at the broadest part." },
+      { slug: "jacket-shirt-length", label: "Jacket / shirt length", helper: "Measure straight down the front, from the base of the neck to the point level with your knuckles." },
+      { slug: "sleeve-length",       label: "Sleeve length",         helper: "Measure from the shoulder, across a slightly bent elbow, to just before the wrist bone — or wherever you'd like the cuff to sit." },
+      { slug: "bicep",               label: "Bicep",                 helper: "With the arm relaxed, measure the circumference around the fullest part of the bicep." },
+      { slug: "wrist",               label: "Wrist",                 helper: "Measure the circumference around the wrist bone." },
     ],
   },
   {
@@ -473,11 +585,11 @@ export const measurementGroups: MeasurementGroup[] = [
     intro:
       "Trouser measurements. Wear flat shoes and have the trouser break in mind.",
     items: [
-      { slug: "waist",        label: "Trouser waist",  helper: "Around the natural waist where the trousers will sit." },
-      { slug: "crotch",       label: "Crotch / rise",  helper: "From the centre of the waistband, between the legs, back up to the waist." },
-      { slug: "thigh",        label: "Thigh",          helper: "Around the fullest part of the upper thigh." },
-      { slug: "knee",         label: "Knee",           helper: "Around the kneecap, leg relaxed." },
-      { slug: "pants-length", label: "Trouser length", helper: "Outseam — waist down the side to the break at the shoe." },
+      { slug: "waist",        label: "Waist",          helper: "Measure around the waist at the point where your belt typically sits." },
+      { slug: "crotch",       label: "Crotch",         helper: "Measure from the top of the front waistband, down under the crotch seam, and back up to the top of the rear waistband." },
+      { slug: "thigh",        label: "Thigh",          helper: "Measure the circumference of the thigh at its largest point." },
+      { slug: "knee",         label: "Knee",           helper: "Measure the circumference of the knee at its broadest point." },
+      { slug: "pants-length", label: "Pants length",   helper: "Measure from the top of the waistband down the outside of the leg to the floor." },
     ],
   },
 ];
@@ -502,19 +614,28 @@ const STEP_CATEGORIES: Record<string, StepCategory[]> = {
   "lining-color":    ["suit", "jacket"],
   pleats:            ["suit", "trouser"],
   "back-pocket":     ["suit", "trouser"],
-  "add-waistcoat":   ["suit", "jacket"],
-  "waistcoat-style": ["suit", "jacket"],
-  "waistcoat-lining":["suit", "jacket"],
+  // Waistcoat is the suit-only "three-piece" upsell — never applies to a
+  // standalone jacket commission.
+  "add-waistcoat":   ["suit"],
+  "waistcoat-style": ["suit"],
+  "waistcoat-lining":["suit"],
   "cuffs-trouser":   ["suit", "trouser"],
   suspenders:        ["suit", "trouser"],
   belt:              ["suit", "trouser"],
   "sleeve-buttons":  ["suit", "jacket"],
   stitching:         ["suit", "jacket"],
+  "sport-jacket":    ["jacket"],
+  tuxedo:            ["suit", "jacket"],
+  "double-breasted": ["suit", "jacket"],
   lining:            ["suit", "jacket"],
   "lining-fancy":    ["suit", "jacket"],
   canvas:            ["suit", "jacket"],
   collar:            ["shirt"],
   "cuffs-shirt":     ["shirt"],
+  placket:           ["shirt"],
+  "shirt-pocket":    ["shirt"],
+  "back-pleats":     ["shirt"],
+  "tux-shirt":       ["shirt"],
 };
 
 // Minimum package tier that unlocks each step (suits/jackets only).
@@ -525,9 +646,12 @@ const STEP_TIER: Record<string, TierLevel> = {
   "waistcoat-style": "essential", "waistcoat-lining": "essential",
   "cuffs-trouser": "signature", suspenders: "signature", belt: "signature",
   "sleeve-buttons": "signature", stitching: "signature", lining: "signature",
-  "lining-fancy": "signature",
+  "lining-fancy": "signature", "sport-jacket": "signature",
+  tuxedo: "signature", "double-breasted": "signature",
   canvas: "bespoke",
-  collar: "essential", "cuffs-shirt": "essential",
+  collar: "essential", "cuffs-shirt": "essential", placket: "essential",
+  "shirt-pocket": "essential", "back-pleats": "essential",
+  "tux-shirt": "signature",
 };
 
 // Steps shown only when another selection is set (the waistcoat add-on).
@@ -608,6 +732,7 @@ export function categoryHasTiers(cat: StepCategory): boolean {
 export type SeedOption = {
   value: string; label: string; note: string | null;
   color: string | null; image: string | null; sortOrder: number;
+  surcharge: number;
 };
 export type SeedStep = {
   slug: string; title: string; eyebrow: string; subtitle: string; description: string;
@@ -637,6 +762,7 @@ export function getSeedConfig(): SeedStep[] {
       note: o.note ?? null,
       color: o.color ?? null,
       image: o.image ?? null,
+      surcharge: o.surcharge ?? 0,
       sortOrder: j,
     })),
   }));

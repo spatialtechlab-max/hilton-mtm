@@ -124,8 +124,6 @@ export default function ContactPage() {
                 <h3 className="text-eyebrow text-[var(--color-charcoal-500)]">Follow the house</h3>
                 <div className="flex gap-6 mt-4 text-eyebrow">
                   <a href={site.social.instagram} className="link-underline">Instagram</a>
-                  <a href={site.social.linkedin} className="link-underline">LinkedIn</a>
-                  <a href={site.social.pinterest} className="link-underline">Pinterest</a>
                 </div>
               </div>
             </Reveal>

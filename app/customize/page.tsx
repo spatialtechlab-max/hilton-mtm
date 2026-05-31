@@ -21,10 +21,24 @@ import { buildSpecPdf } from "@/lib/specSheet";
 import { AuthForm } from "@/components/AuthForm";
 import { useAuth } from "@/components/AuthProvider";
 
-type Phase = "tier" | "spec" | "measurements" | "summary" | "auth" | "cart";
+type Phase = "fabric" | "tier" | "spec" | "measurements" | "summary" | "auth" | "cart";
 
 // Phases that belong to the design flow (show the step progress dock + wizard controls).
-const DESIGN_PHASES: Phase[] = ["tier", "spec", "measurements", "summary"];
+const DESIGN_PHASES: Phase[] = ["fabric", "tier", "spec", "measurements", "summary"];
+
+type Fabric = {
+  sku: string;
+  name: string;
+  brand: string;
+  composition: string;
+  pattern: string;
+  color: string;
+  weight: string;
+  origin: string;
+  price: string;
+  priceNum: number;
+  image: string;
+};
 
 const CATEGORY_COPY: Record<StepCategory, { h1: string; intro: string }> = {
   suit: {
@@ -54,9 +68,12 @@ export default function CustomizePage() {
   const [measurements, setMeasurements] = useState<MeasurementValues>(defaultMeasurements);
   const [unit,         setUnit]         = useState<MeasurementUnit>("cm");
   const [stepIdx, setStepIdx]       = useState(0);
-  const [phase, setPhase]           = useState<Phase>("tier");
+  const [phase, setPhase]           = useState<Phase>("fabric");
   const [tier, setTier]             = useState<string>("signature");
   const [downloading, setDownloading] = useState(false);
+  const [fabrics, setFabrics]       = useState<Fabric[]>([]);
+  const [fabricsLoading, setFabricsLoading] = useState(false);
+  const [selectedFabric, setSelectedFabric] = useState<Fabric | null>(null);
   const { user } = useAuth();
 
   const storageKey = `hilton-customizer-${category}`;
@@ -74,44 +91,100 @@ export default function CustomizePage() {
   const surcharge  = useMemo(() => surchargeTotal(activeSteps, selections), [activeSteps, selections]);
   const grandTotal = basePrice + surcharge;
 
-  // Pull the live config from Supabase once (falls back to the static default).
+  // Merge Supabase-backed config with static. Static defines the structure
+  // (so the new booklet steps that aren't seeded into Supabase still appear);
+  // Supabase overrides labels, surcharges, etc. for the steps it has; and
+  // admin can disable any step/option (active=false) — those get dropped.
   useEffect(() => {
-    fetchLiveSteps().then((s) => { if (s && s.length) setAllSteps(s); });
+    fetchLiveSteps().then((payload) => {
+      if (!payload) return;
+      const { steps: live, disabledStepSlugs, disabledOptionsByStep } = payload;
+      setAllSteps((staticSteps) => {
+        const liveBySlug = new Map(live.map((s) => [s.slug, s]));
+        return staticSteps
+          .filter((s) => !disabledStepSlugs.has(s.slug))
+          .map((s) => {
+            const liveStep = liveBySlug.get(s.slug);
+            const disabledOpts = disabledOptionsByStep[s.slug] ?? new Set<string>();
+            if (!liveStep) {
+              // Static step not in DB at all — keep it as-is but drop any disabled options (won't apply, but defensive).
+              return { ...s, options: s.options.filter((o) => !disabledOpts.has(o.value)) };
+            }
+            // Step is in DB — merge live overrides per option, drop disabled ones.
+            const liveOptByValue = new Map(liveStep.options.map((o) => [o.value, o]));
+            const mergedOptions = s.options
+              .filter((o) => !disabledOpts.has(o.value))
+              .map((o) => liveOptByValue.get(o.value) ?? o);
+            return { ...liveStep, options: mergedOptions };
+          });
+      });
+    });
   }, []);
 
   // One-time init: read ?category from the URL, then restore that category's saved state.
+  // Entry rule: if the URL pre-selects a SKU (came from a PDP "Customise" CTA),
+  // skip fabric pick — they already chose one. Otherwise start at "fabric".
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const raw = params.get("category");
-    setSku(params.get("sku"));
+    const skuParam = params.get("sku");
+    setSku(skuParam);
     const cat: StepCategory = isCustomizeCategory(raw) ? raw : "suit";
     setCategory(cat);
+    // Entry rule: Fabric pick is ALWAYS the first phase, even when the user
+    // arrived from a PDP "Customise" CTA. The PDP item is inspiration, not a
+    // committed fabric — the user still picks a real cloth from the library.
     try {
       const saved = JSON.parse(localStorage.getItem(`hilton-customizer-${cat}`) || "null") as null | {
         selections?: Selections; measurements?: MeasurementValues; unit?: MeasurementUnit;
-        phase?: Phase; stepIdx?: number; tier?: string;
+        phase?: Phase; stepIdx?: number; tier?: string; selectedFabric?: Fabric;
       };
       if (saved) {
         if (saved.selections)   setSelections({ ...defaultSelections(), ...saved.selections });
         if (saved.measurements) setMeasurements({ ...defaultMeasurements(), ...saved.measurements });
         if (saved.unit === "cm" || saved.unit === "in") setUnit(saved.unit);
-        if (saved.phase)        setPhase(saved.phase);
         if (typeof saved.stepIdx === "number") setStepIdx(saved.stepIdx);
         if (saved.tier)         setTier(saved.tier);
+        if (saved.selectedFabric) setSelectedFabric(saved.selectedFabric);
+        // Restore the saved phase only if a fabric was actually picked.
+        // Otherwise start over at Fabric so the flow always begins there.
+        if (saved.phase && saved.selectedFabric) {
+          setPhase(saved.phase);
+        } else {
+          setPhase("fabric");
+        }
       } else {
-        setPhase(categoryHasTiers(cat) ? "tier" : "spec");
+        setPhase("fabric");
       }
     } catch {
-      setPhase(categoryHasTiers(cat) ? "tier" : "spec");
+      setPhase("fabric");
     }
     setReady(true);
   }, []);
 
+  // Fetch fabrics whenever we land on (or return to) the fabric phase.
+  useEffect(() => {
+    if (phase !== "fabric") return;
+    if (fabrics.length > 0) return;
+    setFabricsLoading(true);
+    fetch(`/api/fabrics?category=${category}`)
+      .then((r) => r.json())
+      .then((d) => setFabrics(d.fabrics ?? []))
+      .catch(() => setFabrics([]))
+      .finally(() => setFabricsLoading(false));
+  }, [phase, category, fabrics.length]);
+
   // Persist (per category) once initialised.
   useEffect(() => {
     if (!ready) return;
-    localStorage.setItem(storageKey, JSON.stringify({ selections, measurements, unit, phase, stepIdx, tier }));
-  }, [ready, storageKey, selections, measurements, unit, phase, stepIdx, tier]);
+    localStorage.setItem(storageKey, JSON.stringify({ selections, measurements, unit, phase, stepIdx, tier, selectedFabric }));
+  }, [ready, storageKey, selections, measurements, unit, phase, stepIdx, tier, selectedFabric]);
+
+  function pickFabric(f: Fabric) {
+    setSelectedFabric(f);
+    setSku(f.sku);
+    setPhase(hasTiers ? "tier" : "spec");
+  }
 
   const safeStepIdx = Math.min(stepIdx, Math.max(activeSteps.length - 1, 0));
   const step = activeSteps[safeStepIdx];
@@ -159,14 +232,18 @@ export default function CustomizePage() {
   }
 
   function back() {
-    if (phase === "cart")              setPhase("auth");
+    // From cart, skip past the auth gate if the user is already signed in —
+    // otherwise the auth phase auto-bumps them back to cart (infinite no-op).
+    if (phase === "cart")              setPhase(user ? "summary" : "auth");
     else if (phase === "auth")         setPhase("summary");
     else if (phase === "summary")      setPhase("measurements");
     else if (phase === "measurements") { setStepIdx(activeSteps.length - 1); setPhase("spec"); }
     else if (phase === "spec") {
       if (safeStepIdx > 0) setStepIdx(safeStepIdx - 1);
       else if (hasTiers) setPhase("tier");
+      else if (selectedFabric) setPhase("fabric"); // shirts/trousers: back to fabric pick
     }
+    else if (phase === "tier" && selectedFabric) setPhase("fabric");
     scrollTop();
   }
 
@@ -199,18 +276,25 @@ export default function CustomizePage() {
     setMeasurements(defaultMeasurements());
     setUnit("cm");
     setStepIdx(0);
-    setPhase(hasTiers ? "tier" : "spec");
+    setSelectedFabric(null);
+    setSku(null);
+    setPhase("fabric");
     setTier("signature");
     scrollTop();
   }
 
-  const backDisabled = phase === "tier" || (phase === "spec" && safeStepIdx === 0 && !hasTiers);
+  const backDisabled =
+    phase === "fabric" ||
+    (phase === "tier" && !selectedFabric) ||
+    (phase === "spec" && safeStepIdx === 0 && !hasTiers && !selectedFabric);
   const copy = CATEGORY_COPY[category];
 
   // The big "Design Your Own" hero only makes sense at the very start
   // (tier picker). Once the user is choosing options or measuring, shrink
   // it to a compact crumb so the controls reach the viewport without scroll.
-  const showFullHero = phase === "tier";
+  // Keep the big "Design Your Own" hero on the entry phases (fabric pick, tier
+  // pick). Shrink it once the user is deep in spec/measurement screens.
+  const showFullHero = phase === "fabric" || phase === "tier";
 
   return (
     <div className={`${showFullHero ? "pt-32 md:pt-40" : "pt-24 md:pt-28"} pb-24 min-h-[80vh]`}>
@@ -263,6 +347,24 @@ export default function CustomizePage() {
         {/* ── Body ───────────────────────────────────────────────────── */}
         {ready && (
         <AnimatePresence mode="wait">
+          {phase === "fabric" && (
+            <motion.section
+              key="fabric"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-10"
+            >
+              <FabricPicker
+                fabrics={fabrics}
+                loading={fabricsLoading}
+                selectedSku={selectedFabric?.sku}
+                onPick={pickFabric}
+              />
+            </motion.section>
+          )}
+
           {phase === "spec" && step && (
             <motion.section
               key={`spec-${step.slug}`}
@@ -443,14 +545,16 @@ function ProgressDock({
   hasTiers: boolean;
 }) {
   const tierOffset = hasTiers ? 1 : 0;
-  // dots = [tier?] + spec steps + measurements + summary
-  const total = stepCount + tierOffset + 2;
+  // dots = fabric + [tier?] + spec steps + measurements + summary
+  const total = 1 + stepCount + tierOffset + 2;
   const currentIndex =
-    phase === "tier"         ? 0 :
-    phase === "spec"         ? stepIdx + tierOffset :
-    phase === "measurements" ? stepCount + tierOffset :
-                                stepCount + tierOffset + 1;
+    phase === "fabric"       ? 0 :
+    phase === "tier"         ? 1 :
+    phase === "spec"         ? 1 + stepIdx + tierOffset :
+    phase === "measurements" ? 1 + stepCount + tierOffset :
+                                1 + stepCount + tierOffset + 1;
   const label =
+    phase === "fabric"       ? "Choose your fabric" :
     phase === "tier"         ? "Commission tier" :
     phase === "spec"         ? `Step ${stepIdx + 1} of ${stepCount}` :
     phase === "measurements" ? "Your measurements" :
@@ -567,6 +671,9 @@ function OptionGrid({
               {opt.note && (
                 <div className="text-[0.7rem] text-[var(--color-charcoal-500)] mt-1.5 leading-snug">{opt.note}</div>
               )}
+              <div className="text-eyebrow text-[0.65rem] mt-2 text-[var(--color-burgundy-700)]">
+                {opt.surcharge && opt.surcharge > 0 ? `+ د.ب ${opt.surcharge}` : "Included"}
+              </div>
             </button>
           );
         }
@@ -619,6 +726,9 @@ function OptionGrid({
               {opt.note && (
                 <div className="text-[0.7rem] text-[var(--color-charcoal-500)] mt-1 leading-snug">{opt.note}</div>
               )}
+              <div className="text-eyebrow text-[0.6rem] mt-1.5 text-[var(--color-burgundy-700)]">
+                {opt.surcharge && opt.surcharge > 0 ? `+ د.ب ${opt.surcharge}` : "Included"}
+              </div>
             </div>
           </button>
         );
@@ -648,6 +758,120 @@ function SelectionsSidebar({ steps, selections, currentIdx }: { steps: LiveStep[
           );
         })}
       </dl>
+    </div>
+  );
+}
+
+/* ─────────────────────────── Fabric picker ─────────────────────────── */
+
+function FabricPicker({
+  fabrics, loading, selectedSku, onPick,
+}: {
+  fabrics: Fabric[];
+  loading: boolean;
+  selectedSku?: string;
+  onPick: (f: Fabric) => void;
+}) {
+  return (
+    <div>
+      <div className="max-w-3xl">
+        <span className="text-eyebrow text-[var(--color-burgundy-700)]">First · Pick Your Fabric</span>
+        <h2 className="text-display text-[clamp(2.25rem,4vw,3.5rem)] mt-3 leading-[1.05]">
+          Choose the cloth your garment will be built around.
+        </h2>
+        <p className="mt-5 text-[1rem] text-[var(--color-charcoal-700)] leading-relaxed">
+          Every commission begins with the cloth. Below are the fabrics currently in the house — Italian and Indian
+          worsteds, plain weaves and patterns. Pick one and we&rsquo;ll build the rest of the design around it.
+        </p>
+      </div>
+
+      {loading && (
+        <div className="mt-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="aspect-[3/4] bg-[var(--color-ivory-200)]" />
+              <div className="mt-4 h-3 bg-[var(--color-ivory-200)] w-1/3" />
+              <div className="mt-2 h-4 bg-[var(--color-ivory-200)] w-2/3" />
+              <div className="mt-2 h-3 bg-[var(--color-ivory-200)] w-1/2" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && fabrics.length === 0 && (
+        <div className="mt-12 border border-black/10 p-8 bg-[var(--color-ivory-200)] max-w-2xl">
+          <p className="text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
+            No fabrics for this category yet — the catalogue will populate automatically as soon as the atelier
+            adds them in the ERP. In the meantime you can still proceed: we&rsquo;ll use the house default cloth.
+          </p>
+          <button
+            type="button"
+            onClick={() =>
+              onPick({
+                sku: "house-default",
+                name: "House cloth",
+                brand: "Hilton",
+                composition: "",
+                pattern: "",
+                color: "",
+                weight: "",
+                origin: "",
+                price: "د.ب 0",
+                priceNum: 0,
+                image: "/products/no-image.svg",
+              })
+            }
+            className="mt-5 text-eyebrow inline-flex items-center gap-3 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-6 py-3 hover:bg-[var(--color-burgundy-800)] transition-colors"
+          >
+            Continue with house cloth
+          </button>
+        </div>
+      )}
+
+      {!loading && fabrics.length > 0 && (
+        <div className="mt-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10">
+          {fabrics.map((f) => {
+            const active = f.sku === selectedSku;
+            return (
+              <button
+                key={f.sku}
+                type="button"
+                onClick={() => onPick(f)}
+                className={`group block text-left transition-all duration-300 ${
+                  active ? "ring-2 ring-[var(--color-burgundy-700)] ring-offset-2 ring-offset-[var(--color-ivory-100)]" : ""
+                }`}
+              >
+                <div className="relative aspect-[3/4] overflow-hidden bg-[var(--color-ivory-200)] hover-grow">
+                  <img
+                    src={f.image}
+                    alt={`${f.brand} ${f.name}`}
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
+                <div className="mt-4">
+                  <span className="text-eyebrow text-[var(--color-charcoal-500)]">{f.brand}</span>
+                  <h3 className="text-display text-[1.25rem] mt-1.5 leading-tight text-[var(--color-charcoal-900)] group-hover:text-[var(--color-burgundy-700)] transition-colors">
+                    {f.name}
+                  </h3>
+                  {f.composition && (
+                    <p className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">{f.composition}</p>
+                  )}
+                  <div className="mt-2 flex items-center justify-between gap-2 text-[0.78rem] text-[var(--color-charcoal-700)]">
+                    <span>{[f.pattern, f.origin].filter(Boolean).join(" · ")}</span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between border-t border-black/10 pt-3">
+                    <span className="text-[0.875rem] text-[var(--color-charcoal-900)]">{f.price}</span>
+                    <span className="text-eyebrow text-[var(--color-burgundy-700)] group-hover:underline">
+                      Choose →
+                    </span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

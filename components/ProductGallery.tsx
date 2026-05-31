@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { PlaceholderBadge, isPlaceholder } from "./PlaceholderBadge";
 
 /**
  * Amazon-style product gallery: a large main image with a thumbnail strip.
@@ -21,6 +22,7 @@ export function ProductGallery({
   return (
     <div>
       <div className={`relative aspect-[4/5] overflow-hidden ${contain ? "bg-[var(--color-ivory-200)]" : "grain"}`}>
+        {main && isPlaceholder(main) && <PlaceholderBadge />}
         {main && (
           <Image
             src={main}

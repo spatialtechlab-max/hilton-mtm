@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Database, RefreshCw, AlertTriangle, Lock, Pencil, Trash2, Plus, Check, X, Upload } from "lucide-react";
+import { ArrowLeft, Database, RefreshCw, AlertTriangle, Lock, Pencil, Trash2, Plus, Check, X, Upload, Package, Layers, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
-import { isAdminEmail } from "@/lib/admin";
+import { isAdmin } from "@/lib/admin";
 import {
   fetchSteps, fetchOptions, seedFromConfig,
   updateOption, insertOption, deleteOption, uploadOptionImage,
+  updateStep,
   type DbStep, type DbOption,
 } from "@/lib/adminData";
 
@@ -31,7 +32,12 @@ type CategoryFilter = "all" | "jacket" | "trouser" | "shirt";
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
-  const admin = isAdminEmail(user?.email);
+  const [admin, setAdmin] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!user) { setAdmin(false); return; }
+    isAdmin(user.email).then(setAdmin);
+  }, [user]);
 
   const [steps, setSteps] = useState<DbStep[] | null>(null);
   const [options, setOptions] = useState<DbOption[]>([]);
@@ -87,7 +93,7 @@ export default function AdminPage() {
     return map;
   }, [options]);
 
-  if (loading) return <Shell><p className="text-eyebrow text-[var(--color-charcoal-500)]">Loading…</p></Shell>;
+  if (loading || admin === null) return <Shell><p className="text-eyebrow text-[var(--color-charcoal-500)]">Loading…</p></Shell>;
 
   if (!user) {
     return (
@@ -108,8 +114,7 @@ export default function AdminPage() {
           <h1 className="text-display text-[clamp(2rem,4vw,3rem)] mt-4">Not authorised</h1>
           <p className="mt-4 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
             The account <span className="text-[var(--color-charcoal-900)]">{user.email}</span> isn&rsquo;t on the admin
-            list. Add it to <code className="text-[0.85rem]">NEXT_PUBLIC_ADMIN_EMAILS</code> and the Supabase
-            <code className="text-[0.85rem]"> mtm_admins</code> table.
+            list. Add it to the Supabase <code className="text-[0.85rem]">mtm_admins</code> table.
           </p>
         </div>
       </Shell>
@@ -137,7 +142,19 @@ export default function AdminPage() {
             {stepCount > 0 ? `${stepCount} steps · ${options.length} options` : "Manage the options shown in the customizer."}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Link
+            href="/admin/orders"
+            className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)] px-5 py-3 hover:bg-[var(--color-burgundy-700)] transition-colors"
+          >
+            <Package size={14} strokeWidth={1.5} /> Orders & customers
+          </Link>
+          <Link
+            href="/admin/fabrics"
+            className="text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)] text-[var(--color-charcoal-900)] px-5 py-3 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
+          >
+            <Layers size={14} strokeWidth={1.5} /> Fabrics
+          </Link>
           <button
             type="button"
             onClick={load}
@@ -217,14 +234,14 @@ export default function AdminPage() {
             </p>
           </aside>
 
-          {/* Main — step cards in a 2-up grid */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          {/* Main — step cards in a masonry column layout (no height gaps) */}
+          <div className="columns-1 xl:columns-2 gap-5 [&>*]:mb-5">
             {visible.map((s) => (
-              <div key={s.slug} className="border border-black/10 bg-[var(--color-ivory-100)] self-start">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-5 py-4 border-b border-black/10">
+              <div key={s.slug} className="break-inside-avoid border border-black/10 bg-[var(--color-ivory-100)]">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-4 border-b border-black/10">
                   <span className="text-display text-[1.2rem] text-[var(--color-charcoal-900)]">{s.title}</span>
                   <Badge>{s.kind}</Badge>
-                  {s.tier && <Badge tone="burgundy">{s.tier}</Badge>}
+                  <TierPicker slug={s.slug} tier={s.tier} onChanged={load} />
                   <span className="basis-full text-[0.7rem] text-[var(--color-charcoal-400)]">
                     {s.applies_to.join(" · ")}
                     {s.requires_slug && `  ·  shows if ${s.requires_slug}=${s.requires_value}`}
@@ -232,7 +249,7 @@ export default function AdminPage() {
                 </div>
                 <div className="divide-y divide-black/5">
                   {(optionsByStep[s.slug] ?? []).map((o) => (
-                    <OptionRow key={o.id} option={o} stepKind={s.kind} onChanged={load} />
+                    <OptionRow key={o.id} option={o} stepSlug={s.slug} stepKind={s.kind} onChanged={load} />
                   ))}
                   {(optionsByStep[s.slug] ?? []).length === 0 && (
                     <div className="px-5 py-3 text-[0.8rem] text-[var(--color-charcoal-400)] italic">No options yet</div>
@@ -248,11 +265,81 @@ export default function AdminPage() {
   );
 }
 
+/* ── Tier picker (which package owns this step) ── */
+function TierPicker({
+  slug, tier, onChanged,
+}: {
+  slug: string;
+  tier: string | null;
+  onChanged: () => Promise<void> | void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const tones: Record<string, string> = {
+    essential: "bg-[var(--color-burgundy-700)]/15 text-[var(--color-burgundy-700)]",
+    signature: "bg-[var(--color-charcoal-900)]/85 text-[var(--color-ivory-100)]",
+    bespoke:   "bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)]",
+  };
+  async function pick(next: string) {
+    if (busy || next === (tier ?? "")) return;
+    setBusy(true);
+    try { await updateStep(slug, { tier: next }); await onChanged(); }
+    finally { setBusy(false); }
+  }
+  return (
+    <span className="inline-flex border border-black/10 overflow-hidden">
+      {(["essential", "signature", "bespoke"] as const).map((t) => {
+        const active = tier === t;
+        return (
+          <button
+            key={t}
+            type="button"
+            onClick={() => pick(t)}
+            disabled={busy}
+            className={`text-eyebrow text-[0.6rem] px-2.5 py-1 transition-colors ${
+              active ? tones[t] : "text-[var(--color-charcoal-500)] hover:bg-[var(--color-ivory-200)]"
+            } ${busy ? "opacity-50" : ""}`}
+          >
+            {t}
+          </button>
+        );
+      })}
+    </span>
+  );
+}
+
+/* ── Option image preview (diagram → file PNG, swatch → colour chip, gallery → uploaded image) ── */
+function OptionThumb({
+  stepSlug, stepKind, value, color, image,
+}: { stepSlug: string; stepKind: string; value: string; color: string | null; image: string | null }) {
+  if (stepKind === "swatch") {
+    return color
+      ? <span className="w-8 h-8 rounded-sm border border-black/15 shrink-0" style={{ background: color }} />
+      : <span className="w-8 h-8 rounded-sm border border-black/15 shrink-0 bg-[var(--color-ivory-200)]" />;
+  }
+  if (stepKind === "gallery") {
+    return image
+      ? <img src={image} alt="" className="w-8 h-8 object-cover border border-black/15 shrink-0" />
+      : <span className="w-8 h-8 border border-dashed border-black/20 shrink-0 inline-flex items-center justify-center text-[0.6rem] text-[var(--color-charcoal-400)]">img</span>;
+  }
+  // diagram: served from /public/customizer/<stepSlug>/<value>.png
+  return (
+    <span className="w-8 h-8 bg-[var(--color-ivory-200)] shrink-0 inline-flex items-center justify-center">
+      <img
+        src={`/customizer/${stepSlug}/${value}.png`}
+        alt=""
+        className="w-full h-full object-contain p-0.5"
+        onError={(e) => { (e.target as HTMLImageElement).style.visibility = "hidden"; }}
+      />
+    </span>
+  );
+}
+
 /* ── Editable option row ── */
 function OptionRow({
-  option, stepKind, onChanged,
+  option, stepSlug, stepKind, onChanged,
 }: {
   option: DbOption;
+  stepSlug: string;
   stepKind: string;
   onChanged: () => Promise<void> | void;
 }) {
@@ -341,16 +428,25 @@ function OptionRow({
     );
   }
 
+  async function quickToggle() {
+    setBusy(true);
+    try {
+      await updateOption(option.id, { active: !option.active });
+      await onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <div className={`group flex items-center gap-4 px-5 py-2.5 text-[0.85rem] ${!option.active ? "opacity-50" : ""}`}>
-      {option.color && <span className="w-4 h-4 rounded-sm border border-black/15 shrink-0" style={{ background: option.color }} />}
-      {option.image_url && <span className="text-[0.7rem] text-[var(--color-charcoal-400)] shrink-0">img</span>}
-      <span className="text-[var(--color-charcoal-900)] flex-1">
+    <div className={`group flex items-center gap-3 px-5 py-2.5 text-[0.85rem] ${!option.active ? "opacity-50" : ""}`}>
+      <OptionThumb stepSlug={stepSlug} stepKind={stepKind} value={option.value} color={option.color} image={option.image_url} />
+      <span className="text-[var(--color-charcoal-900)] flex-1 min-w-0">
         {option.label}
         {!option.active && <em className="text-[0.7rem] text-[var(--color-charcoal-400)] ml-2 not-italic">· hidden</em>}
       </span>
       <code className="text-[0.72rem] text-[var(--color-charcoal-400)] hidden sm:inline">{option.value}</code>
-      <span className={`tabular-nums w-28 text-right ${option.surcharge > 0 ? "text-[var(--color-burgundy-700)]" : "text-[var(--color-charcoal-400)]"}`}>
+      <span className={`tabular-nums w-24 text-right ${option.surcharge > 0 ? "text-[var(--color-burgundy-700)]" : "text-[var(--color-charcoal-400)]"}`}>
         {option.surcharge > 0 ? `+ BHD ${option.surcharge}` : "included"}
       </span>
       {confirmDel ? (
@@ -359,9 +455,22 @@ function OptionRow({
           <button onClick={() => setConfirmDel(false)} className="text-[0.72rem] tracking-wide uppercase text-[var(--color-charcoal-400)]">No</button>
         </span>
       ) : (
-        <span className="inline-flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => setEditing(true)} aria-label="Edit" className="p-1.5 hover:text-[var(--color-burgundy-700)]"><Pencil size={13} strokeWidth={1.5} /></button>
-          <button onClick={() => setConfirmDel(true)} aria-label="Delete" className="p-1.5 hover:text-[var(--color-burgundy-700)]"><Trash2 size={13} strokeWidth={1.5} /></button>
+        <span className="inline-flex items-center gap-1">
+          <button
+            onClick={quickToggle}
+            disabled={busy}
+            aria-label={option.active ? "Disable" : "Enable"}
+            title={option.active ? "Click to hide from site" : "Click to show on site"}
+            className={`p-1.5 transition-colors ${
+              option.active
+                ? "text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)]"
+                : "text-[var(--color-charcoal-400)] hover:text-[var(--color-burgundy-700)]"
+            }`}
+          >
+            {option.active ? <Eye size={14} strokeWidth={1.5} /> : <EyeOff size={14} strokeWidth={1.5} />}
+          </button>
+          <button onClick={() => setEditing(true)} aria-label="Edit" className="p-1.5 opacity-40 group-hover:opacity-100 transition-opacity hover:text-[var(--color-burgundy-700)]"><Pencil size={13} strokeWidth={1.5} /></button>
+          <button onClick={() => setConfirmDel(true)} aria-label="Delete" className="p-1.5 opacity-40 group-hover:opacity-100 transition-opacity hover:text-[var(--color-burgundy-700)]"><Trash2 size={13} strokeWidth={1.5} /></button>
         </span>
       )}
     </div>

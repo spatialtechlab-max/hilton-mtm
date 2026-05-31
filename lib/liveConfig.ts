@@ -47,7 +47,7 @@ export function staticLiveSteps(): LiveStep[] {
     requiresSlug: s.requiresSlug,
     requiresValue: s.requiresValue,
     options: s.options.map((o) => ({
-      value: o.value, label: o.label, note: o.note, color: o.color, image: o.image, surcharge: 0,
+      value: o.value, label: o.label, note: o.note, color: o.color, image: o.image, surcharge: o.surcharge ?? 0,
     })),
   }));
 }
@@ -62,25 +62,44 @@ type OptionRow = {
   color: string | null; image_url: string | null; surcharge: number | string | null;
 };
 
-/** Read the active config from Supabase. Returns null if empty/unreachable. */
-export async function fetchLiveSteps(): Promise<LiveStep[] | null> {
+/** Result of pulling the admin config from Supabase. */
+export type LiveConfigPayload = {
+  /** Live, active steps with their active options (admin overrides applied). */
+  steps: LiveStep[];
+  /** Step slugs explicitly disabled in DB (so the customizer can drop them). */
+  disabledStepSlugs: Set<string>;
+  /** Step→Set of option values that are explicitly disabled in DB. */
+  disabledOptionsByStep: Record<string, Set<string>>;
+};
+
+/** Read the config from Supabase. Returns null if empty/unreachable.
+ * Pulls ALL rows (active + inactive) so callers can distinguish
+ * "missing from DB" (use static fallback) from "explicitly disabled" (hide). */
+export async function fetchLiveSteps(): Promise<LiveConfigPayload | null> {
   if (!isSupabaseConfigured) return null;
   try {
     const [stepsRes, optsRes] = await Promise.all([
-      supabase.from("mtm_steps").select("*").eq("active", true).order("sort_order"),
-      supabase.from("mtm_options").select("*").eq("active", true).order("sort_order"),
+      supabase.from("mtm_steps").select("*").order("sort_order"),
+      supabase.from("mtm_options").select("*").order("sort_order"),
     ]);
-    const stepRows = stepsRes.data as StepRow[] | null;
+    const stepRows = (stepsRes.data as (StepRow & { active: boolean })[] | null);
     if (stepsRes.error || optsRes.error || !stepRows || stepRows.length === 0) return null;
+    const activeSteps = stepRows.filter((s) => s.active !== false);
+    const disabledStepSlugs = new Set(stepRows.filter((s) => s.active === false).map((s) => s.slug));
 
     const byStep: Record<string, LiveOption[]> = {};
-    for (const o of (optsRes.data as OptionRow[] | null) ?? []) {
+    const disabledOptionsByStep: Record<string, Set<string>> = {};
+    for (const o of (optsRes.data as (OptionRow & { active: boolean })[] | null) ?? []) {
+      if (o.active === false) {
+        (disabledOptionsByStep[o.step_slug] ??= new Set()).add(o.value);
+        continue;
+      }
       (byStep[o.step_slug] ??= []).push({
         value: o.value, label: o.label, note: o.note,
         color: o.color, image: o.image_url, surcharge: Number(o.surcharge) || 0,
       });
     }
-    return stepRows.map((s) => ({
+    const steps = activeSteps.map((s) => ({
       slug: s.slug,
       title: s.title,
       eyebrow: s.eyebrow ?? "",
@@ -93,6 +112,7 @@ export async function fetchLiveSteps(): Promise<LiveStep[] | null> {
       requiresValue: s.requires_value,
       options: byStep[s.slug] ?? [],
     }));
+    return { steps, disabledStepSlugs, disabledOptionsByStep };
   } catch {
     return null;
   }

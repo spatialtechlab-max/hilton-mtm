@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Reveal, SplitReveal } from "./Reveal";
+import { PlaceholderBadge, isPlaceholder } from "./PlaceholderBadge";
 
 type Tile = {
   category: string;
@@ -65,7 +66,7 @@ const bottom: Tile[] = [
 
 export function Categories() {
   return (
-    <section className="py-32 md:py-44">
+    <section className="py-16 md:py-24">
       <div className="container-editorial">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
           <div className="max-w-2xl">
@@ -137,6 +138,7 @@ function CategoryTile({ tile, large = false }: { tile: Tile; large?: boolean }) 
         large ? "aspect-[4/5] lg:aspect-auto lg:h-full" : "aspect-[16/10]"
       }`}
     >
+      {isPlaceholder(tile.image) && <PlaceholderBadge />}
       <Image
         src={tile.image}
         alt={tile.alt}

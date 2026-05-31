@@ -6,6 +6,7 @@ import { Marquee } from "@/components/Marquee";
 import { Button } from "@/components/Button";
 import { CtaBanner } from "@/components/CtaBanner";
 import { Categories } from "@/components/Categories";
+import { PlaceholderBadge, isPlaceholder } from "@/components/PlaceholderBadge";
 
 const collection = [
   {
@@ -45,6 +46,7 @@ export default function HomePage() {
     <>
       {/* ─────────────────────────── HERO ─────────────────────────── */}
       <section className="relative h-[100svh] min-h-[680px] w-full overflow-hidden">
+        <PlaceholderBadge />
         <Image
           src="https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=2400&auto=format&fit=crop"
           alt="A master tailor at the cutting table, Hilton atelier"
@@ -102,7 +104,7 @@ export default function HomePage() {
       <Categories />
 
       {/* ─────────────────────────── INTRODUCTION ─────────────────────────── */}
-      <section id="introduction" className="py-32 md:py-48">
+      <section id="introduction" className="py-16 md:py-24">
         <div className="container-editorial grid grid-cols-1 lg:grid-cols-12 gap-16">
           <div className="lg:col-span-4">
             <Reveal>
@@ -132,7 +134,7 @@ export default function HomePage() {
       </section>
 
       {/* ─────────────────────────── COLLECTION GRID ─────────────────────────── */}
-      <section className="py-32 md:py-44">
+      <section className="py-16 md:py-24">
         <div className="container-editorial">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-20">
             <div className="max-w-2xl">
@@ -158,6 +160,7 @@ export default function HomePage() {
               <Reveal key={item.name} delay={i * 0.08}>
                 <Link href={item.href} className="group block">
                   <div className="relative aspect-[3/4] overflow-hidden bg-[var(--color-ivory-200)] hover-grow">
+                    {isPlaceholder(item.image) && <PlaceholderBadge />}
                     <Image
                       src={item.image}
                       alt={item.name}
@@ -195,7 +198,7 @@ export default function HomePage() {
       </section>
 
       {/* ─────────────────────────── PROCESS TEASE ─────────────────────────── */}
-      <section className="py-32 md:py-44">
+      <section className="py-16 md:py-24">
         <div className="container-editorial grid grid-cols-1 lg:grid-cols-12 gap-16">
           <div className="lg:col-span-4">
             <Reveal>
