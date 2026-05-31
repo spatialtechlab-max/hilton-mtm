@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Download, Sparkles, Ruler, Play, Pause, Pencil, ShoppingBag, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,6 +21,7 @@ import { findProduct } from "@/lib/libraries";
 import { buildSpecPdf } from "@/lib/specSheet";
 import { AuthForm } from "@/components/AuthForm";
 import { useAuth } from "@/components/AuthProvider";
+import { addToCart as pushToCart } from "@/lib/cart";
 
 type Phase = "fabric" | "tier" | "spec" | "measurements" | "summary" | "auth" | "cart";
 
@@ -75,6 +77,7 @@ export default function CustomizePage() {
   const [fabricsLoading, setFabricsLoading] = useState(false);
   const [selectedFabric, setSelectedFabric] = useState<Fabric | null>(null);
   const { user } = useAuth();
+  const router = useRouter();
 
   const storageKey = `hilton-customizer-${category}`;
   const hasTiers   = categoryHasTiers(category);
@@ -203,10 +206,33 @@ export default function CustomizePage() {
 
   const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
-  // Add to cart: signed-in visitors skip the sign-in gate and go straight to cart.
+  // Push the commission into the shared localStorage cart and route to
+  // /cart, which handles sign-in, profile completion, and order placement
+  // (createOrderFromCart writes the row to mtm_orders).
   function addToCart() {
-    setPhase(user ? "cart" : "auth");
-    scrollTop();
+    if (!selectedFabric) return;
+    const tierLabel = hasTiers ? tierObj.name : "Made to measure";
+    const categoryNoun = category === "trouser" ? "trousers" : category;
+    const lineName = hasTiers
+      ? `Bespoke ${categoryNoun} commission — ${tierLabel}`
+      : `Made-to-measure ${categoryNoun}`;
+    pushToCart({
+      sku: `MTM-${category.toUpperCase()}-${Date.now()}`,
+      name: lineName,
+      type: hasTiers ? `${tierLabel} commission` : "Made-to-measure",
+      price: formatBhd(grandTotal),
+      priceNum: grandTotal,
+      image: selectedFabric.image,
+      href: `/customize?category=${category}`,
+      custom: {
+        category,
+        tier: hasTiers ? tier : undefined,
+        fabric: selectedFabric.name,
+        selections,
+        surcharge,
+      },
+    });
+    router.push("/cart");
   }
 
   // After signing in (incl. returning from Google OAuth) advance the gate to cart.
