@@ -6,6 +6,9 @@ import { Marquee } from "@/components/Marquee";
 import { Button } from "@/components/Button";
 import { CtaBanner } from "@/components/CtaBanner";
 import { Categories } from "@/components/Categories";
+import { Partners } from "@/components/Partners";
+import { AtelierStrip } from "@/components/AtelierStrip";
+import { ShowroomFeature } from "@/components/ShowroomFeature";
 import { PlaceholderBadge, isPlaceholder } from "@/components/PlaceholderBadge";
 
 const collection = [
@@ -133,6 +136,9 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ─────────────────────────── HOUSE OF CLOTH (partner mills) ────────── */}
+      <Partners />
+
       {/* ─────────────────────────── COLLECTION GRID ─────────────────────────── */}
       <section className="py-16 md:py-24">
         <div className="container-editorial">
@@ -188,6 +194,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ─────────────────────────── ATELIER PHOTO STRIP ─────────────────────── */}
+      <AtelierStrip />
 
       {/* ─────────────────────────── MARQUEE ─────────────────────────── */}
       <section className="py-16 border-y border-black/10 bg-[var(--color-ivory-100)] text-[var(--color-burgundy-700)]">
@@ -265,6 +274,9 @@ export default function HomePage() {
           </ol>
         </div>
       </section>
+
+      {/* ─────────────────────────── SHOWROOM FEATURE ─────────────────────── */}
+      <ShowroomFeature />
 
       {/* ─────────────────────────── CTA ─────────────────────────── */}
       <CtaBanner />
