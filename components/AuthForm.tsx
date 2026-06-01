@@ -169,14 +169,17 @@ export function AuthForm({
         <div className="flex-1 h-px bg-black/10" />
       </div>
 
-      <button
-        type="button"
-        onClick={handleGoogle}
-        disabled={loading}
-        className="mt-7 w-full text-eyebrow inline-flex items-center justify-center gap-3 border border-[var(--color-charcoal-900)]/25 text-[var(--color-charcoal-900)] px-8 py-4 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors disabled:opacity-60"
-      >
-        <GoogleMark /> Continue with Google
-      </button>
+      {/*
+        Google OAuth temporarily disabled.
+        The Supabase project's `Site URL` is set to http://localhost:3000
+        (a dev-time default), so Google sign-in returned the access token
+        to localhost instead of the production host. Re-enable this button
+        AFTER updating Supabase dashboard:
+          Authentication → URL Configuration → Site URL = https://hilton-mtm-virid.vercel.app
+          Add https://hilton-mtm-virid.vercel.app/** to the Redirect URLs list.
+        The handler (`handleGoogle`) already passes window.location.href —
+        nothing else has to change once the dashboard is corrected.
+      */}
 
       <p className="mt-7 flex items-center justify-center gap-2 text-[0.78rem] text-[var(--color-charcoal-500)]">
         <Lock size={12} strokeWidth={1.5} /> Your details are encrypted and never shared.
