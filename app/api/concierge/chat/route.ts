@@ -122,11 +122,11 @@ export async function POST(req: Request) {
         max_tokens: 360,
         temperature: 0.45,
       }),
-      // Keep the request snappy — Sebastian should reply within a few seconds.
-      signal: AbortSignal.timeout(25_000),
     });
     if (!res.ok) {
-      return NextResponse.json({ reply: FALLBACK_REPLY }, { status: 200 });
+      const errBody = await res.text().catch(() => "");
+      console.error("[concierge] upstream not ok", res.status, errBody.slice(0, 300));
+      return NextResponse.json({ reply: FALLBACK_REPLY, _debug: { status: res.status, err: errBody.slice(0, 200) } }, { status: 200 });
     }
     const data = await res.json();
     const raw: string = data?.choices?.[0]?.message?.content ?? "";
@@ -146,7 +146,8 @@ export async function POST(req: Request) {
     }
     const reply = raw.replace(/```json[\s\S]*?```/g, "").trim();
     return NextResponse.json({ reply: reply || FALLBACK_REPLY, recommendation });
-  } catch {
-    return NextResponse.json({ reply: FALLBACK_REPLY }, { status: 200 });
+  } catch (err) {
+    console.error("[concierge] fetch threw", err);
+    return NextResponse.json({ reply: FALLBACK_REPLY, _debug: { caught: String(err) } }, { status: 200 });
   }
 }
