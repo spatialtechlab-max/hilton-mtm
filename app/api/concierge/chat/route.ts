@@ -62,6 +62,34 @@ const FALLBACK_REPLY = "Forgive me — Sebastian's line is briefly down. Allow m
 
 export const runtime = "nodejs";
 
+// Debug GET — verifies the function is running with the right env shape
+// without leaking the secret itself. Remove after sanity-check.
+export async function GET() {
+  const key = process.env.OPENROUTER_API_KEY ?? "";
+  const probe = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://hilton-mtm-virid.vercel.app",
+      "X-Title": "Hilton MTM probe",
+    },
+    body: JSON.stringify({
+      model: "anthropic/claude-3.5-haiku",
+      messages: [{ role: "user", content: "ping" }],
+      max_tokens: 6,
+    }),
+  }).catch((e) => ({ ok: false, status: 0, text: () => Promise.resolve(String(e)) } as Response));
+  const status = (probe as Response).status;
+  const ok = (probe as Response).ok;
+  let body = "";
+  try { body = await (probe as Response).text(); } catch { /* ignore */ }
+  return NextResponse.json({
+    keyShape: { len: key.length, head: key.slice(0, 12), tail: key.slice(-4) },
+    upstream: { ok, status, body: body.slice(0, 400) },
+  });
+}
+
 export async function POST(req: Request) {
   let messages: ChatMessage[] = [];
   try {
