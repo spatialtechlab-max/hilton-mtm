@@ -45,11 +45,13 @@ const CATEGORY_LABEL: Record<NonNullable<Recommendation["category"]>, string> = 
   trouser: "Tailored trouser",
 };
 
-const CATEGORY_IMG: Record<NonNullable<Recommendation["category"]>, string> = {
+// Only the suit recommendation gets a photograph — the rest stay text-only
+// (the user pointed out that pairing a "Made-to-measure shirt for party"
+// with a shirting flat-lay reads as a generic stock photo, which is worse
+// than no image at all). Keeping image surface scarce makes each photo
+// feel earned.
+const CATEGORY_IMG: Partial<Record<NonNullable<Recommendation["category"]>, string>> = {
   suit: "/atelier/showroom-double-breasted.jpg",
-  jacket: "/atelier/the-cut.jpg",
-  shirt: "/atelier/alumo-shirting.jpg",
-  trouser: "/atelier/trofeo-book.jpg",
 };
 
 function uid() {
@@ -328,6 +330,7 @@ function RecommendationCard({
 }) {
   const matchPct = Math.max(0, Math.min(100, Math.round(rec.match ?? 75)));
   const cat = rec.category;
+  const img = CATEGORY_IMG[cat];
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -335,20 +338,34 @@ function RecommendationCard({
       transition={{ delay: 0.15, duration: 0.35 }}
       className="max-w-[92%] border border-black/10 bg-[var(--color-ivory-100)]"
     >
-      <div className="relative aspect-[5/3] overflow-hidden bg-[var(--color-ivory-200)]">
-        <Image
-          src={CATEGORY_IMG[cat]}
-          alt={CATEGORY_LABEL[cat]}
-          fill
-          sizes="320px"
-          className="object-cover"
-        />
-        {/* Match badge */}
-        <div className="absolute top-2 left-2 px-2 py-1 bg-[var(--color-ivory-100)]/95 text-[var(--color-burgundy-700)] text-eyebrow text-[0.58rem]">
-          {matchPct}% match
+      {img ? (
+        <div className="relative aspect-[5/3] overflow-hidden bg-[var(--color-ivory-200)]">
+          <Image
+            src={img}
+            alt={CATEGORY_LABEL[cat]}
+            fill
+            sizes="320px"
+            className="object-cover"
+          />
+          {/* Match badge */}
+          <div className="absolute top-2 left-2 px-2 py-1 bg-[var(--color-ivory-100)]/95 text-[var(--color-burgundy-700)] text-eyebrow text-[0.58rem]">
+            {matchPct}% match
+          </div>
         </div>
-      </div>
-      <div className="px-4 py-3.5">
+      ) : (
+        // Text-only header. Used for shirts, jackets, trousers — we don't
+        // hold a photograph for those that wouldn't read as a generic
+        // stock pose. The match badge moves into the header text instead.
+        <div className="px-4 pt-4 flex items-center justify-between gap-3">
+          <div className="text-eyebrow text-[var(--color-burgundy-700)] text-[0.62rem]">
+            Sebastian's pick
+          </div>
+          <div className="text-eyebrow text-[var(--color-burgundy-700)] text-[0.62rem]">
+            {matchPct}% match
+          </div>
+        </div>
+      )}
+      <div className={`px-4 ${img ? "py-3.5" : "pt-2 pb-4"}`}>
         <div className="text-eyebrow text-[var(--color-charcoal-500)] text-[0.6rem]">
           {rec.occasion ? `For: ${rec.occasion.replace(/-/g, " ")}` : "Recommended"}
         </div>

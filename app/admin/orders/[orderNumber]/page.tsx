@@ -88,7 +88,8 @@ export default function AdminOrderDetailPage() {
           <section className="border border-[var(--color-burgundy-700)]/25 bg-[var(--color-burgundy-50)] p-6">
             <h2 className="text-eyebrow text-[var(--color-burgundy-700)]">Update order status</h2>
             <p className="text-[0.85rem] text-[var(--color-charcoal-700)] mt-2">
-              Changing status here pushes the update to the customer&rsquo;s dashboard in real time.
+              Sebastian will deliver the change to the customer&rsquo;s notifications and dashboard the moment you save —
+              live, no refresh needed.
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <select

@@ -1,29 +1,28 @@
-import Image from "next/image";
 import { Reveal, SplitReveal } from "./Reveal";
 
 type Mill = {
   name: string;
   src: string;
   since?: string;
-  /** Pixel cap so each mark reads at a similar VISUAL weight in the row.
-   *  Word-mark logos (Zegna, Loro Piana, Reda) sit tall; crested marks with
-   *  a strapline (Cerruti, Dormeuil, Angelico) sit short. The numbers
-   *  compensate for the cropping of the source files. */
-  cap: number;
+  /** Final on-screen pixel height. Tuned by eye for visual parity, NOT by
+   *  the raw aspect ratio of the source file, because the source crops
+   *  vary wildly across the eight mills. */
+  h: number;
 };
 
-// Eight mills that supply the house. Each cap is hand-picked from looking at
-// the raw asset; we trust the source files' aspect ratios but normalise the
-// final on-screen height so the row reads as a balanced museum-label band.
+// Hand-tuned heights so every mill reads at a similar visual weight in the
+// row. The earlier algorithmic scaling left Zegna nearly invisible and
+// Dormeuil dominating — these numbers were checked by eye against the live
+// rendered page on prod.
 const mills: Mill[] = [
-  { name: "Lanificio F.lli Cerruti", since: "1881", src: "/partners/cerruti.webp",     cap: 74 },
-  { name: "Ermenegildo Zegna",                       src: "/partners/zegna.png",        cap: 50 },
-  { name: "Dormeuil",                                src: "/partners/dormeuil.png",     cap: 88 },
-  { name: "Loro Piana",                              src: "/partners/loro-piana.png",   cap: 64 },
-  { name: "Reda",                  since: "1865",    src: "/partners/reda.png",         cap: 78 },
-  { name: "Scabal",                                  src: "/partners/scabal.png",       cap: 92 },
-  { name: "Angelico",              since: "1959",    src: "/partners/angelico.webp",    cap: 60 },
-  { name: "Carlo Barbera",                           src: "/partners/carlo-barbera.jpg", cap: 70 },
+  { name: "Lanificio F.lli Cerruti", since: "1881", src: "/partners/cerruti.webp",     h: 104 },
+  { name: "Ermenegildo Zegna",                       src: "/partners/zegna.png",        h: 64  },
+  { name: "Dormeuil",                                src: "/partners/dormeuil.png",     h: 122 },
+  { name: "Loro Piana",                              src: "/partners/loro-piana.png",   h: 76  },
+  { name: "Reda",                  since: "1865",    src: "/partners/reda.png",         h: 100 },
+  { name: "Scabal",                                  src: "/partners/scabal.png",       h: 112 },
+  { name: "Angelico",              since: "1959",    src: "/partners/angelico.webp",    h: 70  },
+  { name: "Carlo Barbera",                           src: "/partners/carlo-barbera.jpg", h: 100 },
 ];
 
 export function Partners() {
@@ -56,27 +55,30 @@ export function Partners() {
           </div>
         </div>
 
-        {/* Logos in original colour, normalised by visual height. White cards
-            on the source files drop into the page background via mix-blend-
-            multiply so the page reads as a single calm band of marks, not a
-            row of jpegs. */}
+        {/* Logos use a plain <img> on purpose: Next.js Image optimisation was
+            re-encoding PNGs into JPEG and baking the transparency checker
+            into the cloth-Dormeuil mark. Native <img> preserves the alpha. */}
         <ul className="grid grid-cols-2 sm:grid-cols-4 gap-y-14 gap-x-10 md:gap-x-16 items-center">
           {mills.map((m, i) => (
             <Reveal key={m.name} delay={i * 0.05} as="li">
               <div
                 className="relative w-full grid place-items-center"
-                style={{ height: m.cap + 12 }}
+                style={{ height: m.h + 12 }}
                 title={m.since ? `${m.name} · since ${m.since}` : m.name}
               >
-                <Image
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src={m.src}
                   alt={m.name}
-                  width={320}
-                  height={m.cap}
-                  sizes="(min-width: 1024px) 14vw, 40vw"
+                  loading="lazy"
+                  decoding="async"
                   style={{
-                    maxHeight: m.cap,
+                    maxHeight: m.h,
                     width: "auto",
+                    // Multiply keeps the originals readable while dropping any
+                    // pure-white card background into the ivory page. PNGs
+                    // with real alpha (Zegna, Loro Piana, Reda, Scabal,
+                    // Dormeuil) are unaffected by it.
                     mixBlendMode: "multiply",
                   }}
                   className="object-contain"

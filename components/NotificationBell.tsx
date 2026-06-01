@@ -3,49 +3,29 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, Package, MessageCircle, Sparkles } from "lucide-react";
+import { Bell, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./AuthProvider";
-import { ORDER_STATUS_LABEL, listMyOrders, type Order } from "@/lib/orders";
+import { ORDER_STATUS_LABEL, listMyOrders, type Order, type OrderStatus } from "@/lib/orders";
 
 /**
- * Bell + dropdown.
+ * Bell + dropdown — only meaningful for signed-in customers.
  *
- * Anonymous visitors see a short welcome strip (so the bell isn't empty).
- * Signed-in customers see their own orders, with a Supabase Realtime
- * subscription on `mtm_orders` so admin status changes appear here without
- * a refresh — this is the channel the user calls out in the brief.
+ * The bell stays visible to everyone for layout consistency, but it only
+ * fills with content when the visitor is signed in. Each notification is
+ * written in Sebastian's voice — the same agent runs the chat AND watches
+ * for status changes from the atelier, so the visitor feels one continuous
+ * concierge presence across the site.
  */
 
 type N = {
   id: string;
-  icon: "package" | "chat" | "sparkle";
   title: string;
   body?: string;
   href?: string;
   ts: number;
   unread: boolean;
 };
-
-const ANON_NOTES: N[] = [
-  {
-    id: "anon-welcome",
-    icon: "sparkle",
-    title: "Welcome to Hilton MTM",
-    body: "Sebastian can guide you through cloth and cut — tap the concierge at the bottom right.",
-    ts: Date.now() - 60 * 1000,
-    unread: true,
-  },
-  {
-    id: "anon-visit",
-    icon: "package",
-    title: "The atelier is open",
-    body: "Shop No. 119, Shaikh Abdulla Avenue, Manama. Sun–Thu, by appointment.",
-    href: "/book",
-    ts: Date.now() - 5 * 60 * 1000,
-    unread: false,
-  },
-];
 
 const READ_KEY = "hilton-notif-read";
 
@@ -67,12 +47,27 @@ function writeReadSet(s: Set<string>) {
   }
 }
 
+// Status-specific phrasing in Sebastian's voice. We avoid robotic phrases
+// like "Status changed" and lean into the concierge framing the user asked
+// for ("Sebastian noticed your commission has moved forward").
+const SEBASTIAN_LINE: Record<OrderStatus, string> = {
+  placed:           "I've placed your commission with the cutter.",
+  confirmed:        "The atelier has confirmed your commission.",
+  cloth_received:   "Your cloth has arrived from the mill.",
+  cutting:          "Your commission is on the cutting bench.",
+  in_production:    "Your commission has moved into production.",
+  fitting_ready:    "Your fitting is ready when you are.",
+  finishing:        "We are at the finishing stage — almost there.",
+  ready_for_pickup: "Your commission is ready for pickup at the atelier.",
+  delivered:        "Your commission has been delivered. A pleasure to dress you.",
+  cancelled:        "Your commission has been cancelled.",
+};
+
 function orderToNotification(o: Order): N {
   return {
     id: `order-${o.id}-${o.updated_at}`,
-    icon: "package",
-    title: `${o.order_number} — ${ORDER_STATUS_LABEL[o.status]}`,
-    body: `Updated ${new Date(o.updated_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
+    title: `${o.order_number} · ${ORDER_STATUS_LABEL[o.status]}`,
+    body: `${SEBASTIAN_LINE[o.status]} — ${new Date(o.updated_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
     href: `/account/orders/${o.order_number}`,
     ts: new Date(o.updated_at).getTime(),
     unread: true,
@@ -82,7 +77,7 @@ function orderToNotification(o: Order): N {
 export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [notes, setNotes] = useState<N[]>(ANON_NOTES);
+  const [notes, setNotes] = useState<N[]>([]);
   const [readSet, setReadSet] = useState<Set<string>>(() => new Set());
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -92,9 +87,11 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
   }, []);
 
   // Hydrate signed-in customer's order list, then subscribe to live updates.
+  // Anonymous visitors get no notifications — the bell stays empty so it
+  // doesn't pretend to be more useful than it is.
   useEffect(() => {
     if (!user) {
-      setNotes(ANON_NOTES);
+      setNotes([]);
       return;
     }
     let cancelled = false;
@@ -188,19 +185,24 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
             role="dialog"
             aria-label="Notifications"
           >
-            <header className="px-4 py-3 border-b border-black/10 flex items-center justify-between">
-              <div>
-                <div className="text-eyebrow text-[var(--color-burgundy-700)] text-[0.6rem]">
-                  From the atelier
-                </div>
-                <div className="text-display text-[1.05rem] text-[var(--color-charcoal-900)] leading-none mt-1">
-                  Notifications
+            <header className="px-4 py-3 border-b border-black/10 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="w-7 h-7 rounded-full bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] inline-flex items-center justify-center shrink-0">
+                  <Sparkles size={12} strokeWidth={1.6} />
+                </span>
+                <div className="min-w-0">
+                  <div className="text-eyebrow text-[var(--color-burgundy-700)] text-[0.58rem]">
+                    From Sebastian
+                  </div>
+                  <div className="text-display text-[1.0rem] text-[var(--color-charcoal-900)] leading-none mt-0.5">
+                    Notifications
+                  </div>
                 </div>
               </div>
               {user ? null : (
                 <Link
                   href="/account"
-                  className="text-eyebrow text-[0.6rem] text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors"
+                  className="text-eyebrow text-[0.6rem] text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors shrink-0"
                   onClick={() => setOpen(false)}
                 >
                   Sign in
@@ -208,9 +210,15 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
               )}
             </header>
             <ul className="max-h-[60vh] overflow-y-auto divide-y divide-black/5">
-              {notes.length === 0 ? (
+              {!user ? (
+                <li className="px-4 py-6 text-[0.85rem] text-[var(--color-charcoal-700)] leading-relaxed">
+                  Sign in and I'll keep you informed as your commission moves
+                  through the atelier — first cut, fitting, finishing,
+                  delivery.
+                </li>
+              ) : notes.length === 0 ? (
                 <li className="px-4 py-6 text-[0.85rem] text-[var(--color-charcoal-500)]">
-                  No commissions yet. Begin one and you'll see updates here.
+                  No commissions yet. Begin one and I'll update you here.
                 </li>
               ) : (
                 notes.map((n) => (
@@ -239,14 +247,13 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
 }
 
 function NoteRow({ note, onClose }: { note: N; onClose: () => void }) {
-  const Icon = note.icon === "package" ? Package : note.icon === "chat" ? MessageCircle : Sparkles;
   const body = (
     <div className="px-4 py-3 flex items-start gap-3 hover:bg-[var(--color-ivory-200)] transition-colors">
-      <span className="mt-0.5 w-8 h-8 rounded-full bg-[var(--color-ivory-200)] text-[var(--color-burgundy-700)] inline-flex items-center justify-center shrink-0">
-        <Icon size={14} strokeWidth={1.5} />
+      <span className="mt-0.5 w-8 h-8 rounded-full bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] inline-flex items-center justify-center shrink-0">
+        <Sparkles size={12} strokeWidth={1.6} />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="text-[0.88rem] text-[var(--color-charcoal-900)] truncate">{note.title}</div>
+        <div className="text-[0.86rem] text-[var(--color-charcoal-900)] tabular-nums">{note.title}</div>
         {note.body && (
           <div className="text-[0.78rem] text-[var(--color-charcoal-500)] mt-0.5 line-clamp-2">{note.body}</div>
         )}
