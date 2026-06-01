@@ -52,32 +52,30 @@ export function Partners() {
           </div>
         </div>
 
-        {/* Logo grid — four across on desktop, two on mobile. Grayscale-and-soft
-            on rest, color on hover, so the row reads as a single quiet band. */}
-        <ul className="grid grid-cols-2 sm:grid-cols-4 gap-y-12 gap-x-8 md:gap-x-12 items-center">
+        {/* Logo grid — four across on desktop, two on mobile. Each mark is
+            grayscale + multiplied against the ivory background so the
+            individual logo packaging (white cards, transparent / cream
+            crops) reads as a single calm band. Hover lifts to full colour. */}
+        <ul className="grid grid-cols-2 sm:grid-cols-4 gap-y-14 gap-x-10 md:gap-x-16 items-center">
           {mills.map((m, i) => {
             const s = m.scale ?? 1;
-            const h = Math.round(64 * s);
+            const h = Math.round(72 * s);
             return (
               <Reveal key={m.name} delay={i * 0.05} as="li">
-                <div className="flex flex-col items-center text-center gap-3">
-                  <div
-                    className="relative w-full grid place-items-center"
-                    style={{ height: h }}
-                  >
-                    <Image
-                      src={m.src}
-                      alt={m.name}
-                      width={260}
-                      height={h}
-                      sizes="(min-width: 1024px) 14vw, 40vw"
-                      className="max-h-full w-auto object-contain opacity-70 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500"
-                    />
-                  </div>
-                  <span className="text-eyebrow text-[var(--color-charcoal-500)] text-[0.62rem]">
-                    {m.name}
-                    {m.since ? <span className="opacity-60"> · {m.since}</span> : null}
-                  </span>
+                <div
+                  className="relative w-full grid place-items-center"
+                  style={{ height: h + 16 }}
+                  title={m.since ? `${m.name} · since ${m.since}` : m.name}
+                >
+                  <Image
+                    src={m.src}
+                    alt={m.name}
+                    width={320}
+                    height={h}
+                    sizes="(min-width: 1024px) 14vw, 40vw"
+                    style={{ maxHeight: h, width: "auto", mixBlendMode: "multiply" }}
+                    className="object-contain opacity-75 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500"
+                  />
                 </div>
               </Reveal>
             );
