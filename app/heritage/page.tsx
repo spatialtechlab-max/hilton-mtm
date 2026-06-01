@@ -2,6 +2,7 @@ import Image from "next/image";
 import { PageHero } from "@/components/PageHero";
 import { Reveal, SplitReveal } from "@/components/Reveal";
 import { CtaBanner } from "@/components/CtaBanner";
+import { MillBookGallery } from "@/components/MillBookGallery";
 import { PlaceholderBadge } from "@/components/PlaceholderBadge";
 
 const timeline = [
@@ -182,6 +183,9 @@ export default function HeritagePage() {
           </div>
         </div>
       </section>
+
+      {/* Editorial gallery of swatch folios from the cloth library. */}
+      <MillBookGallery />
 
       <CtaBanner
         title="A house, not a brand."
