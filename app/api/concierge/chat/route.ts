@@ -126,10 +126,11 @@ export async function POST(req: Request) {
         "X-Title": "Hilton MTM - Sebastian Concierge",
       },
       body: JSON.stringify({
-        // Claude 3.5 Sonnet handles the intent classification (party vs
-        // wedding vs business etc.) far more reliably than haiku, and the
-        // tone control is sharper. Pay the cost — this is the concierge.
-        model: "anthropic/claude-3.5-sonnet",
+        // Claude Sonnet 4.6 — top-tier intent classification (party vs
+        // wedding vs business etc.) and the cleanest tone control of the
+        // OpenRouter catalogue at sensible cost. The earlier "haiku" tier
+        // was demonstrably misclassifying "party wear" as "wedding".
+        model: "anthropic/claude-sonnet-4.6",
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
         max_tokens: 420,
         temperature: 0.3,
