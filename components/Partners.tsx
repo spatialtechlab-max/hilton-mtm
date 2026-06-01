@@ -12,17 +12,20 @@ type Mill = {
 
 // Heights recalibrated AFTER each source PNG was alpha-keyed (whites
 // dropped to transparent — fixing Dormeuil's baked-in checker) AND
-// trimmed flush to the mark. With no canvas padding any more, the height
-// caps drive visual weight directly. Numbers chosen by eye on prod.
+// trimmed flush to the mark.
+//
+// The squarer marks (Loro Piana 1.79:1, Scabal 1:1, Carlo Barbera 1.32:1)
+// were finishing well below the cell width, leaving them visually smaller
+// than the wide wordmarks. Bumped their caps so they fill the cell.
 const mills: Mill[] = [
   { name: "Lanificio F.lli Cerruti", since: "1881", src: "/partners/cerruti.png",       h: 92 },
   { name: "Ermenegildo Zegna",                       src: "/partners/zegna.png",        h: 36 },
   { name: "Dormeuil",                                src: "/partners/dormeuil.png",     h: 110 },
-  { name: "Loro Piana",                              src: "/partners/loro-piana.png",    h: 78 },
+  { name: "Loro Piana",                              src: "/partners/loro-piana.png",   h: 120 },
   { name: "Reda",                  since: "1865",    src: "/partners/reda.png",         h: 100 },
-  { name: "Scabal",                                  src: "/partners/scabal.png",       h: 112 },
+  { name: "Scabal",                                  src: "/partners/scabal.png",       h: 170 },
   { name: "Angelico",              since: "1959",    src: "/partners/angelico.png",     h: 60 },
-  { name: "Carlo Barbera",                           src: "/partners/carlo-barbera.png", h: 90 },
+  { name: "Carlo Barbera",                           src: "/partners/carlo-barbera.png", h: 145 },
 ];
 
 export function Partners() {
