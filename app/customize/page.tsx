@@ -11,7 +11,7 @@ import {
   defaultMeasurements,
   type MeasurementValues, type MeasurementUnit, type Measurement, type MeasurementGroup,
   type StepCategory, measurementGroupsForCategory,
-  categoryHasTiers, isCustomizeCategory,
+  categoryHasTiers, isCustomizeCategory, tierPriceFor,
 } from "@/lib/customizer";
 import {
   type LiveStep, staticLiveSteps, fetchLiveSteps, visibleLiveSteps,
@@ -88,9 +88,11 @@ export default function CustomizePage() {
   const activeGroups       = useMemo(() => measurementGroupsForCategory(category), [category]);
   const activeMeasurements = useMemo(() => activeGroups.flatMap((g) => g.items), [activeGroups]);
 
-  // Pricing: base (tier for suits/jackets, product price otherwise) + surcharges
+  // Pricing: every category now uses tier-based pricing, but the tier
+  // *price* depends on the category — a Bespoke shirt isn't a Bespoke
+  // suit. `tierPriceFor` returns the right BHD label per (cat × tier).
   const product    = useMemo(() => (sku ? findProduct(sku) : null), [sku]);
-  const basePrice  = hasTiers ? parsePrice(tierObj.price) : parsePrice(product?.item.price);
+  const basePrice  = parsePrice(tierPriceFor(category, tier));
   const surcharge  = useMemo(() => surchargeTotal(activeSteps, selections), [activeSteps, selections]);
   const grandTotal = basePrice + surcharge;
 

@@ -6,7 +6,9 @@ import {
   measurementGroupsForCategory,
   categoryHasTiers,
   defaultSelections,
+  tierPriceFor,
 } from "@/lib/customizer";
+import { parsePrice } from "@/lib/liveConfig";
 
 /**
  * Customizer segregation. The user has called this out as load-bearing —
@@ -87,13 +89,41 @@ describe("measurementGroupsForCategory", () => {
   });
 });
 
-describe("categoryHasTiers", () => {
-  test("suit + jacket use tiers", () => {
-    expect(categoryHasTiers("suit")).toBe(true);
-    expect(categoryHasTiers("jacket")).toBe(true);
+describe("categoryHasTiers — every garment now passes through tier picker", () => {
+  test.each(["suit", "jacket", "shirt", "trouser"] as const)(
+    "%s honours the tier flow",
+    (cat) => {
+      expect(categoryHasTiers(cat)).toBe(true);
+    },
+  );
+});
+
+describe("tierPriceFor — category-specific tier pricing", () => {
+  test("suit signature is د.ب 1,400 (unchanged baseline)", () => {
+    expect(parsePrice(tierPriceFor("suit", "signature"))).toBe(1400);
   });
-  test("shirt + trouser do not", () => {
-    expect(categoryHasTiers("shirt")).toBe(false);
-    expect(categoryHasTiers("trouser")).toBe(false);
+  test("shirt is priced as a single garment, not a commission", () => {
+    expect(parsePrice(tierPriceFor("shirt", "essential"))).toBeLessThan(200);
+    expect(parsePrice(tierPriceFor("shirt", "bespoke"))).toBeLessThan(500);
+  });
+  test("trouser sits between shirt and jacket", () => {
+    expect(parsePrice(tierPriceFor("trouser", "signature"))).toBeGreaterThan(
+      parsePrice(tierPriceFor("shirt", "signature")),
+    );
+    expect(parsePrice(tierPriceFor("trouser", "signature"))).toBeLessThan(
+      parsePrice(tierPriceFor("jacket", "signature")),
+    );
+  });
+  test("ordering: essential < signature < bespoke for every category", () => {
+    for (const cat of ["suit", "jacket", "shirt", "trouser"] as const) {
+      const e = parsePrice(tierPriceFor(cat, "essential"));
+      const s = parsePrice(tierPriceFor(cat, "signature"));
+      const b = parsePrice(tierPriceFor(cat, "bespoke"));
+      expect(s).toBeGreaterThan(e);
+      expect(b).toBeGreaterThan(s);
+    }
+  });
+  test("unknown tier slug falls back to signature, not 0", () => {
+    expect(parsePrice(tierPriceFor("suit", "platinum"))).toBe(1400);
   });
 });

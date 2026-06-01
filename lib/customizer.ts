@@ -722,9 +722,44 @@ export function measurementGroupsForCategory(cat: StepCategory): MeasurementGrou
     .filter((g) => g.items.length > 0);
 }
 
-/** Only suits/jackets/3-piece use the package tiers. */
-export function categoryHasTiers(cat: StepCategory): boolean {
-  return cat === "suit" || cat === "jacket";
+/** Every category goes through the same fabric → tier → spec → measure
+ *  → review flow now. The tier *prices* differ per category (a shirt at
+ *  Bespoke isn't the same number as a suit), see `tierPriceFor` below. */
+export function categoryHasTiers(_cat: StepCategory): boolean {
+  return true;
+}
+
+/**
+ * Category-specific tier pricing. The `tiers` array carries the suit
+ * baseline; shirts and trousers ride on much lower scales because they
+ * are a single garment, not a two-piece commission.
+ */
+const TIER_PRICE_BY_CATEGORY: Record<StepCategory, Record<TierLevel, string>> = {
+  suit: {
+    essential: "د.ب 800",
+    signature: "د.ب 1,400",
+    bespoke:   "د.ب 2,200",
+  },
+  jacket: {
+    essential: "د.ب 500",
+    signature: "د.ب 900",
+    bespoke:   "د.ب 1,500",
+  },
+  shirt: {
+    essential: "د.ب 140",
+    signature: "د.ب 220",
+    bespoke:   "د.ب 380",
+  },
+  trouser: {
+    essential: "د.ب 280",
+    signature: "د.ب 440",
+    bespoke:   "د.ب 720",
+  },
+};
+
+export function tierPriceFor(cat: StepCategory, tierSlug: string): string {
+  const slug = (tierSlug as TierLevel) in TIER_RANK ? (tierSlug as TierLevel) : "signature";
+  return TIER_PRICE_BY_CATEGORY[cat][slug];
 }
 
 /* ───────────────── Admin seed (static config → DB) ───────────────── */
