@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Inter } from "next/font/google";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { AuthProvider } from "@/components/AuthProvider";
+import { Concierge } from "@/components/Concierge/Concierge";
 import { site } from "@/lib/site";
 import "./globals.css";
 
@@ -57,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Navigation />
           <main>{children}</main>
           <Footer />
+          <Concierge />
         </AuthProvider>
       </body>
     </html>

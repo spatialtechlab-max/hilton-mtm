@@ -9,6 +9,7 @@ import { Logo } from "./Logo";
 import { nav } from "@/lib/site";
 import { useAuth } from "./AuthProvider";
 import { useCart } from "@/lib/cart";
+import { NotificationBell } from "./NotificationBell";
 
 export function Navigation() {
   const pathname = usePathname();
@@ -77,6 +78,12 @@ export function Navigation() {
           </nav>
 
           <div className="flex items-center gap-3 lg:gap-5">
+            {/* Notifications bell — visible to anyone, fills with live order
+                status changes when signed in. */}
+            <div className="hidden lg:inline-flex">
+              <NotificationBell tone={onDark ? "light" : "dark"} />
+            </div>
+
             {/* Cart — always visible, with item-count badge */}
             <Link
               href="/cart"

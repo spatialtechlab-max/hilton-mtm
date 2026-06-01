@@ -135,6 +135,14 @@ export default function CustomizePage() {
     const skuParam = params.get("sku");
     setSku(skuParam);
     const cat: StepCategory = isCustomizeCategory(raw) ? raw : "suit";
+    // Sebastian (the concierge) can pass ?tier=signature etc. We honour it
+    // even when it overrides the user's prior saved state, so that picking
+    // "Bespoke" in chat truly arrives in the bespoke flow.
+    const tierParam = params.get("tier");
+    const validTiers = ["essential", "signature", "bespoke"] as const;
+    if (tierParam && (validTiers as readonly string[]).includes(tierParam)) {
+      setTier(tierParam);
+    }
     setCategory(cat);
     // Entry rule: Fabric pick is ALWAYS the first phase, even when the user
     // arrived from a PDP "Customise" CTA. The PDP item is inspiration, not a

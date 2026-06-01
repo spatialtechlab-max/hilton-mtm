@@ -5,21 +5,25 @@ type Mill = {
   name: string;
   src: string;
   since?: string;
-  /** Some marks read low; nudge their height up to balance the row. */
-  scale?: number;
+  /** Pixel cap so each mark reads at a similar VISUAL weight in the row.
+   *  Word-mark logos (Zegna, Loro Piana, Reda) sit tall; crested marks with
+   *  a strapline (Cerruti, Dormeuil, Angelico) sit short. The numbers
+   *  compensate for the cropping of the source files. */
+  cap: number;
 };
 
-// Eight mills that supply the house. Sequenced for visual rhythm — short word
-// marks (Reda, Zegna) alternate with the wider crests so the row breathes.
+// Eight mills that supply the house. Each cap is hand-picked from looking at
+// the raw asset; we trust the source files' aspect ratios but normalise the
+// final on-screen height so the row reads as a balanced museum-label band.
 const mills: Mill[] = [
-  { name: "Lanificio F.lli Cerruti", since: "1881", src: "/partners/cerruti.webp", scale: 1.05 },
-  { name: "Ermenegildo Zegna",                       src: "/partners/zegna.png",    scale: 0.7 },
-  { name: "Dormeuil",                                src: "/partners/dormeuil.png", scale: 1.05 },
-  { name: "Loro Piana",                              src: "/partners/loro-piana.png" },
-  { name: "Reda",                  since: "1865",   src: "/partners/reda.png",     scale: 0.95 },
-  { name: "Scabal",                                  src: "/partners/scabal.png",   scale: 1.1 },
-  { name: "Angelico",              since: "1959",   src: "/partners/angelico.webp", scale: 0.8 },
-  { name: "Carlo Barbera",                           src: "/partners/carlo-barbera.jpg" },
+  { name: "Lanificio F.lli Cerruti", since: "1881", src: "/partners/cerruti.webp",     cap: 74 },
+  { name: "Ermenegildo Zegna",                       src: "/partners/zegna.png",        cap: 50 },
+  { name: "Dormeuil",                                src: "/partners/dormeuil.png",     cap: 88 },
+  { name: "Loro Piana",                              src: "/partners/loro-piana.png",   cap: 64 },
+  { name: "Reda",                  since: "1865",    src: "/partners/reda.png",         cap: 78 },
+  { name: "Scabal",                                  src: "/partners/scabal.png",       cap: 92 },
+  { name: "Angelico",              since: "1959",    src: "/partners/angelico.webp",    cap: 60 },
+  { name: "Carlo Barbera",                           src: "/partners/carlo-barbera.jpg", cap: 70 },
 ];
 
 export function Partners() {
@@ -52,34 +56,34 @@ export function Partners() {
           </div>
         </div>
 
-        {/* Logo grid — four across on desktop, two on mobile. Each mark is
-            grayscale + multiplied against the ivory background so the
-            individual logo packaging (white cards, transparent / cream
-            crops) reads as a single calm band. Hover lifts to full colour. */}
+        {/* Logos in original colour, normalised by visual height. White cards
+            on the source files drop into the page background via mix-blend-
+            multiply so the page reads as a single calm band of marks, not a
+            row of jpegs. */}
         <ul className="grid grid-cols-2 sm:grid-cols-4 gap-y-14 gap-x-10 md:gap-x-16 items-center">
-          {mills.map((m, i) => {
-            const s = m.scale ?? 1;
-            const h = Math.round(72 * s);
-            return (
-              <Reveal key={m.name} delay={i * 0.05} as="li">
-                <div
-                  className="relative w-full grid place-items-center"
-                  style={{ height: h + 16 }}
-                  title={m.since ? `${m.name} · since ${m.since}` : m.name}
-                >
-                  <Image
-                    src={m.src}
-                    alt={m.name}
-                    width={320}
-                    height={h}
-                    sizes="(min-width: 1024px) 14vw, 40vw"
-                    style={{ maxHeight: h, width: "auto", mixBlendMode: "multiply" }}
-                    className="object-contain opacity-75 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500"
-                  />
-                </div>
-              </Reveal>
-            );
-          })}
+          {mills.map((m, i) => (
+            <Reveal key={m.name} delay={i * 0.05} as="li">
+              <div
+                className="relative w-full grid place-items-center"
+                style={{ height: m.cap + 12 }}
+                title={m.since ? `${m.name} · since ${m.since}` : m.name}
+              >
+                <Image
+                  src={m.src}
+                  alt={m.name}
+                  width={320}
+                  height={m.cap}
+                  sizes="(min-width: 1024px) 14vw, 40vw"
+                  style={{
+                    maxHeight: m.cap,
+                    width: "auto",
+                    mixBlendMode: "multiply",
+                  }}
+                  className="object-contain"
+                />
+              </div>
+            </Reveal>
+          ))}
         </ul>
       </div>
     </section>
