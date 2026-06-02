@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  ArrowRight, LogOut, ShoppingBag, Ruler, CalendarClock, Mail, Package, Lock,
+  ArrowRight, LogOut, ShoppingBag, Ruler, CalendarClock, Mail, Package,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { AuthForm } from "@/components/AuthForm";
@@ -22,11 +23,28 @@ const ATELIER_IMG =
 
 export default function AccountPage() {
   const { user, loading, signOut } = useAuth();
+  const router = useRouter();
+  // Admins never see the customer dashboard. The moment they're signed in
+  // we send them to /admin. This handles every entry point (sign-in form,
+  // returning visitor, direct URL) without touching the AuthForm flow.
+  const [redirecting, setRedirecting] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    isAdmin(user.email).then((adm) => {
+      if (cancelled || !adm) return;
+      setRedirecting(true);
+      router.replace("/admin");
+    });
+    return () => { cancelled = true; };
+  }, [user, router]);
 
-  if (loading) {
+  if (loading || redirecting) {
     return (
       <div className="pt-40 pb-24 min-h-[70vh] flex items-center justify-center">
-        <span className="text-eyebrow text-[var(--color-charcoal-500)]">Loading…</span>
+        <span className="text-eyebrow text-[var(--color-charcoal-500)]">
+          {redirecting ? "Taking you to the atelier admin…" : "Loading…"}
+        </span>
       </div>
     );
   }
@@ -106,28 +124,19 @@ function AccountDashboard({ user, onSignOut }: { user: User; onSignOut: () => vo
   const [profile, setProfile] = useState<Profile | null>(null);
   const [orders, setOrders]   = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  // Admins see an extra "Go to the atelier admin" rail at the top of the
-  // signed-in dashboard. Customers never see it because isAdmin checks the
-  // mtm_admins allow-list on the server.
-  const [showAdminLink, setShowAdminLink] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [p, os, adm] = await Promise.all([
-        fetchProfile(user.id),
-        listMyOrders(),
-        isAdmin(user.email),
-      ]);
+      const [p, os] = await Promise.all([fetchProfile(user.id), listMyOrders()]);
       if (cancelled) return;
       setProfile(p);
       setOrders(os);
-      setShowAdminLink(adm);
       setLoading(false);
     }
     load();
     return () => { cancelled = true; };
-  }, [user.id, user.email]);
+  }, [user.id]);
 
   const needsProfile = !loading && !isProfileComplete(profile);
   const displayName = profile?.full_name?.trim() || googleName || email.split("@")[0];
@@ -147,23 +156,13 @@ function AccountDashboard({ user, onSignOut }: { user: User; onSignOut: () => vo
                 <Mail size={14} strokeWidth={1.5} /> {email}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
-              {showAdminLink && (
-                <Link
-                  href="/admin"
-                  className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)] px-5 py-3 hover:bg-[var(--color-burgundy-700)] transition-colors"
-                >
-                  <Lock size={14} strokeWidth={1.5} /> Atelier admin
-                </Link>
-              )}
-              <button
-                type="button"
-                onClick={onSignOut}
-                className="text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)]/25 text-[var(--color-charcoal-900)] px-5 py-3 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
-              >
-                <LogOut size={15} strokeWidth={1.5} /> Sign out
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="self-start md:self-auto text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)]/25 text-[var(--color-charcoal-900)] px-5 py-3 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
+            >
+              <LogOut size={15} strokeWidth={1.5} /> Sign out
+            </button>
           </div>
 
           {/* Profile completion prompt */}

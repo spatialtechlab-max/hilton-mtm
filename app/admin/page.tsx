@@ -11,6 +11,7 @@ import {
   updateStep,
   type DbStep, type DbOption,
 } from "@/lib/adminData";
+import { alphaKeyToPng } from "@/lib/imageKey";
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
@@ -490,21 +491,45 @@ function AddOption({
   const [label, setLabel] = useState("");
   const [surcharge, setSurcharge] = useState("0");
   const [color, setColor] = useState("");
+  // Image picked by the admin. We alpha-key it client-side BEFORE upload
+  // so the storefront only ever sees a transparent PNG — the white card
+  // backgrounds that ship with most stock vector exports get dropped
+  // automatically so the option diagrams blend with the customizer's
+  // ivory page.
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  async function handlePickFile(f: File | null) {
+    setErr(null);
+    if (!f) { setFile(null); setPreview(null); return; }
+    try {
+      const cleaned = await alphaKeyToPng(f);
+      setFile(cleaned);
+      setPreview(URL.createObjectURL(cleaned));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Couldn't process that image.");
+    }
+  }
 
   async function add() {
     if (!value.trim() || !label.trim()) { setErr("Value and label are required."); return; }
     setBusy(true); setErr(null);
     try {
+      let image_url: string | null = null;
+      if (file) image_url = await uploadOptionImage(file);
       await insertOption({
         step_slug: stepSlug,
         value: value.trim(),
         label: label.trim(),
         surcharge: Number(surcharge) || 0,
         color: stepKind === "swatch" ? (color.trim() || null) : null,
+        image_url,
       });
-      setOpen(false); setValue(""); setLabel(""); setSurcharge("0"); setColor("");
+      setOpen(false);
+      setValue(""); setLabel(""); setSurcharge("0"); setColor("");
+      setFile(null); setPreview(null);
       await onAdded();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to add.");
@@ -530,6 +555,30 @@ function AddOption({
           <Field label="Colour (hex)"><input value={color} onChange={(e) => setColor(e.target.value)} placeholder="#6e2639" className={inputCls + " w-32"} /></Field>
         )}
       </div>
+
+      {/* Image picker. The preview tile uses the same ivory bg as the
+          customizer card so admin sees exactly how the diagram will read
+          after the auto-key — no surprises. */}
+      <div className="flex items-center gap-4">
+        <Field label="Diagram (auto-transparent)">
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => handlePickFile(e.target.files?.[0] ?? null)}
+            className="mt-1 text-[0.85rem] text-[var(--color-charcoal-700)] file:mr-3 file:px-3 file:py-1.5 file:border file:border-black/15 file:bg-[var(--color-ivory-100)] file:text-eyebrow file:text-[0.65rem] hover:file:border-[var(--color-burgundy-700)]"
+          />
+        </Field>
+        {preview && (
+          <div className="flex items-center gap-2 text-[0.7rem] text-[var(--color-charcoal-500)]">
+            <div className="relative w-14 h-14 bg-[var(--color-ivory-100)] border border-black/10 grid place-items-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={preview} alt="preview" className="max-w-full max-h-full object-contain" />
+            </div>
+            <span>White removed.<br />Same tile as customizer.</span>
+          </div>
+        )}
+      </div>
+
       {err && <p className="text-[0.8rem] text-[var(--color-burgundy-700)]">{err}</p>}
       <div className="flex gap-2 pt-1">
         <button onClick={add} disabled={busy} className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-4 py-2.5 hover:bg-[var(--color-burgundy-800)] disabled:opacity-60">
