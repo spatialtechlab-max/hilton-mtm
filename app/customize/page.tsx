@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Download, Sparkles, Ruler, Play, Pause, Pencil, ShoppingBag, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -84,6 +84,11 @@ export default function CustomizePage() {
   const [hasUrlCategory, setHasUrlCategory] = useState(true);
   const { user } = useAuth();
   const router = useRouter();
+  // useSearchParams gives us a reactive value that re-runs the URL-reading
+  // effect whenever a Next.js Link / router.push changes the query string
+  // (the default useEffect with [] would have read the URL once on mount
+  // only — picking a tile from the Design Yours landing wouldn't propagate).
+  const searchParams = useSearchParams();
 
   const storageKey = `hilton-customizer-${category}`;
   const hasTiers   = categoryHasTiers(category);
@@ -175,7 +180,9 @@ export default function CustomizePage() {
       setPhase("fabric");
     }
     setReady(true);
-  }, []);
+    // Re-run on every URL query change (Next Link / router.push) so the
+    // page reacts to picking a tile from the Design Yours landing.
+  }, [searchParams]);
 
   // Fetch fabrics whenever we land on (or return to) the fabric phase.
   useEffect(() => {
