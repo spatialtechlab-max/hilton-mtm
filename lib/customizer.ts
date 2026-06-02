@@ -224,6 +224,70 @@ export const steps: Step[] = [
     ],
     defaultValue: "with-lining",
   },
+  /* ──────────────────────────────────────────────────────────────────
+   * SUIT / JACKET — Signature tier (brief order: jacket first, pants
+   * after; then the optional "polish" steps the user asked us to keep;
+   * canvas closes as the bespoke tier).
+   * ────────────────────────────────────────────────────────────────── */
+  {
+    slug: "sleeve-buttons",
+    eyebrow: "Sleeve buttons",
+    title: "Button your sleeves",
+    subtitle: "The working cuff of the jacket.",
+    description:
+      "How many working buttons sit at the cuff — and whether they kiss or stack. A quiet mark of hand tailoring.",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
+    options: [
+      { value: "three",        label: "Three buttons",    surcharge: 0  },
+      { value: "four",         label: "Four buttons",     surcharge: 15 },
+      { value: "four-kissing", label: "Four · kissing",   surcharge: 30 },
+      { value: "five",         label: "Five buttons",     surcharge: 25 },
+    ],
+    defaultValue: "four",
+  },
+  {
+    slug: "stitching",
+    eyebrow: "N° 09",
+    title: "Hand-picked stitching",
+    subtitle: "A small detail, deliberately visible.",
+    description:
+      "With hand-picked stitching, a fine line of pick-stitch follows the lapel, the lining edges, and the breast pocket — the discreet signature of hand-finished tailoring. Without keeps the lines clean and seamless, in the modern Italian tradition.",
+    options: [
+      { value: "with",    label: "With hand stitching", surcharge: 90 },
+      { value: "without", label: "Without",             surcharge: 0 },
+    ],
+  },
+  {
+    slug: "lining",
+    eyebrow: "N° 10",
+    title: "To line or not to line",
+    subtitle: "How the jacket sits against the body.",
+    description:
+      "A Full Lining gives the jacket its structure and the classic formal feel. A Half Lining keeps the back light — ideal for warmer climates without losing the line. Unlined is at its most relaxed: a summer-weight, travel-ready garment.",
+    options: [
+      { value: "full", label: "Full lining", surcharge: 0 },
+      { value: "half", label: "Half lining", surcharge: 0 },
+      { value: "none", label: "No lining",   surcharge: 0 },
+    ],
+  },
+  {
+    slug: "lining-fancy",
+    eyebrow: "Fancy lining",
+    title: "A lining with character",
+    subtitle: "Patterned silks for the inside of the jacket.",
+    description:
+      "Beyond the house basics — patterned and printed silks for the lining, seen only when the jacket opens. (Placeholder swatches; the house gallery uploads via the admin panel.)",
+    kind: "gallery",
+    options: [
+      { value: "none",      label: "Keep it plain",     surcharge: 0 },
+      { value: "paisley",   label: "Cardinal Paisley",  image: "/products/ties/HBTS001.webp", surcharge: 80 },
+      { value: "botanical", label: "Botanical Print",   image: "/products/ties/HBTS002.webp", surcharge: 80 },
+      { value: "foulard",   label: "Estate Foulard",    image: "/products/ties/HBTS003.webp", surcharge: 80 },
+      { value: "medallion", label: "Garnet Medallion",  image: "/products/ties/HBTS080.webp", surcharge: 80 },
+    ],
+    defaultValue: "none",
+  },
+  /* ── Signature tier — pants (brief: Fold or Hold, Suspend, Belt) ── */
   {
     slug: "cuffs-trouser",
     eyebrow: "N° 07",
@@ -261,34 +325,8 @@ export const steps: Step[] = [
       { value: "none", label: "Without belt loops", surcharge: 0 },
     ],
   },
-  {
-    slug: "sleeve-buttons",
-    eyebrow: "Sleeve buttons",
-    title: "Button your sleeves",
-    subtitle: "The working cuff of the jacket.",
-    description:
-      "How many working buttons sit at the cuff — and whether they kiss or stack. A quiet mark of hand tailoring.",
-    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
-    options: [
-      { value: "three",        label: "Three buttons",    surcharge: 0  },
-      { value: "four",         label: "Four buttons",     surcharge: 15 },
-      { value: "four-kissing", label: "Four · kissing",   surcharge: 30 },
-      { value: "five",         label: "Five buttons",     surcharge: 25 },
-    ],
-    defaultValue: "four",
-  },
-  {
-    slug: "stitching",
-    eyebrow: "N° 09",
-    title: "Hand-picked stitching",
-    subtitle: "A small detail, deliberately visible.",
-    description:
-      "With hand-picked stitching, a fine line of pick-stitch follows the lapel, the lining edges, and the breast pocket — the discreet signature of hand-finished tailoring. Without keeps the lines clean and seamless, in the modern Italian tradition.",
-    options: [
-      { value: "with",    label: "With hand stitching", surcharge: 90 },
-      { value: "without", label: "Without",             surcharge: 0 },
-    ],
-  },
+  /* ── Optional "polish" upgrades not in the V1 brief — the user asked
+   *    us to keep them as additional surcharge upsells.           ── */
   {
     slug: "double-breasted",
     eyebrow: "Double Breasted",
@@ -333,36 +371,6 @@ export const steps: Step[] = [
       { value: "hand-stitching", label: "With hand stitching",   surcharge: 90  },
     ],
     defaultValue: "regular",
-  },
-  {
-    slug: "lining",
-    eyebrow: "N° 10",
-    title: "To line or not to line",
-    subtitle: "How the jacket sits against the body.",
-    description:
-      "A Full Lining gives the jacket its structure and the classic formal feel. A Half Lining keeps the back light — ideal for warmer climates without losing the line. Unlined is at its most relaxed: a summer-weight, travel-ready garment.",
-    options: [
-      { value: "full", label: "Full lining", surcharge: 0 },
-      { value: "half", label: "Half lining", surcharge: 0 },
-      { value: "none", label: "No lining",   surcharge: 0 },
-    ],
-  },
-  {
-    slug: "lining-fancy",
-    eyebrow: "Fancy lining",
-    title: "A lining with character",
-    subtitle: "Patterned silks for the inside of the jacket.",
-    description:
-      "Beyond the house basics — patterned and printed silks for the lining, seen only when the jacket opens. (Placeholder swatches; the house gallery uploads via the admin panel.)",
-    kind: "gallery",
-    options: [
-      { value: "none",      label: "Keep it plain",     surcharge: 0 },
-      { value: "paisley",   label: "Cardinal Paisley",  image: "/products/ties/HBTS001.webp", surcharge: 80 },
-      { value: "botanical", label: "Botanical Print",   image: "/products/ties/HBTS002.webp", surcharge: 80 },
-      { value: "foulard",   label: "Estate Foulard",    image: "/products/ties/HBTS003.webp", surcharge: 80 },
-      { value: "medallion", label: "Garnet Medallion",  image: "/products/ties/HBTS080.webp", surcharge: 80 },
-    ],
-    defaultValue: "none",
   },
   {
     slug: "canvas",
