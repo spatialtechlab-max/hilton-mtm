@@ -378,6 +378,20 @@ export const steps: Step[] = [
     ],
     defaultValue: "full",
   },
+  /* ──────────────────────────────────────────────────────────────────
+   * SHIRT — sequence per client brief (V1):
+   *   1. Placket Your Shirt
+   *   2. Search Our Pockets
+   *   3. Pleats on Your Six
+   *   4. What Collars the Occasion?
+   *   5. Cuff Up Your Style
+   *   6. Cuff Up Your Style — finish  (Essentials / Signature / Bespoke)
+   *
+   * "Find your fit" (jacket diagram) and "Tux your shirt" are NOT in the
+   * brief; they're filtered out via STEP_CATEGORIES — but the source
+   * order matters because shirt steps appear in the order they're
+   * declared in this array.
+   * ────────────────────────────────────────────────────────────────── */
   {
     slug: "tux-shirt",
     eyebrow: "Tuxedo shirt",
@@ -393,8 +407,38 @@ export const steps: Step[] = [
     defaultValue: "tuxedo",
   },
   {
+    slug: "placket",
+    eyebrow: "N° 1",
+    title: "Placket your shirt",
+    subtitle: "How the buttons sit on the front.",
+    description:
+      "Without Placket (or Invisible Placket) is a French-style tailored placket that folds the fabric inside to disguise the button stitches — clean and contemporary. With Placket (or Front Placket) is for traditionalists, outlining the button strip. Hidden Button (or Fly Front Placket) covers the buttons completely — perfect for highlighting bow-ties.",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
+    options: [
+      { value: "without", label: "Without placket", surcharge: 0  },
+      { value: "with",    label: "With placket",    surcharge: 0  },
+      { value: "hidden",  label: "Hidden button",   surcharge: 20 },
+    ],
+    defaultValue: "with",
+  },
+  {
+    slug: "shirt-pocket",
+    eyebrow: "N° 2",
+    title: "Search our pockets",
+    subtitle: "The detail on the chest.",
+    description:
+      "Shirt pockets, though mostly ceremonial, add depth, detail and utility. Without Pocket is best for very formal occasions — elegance and order. With Pocket or Pocket with Flap shirts are ideal for more casual settings.",
+    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
+    options: [
+      { value: "without",    label: "Without pocket",    surcharge: 0  },
+      { value: "with",       label: "With pocket",       surcharge: 10 },
+      { value: "with-flaps", label: "Pockets with flaps",surcharge: 20 },
+    ],
+    defaultValue: "without",
+  },
+  {
     slug: "back-pleats",
-    eyebrow: "Back pleats",
+    eyebrow: "N° 3",
     title: "Pleats on your six",
     subtitle: "How the back of the shirt sits.",
     description:
@@ -409,38 +453,8 @@ export const steps: Step[] = [
     defaultValue: "single",
   },
   {
-    slug: "shirt-pocket",
-    eyebrow: "Shirt pocket",
-    title: "Search our pockets",
-    subtitle: "The detail on the chest.",
-    description:
-      "Shirt pockets, though mostly ceremonial, add depth, detail and utility. Without Pocket is best for very formal occasions — elegance and order. With Pocket or Pocket with Flap shirts are ideal for more casual settings.",
-    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
-    options: [
-      { value: "without",    label: "Without pocket",    surcharge: 0  },
-      { value: "with",       label: "With pocket",       surcharge: 10 },
-      { value: "with-flaps", label: "Pockets with flaps",surcharge: 20 },
-    ],
-    defaultValue: "without",
-  },
-  {
-    slug: "placket",
-    eyebrow: "Placket",
-    title: "Placket your shirt",
-    subtitle: "How the buttons sit on the front.",
-    description:
-      "Without Placket (or Invisible Placket) is a French-style tailored placket that folds the fabric inside to disguise the button stitches — clean and contemporary. With Placket (or Front Placket) is for traditionalists, outlining the button strip. Hidden Button (or Fly Front Placket) covers the buttons completely — perfect for highlighting bow-ties.",
-    // Diagram-based: illustrations cropped from the Hilton Bespoke Booklet V4.
-    options: [
-      { value: "without", label: "Without placket", surcharge: 0  },
-      { value: "with",    label: "With placket",    surcharge: 0  },
-      { value: "hidden",  label: "Hidden button",   surcharge: 20 },
-    ],
-    defaultValue: "with",
-  },
-  {
     slug: "collar",
-    eyebrow: "N° 11",
+    eyebrow: "N° 4",
     title: "What collars the occasion?",
     subtitle: "The single most visible detail on a shirt.",
     description:
@@ -463,7 +477,7 @@ export const steps: Step[] = [
   },
   {
     slug: "cuffs-shirt",
-    eyebrow: "N° 12",
+    eyebrow: "N° 5",
     title: "Cuff up your style",
     subtitle: "Six cuffs — pick the line that suits the watch.",
     description:
@@ -485,7 +499,7 @@ export const steps: Step[] = [
     // cuff treatment. Pricing follows the same surcharge mechanic the
     // rest of the customizer uses.
     slug: "cuff-tier",
-    eyebrow: "N° 12.1",
+    eyebrow: "N° 6",
     title: "Cuff up your style — finish",
     subtitle: "Three finishes — choose the depth of the work on collar and cuff.",
     description:
@@ -625,7 +639,10 @@ export type TierLevel = "essential" | "signature" | "bespoke";
 // so it inherits both jacket and trouser steps. A standalone jacket gets the
 // jacket steps only (no trouser steps); shirts/trousers get their own.
 const STEP_CATEGORIES: Record<string, StepCategory[]> = {
-  fit:               ["suit", "jacket", "shirt", "trouser"],
+  // Per client brief, shirt has only 5 essentials (Placket, Pockets,
+  // Pleats, Collar, Cuff) + the new cuff-tier. "Find your fit" is a
+  // jacket-shaped diagram step — keep it on suit/jacket/trouser only.
+  fit:               ["suit", "jacket", "trouser"],
   buttons:           ["suit", "jacket"],
   lapel:             ["suit", "jacket"],
   vents:             ["suit", "jacket"],
@@ -656,7 +673,10 @@ const STEP_CATEGORIES: Record<string, StepCategory[]> = {
   placket:           ["shirt"],
   "shirt-pocket":    ["shirt"],
   "back-pleats":     ["shirt"],
-  "tux-shirt":       ["shirt"],
+  // tux-shirt was a signature-tier extra; it isn't in the client brief
+  // for shirt and would confuse the 5-step Essentials sequence. Removed
+  // from shirt; can be re-added in admin if the atelier wants it.
+  "tux-shirt":       [],
 };
 
 // Minimum package tier that unlocks each step (suits/jackets only).
