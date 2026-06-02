@@ -17,6 +17,7 @@ import {
   type LiveStep, staticLiveSteps, fetchLiveSteps, visibleLiveSteps,
   surchargeTotal, findLiveOption, parsePrice, formatBhd,
 } from "@/lib/liveConfig";
+import { mergeLiveAndStatic } from "@/lib/liveConfigMerge";
 import { findProduct } from "@/lib/libraries";
 import { buildSpecPdf } from "@/lib/specSheet";
 import { AuthForm } from "@/components/AuthForm";
@@ -96,33 +97,21 @@ export default function CustomizePage() {
   const surcharge  = useMemo(() => surchargeTotal(activeSteps, selections), [activeSteps, selections]);
   const grandTotal = basePrice + surcharge;
 
-  // Merge Supabase-backed config with static. Static defines the structure
-  // (so the new booklet steps that aren't seeded into Supabase still appear);
-  // Supabase overrides labels, surcharges, etc. for the steps it has; and
-  // admin can disable any step/option (active=false) — those get dropped.
+  // Merge Supabase-backed admin config with the static defaults. Logic
+  // lives in lib/liveConfigMerge.ts so it can be unit-tested; this
+  // useEffect is now just glue to Supabase + React state.
   useEffect(() => {
     fetchLiveSteps().then((payload) => {
       if (!payload) return;
       const { steps: live, disabledStepSlugs, disabledOptionsByStep } = payload;
-      setAllSteps((staticSteps) => {
-        const liveBySlug = new Map(live.map((s) => [s.slug, s]));
-        return staticSteps
-          .filter((s) => !disabledStepSlugs.has(s.slug))
-          .map((s) => {
-            const liveStep = liveBySlug.get(s.slug);
-            const disabledOpts = disabledOptionsByStep[s.slug] ?? new Set<string>();
-            if (!liveStep) {
-              // Static step not in DB at all — keep it as-is but drop any disabled options (won't apply, but defensive).
-              return { ...s, options: s.options.filter((o) => !disabledOpts.has(o.value)) };
-            }
-            // Step is in DB — merge live overrides per option, drop disabled ones.
-            const liveOptByValue = new Map(liveStep.options.map((o) => [o.value, o]));
-            const mergedOptions = s.options
-              .filter((o) => !disabledOpts.has(o.value))
-              .map((o) => liveOptByValue.get(o.value) ?? o);
-            return { ...liveStep, options: mergedOptions };
-          });
-      });
+      setAllSteps((staticSteps) =>
+        mergeLiveAndStatic({
+          staticSteps,
+          liveSteps: live,
+          disabledStepSlugs,
+          disabledOptionsByStep,
+        }),
+      );
     });
   }, []);
 
