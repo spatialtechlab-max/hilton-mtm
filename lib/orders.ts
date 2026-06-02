@@ -240,3 +240,54 @@ export async function postOrderMessage(
     .insert({ order_id: orderId, status, note: trimmed });
   return { error: error?.message ?? null };
 }
+
+/** Recent status_history rows that carry a note. Joins to mtm_orders for the
+ *  order_number so the bell can surface them without an extra round-trip.
+ *  RLS scopes the result: customers only see their own; admins see all. */
+export type RecentMessage = {
+  id: string;
+  order_id: string;
+  order_number: string;
+  customer_name: string;
+  note: string;
+  status: OrderStatus;
+  changed_at: string;
+};
+
+export async function fetchRecentMessages(limit = 20): Promise<RecentMessage[]> {
+  const { data, error } = await supabase
+    .from("mtm_order_status_history")
+    .select("id, order_id, status, note, changed_at, mtm_orders(order_number, customer_name)")
+    .neq("note", "")
+    .order("changed_at", { ascending: false })
+    .limit(limit);
+  if (error || !data) return [];
+  // PostgREST returns the joined relation as a single object or an array
+  // depending on the constraint shape. We accept both and unwrap.
+  type Row = {
+    id: string;
+    order_id: string;
+    status: OrderStatus;
+    note: string;
+    changed_at: string;
+    mtm_orders:
+      | { order_number: string; customer_name: string }
+      | { order_number: string; customer_name: string }[]
+      | null;
+  };
+  return (data as unknown as Row[])
+    .map((r) => {
+      const ord = Array.isArray(r.mtm_orders) ? r.mtm_orders[0] : r.mtm_orders;
+      if (!r.note || !ord) return null;
+      return {
+        id: r.id,
+        order_id: r.order_id,
+        order_number: ord.order_number,
+        customer_name: ord.customer_name,
+        note: r.note,
+        status: r.status,
+        changed_at: r.changed_at,
+      };
+    })
+    .filter((m): m is RecentMessage => m !== null);
+}

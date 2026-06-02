@@ -7,7 +7,7 @@ import { Bell, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./AuthProvider";
 import { isAdmin } from "@/lib/admin";
-import { ORDER_STATUS_LABEL, listMyOrders, listAllOrders, type Order, type OrderStatus } from "@/lib/orders";
+import { ORDER_STATUS_LABEL, listMyOrders, listAllOrders, fetchRecentMessages, type Order, type OrderStatus, type RecentMessage } from "@/lib/orders";
 
 /**
  * Bell + dropdown — only meaningful for signed-in customers.
@@ -95,6 +95,31 @@ function adminOrderToNotification(o: Order): N {
   };
 }
 
+// Custom message a human in the atelier (admin) wrote inside the order
+// modal. Surfaces on BOTH bells — customer sees "Sebastian's note", admin
+// sees "Sent to <customer>". Routes the click to the right detail surface.
+function messageToCustomerNotification(m: RecentMessage): N {
+  return {
+    id: `msg-${m.id}`,
+    title: `${m.order_number} · Note from the atelier`,
+    body: `${m.note} — ${new Date(m.changed_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
+    href: `/account/orders/${m.order_number}`,
+    ts: new Date(m.changed_at).getTime(),
+    unread: true,
+  };
+}
+
+function messageToAdminNotification(m: RecentMessage): N {
+  return {
+    id: `admin-msg-${m.id}`,
+    title: `${m.order_number} · Sent to ${m.customer_name || "customer"}`,
+    body: `${m.note} — ${new Date(m.changed_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
+    href: `/admin/orders`,
+    ts: new Date(m.changed_at).getTime(),
+    unread: true,
+  };
+}
+
 export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" }) {
   const { user } = useAuth();
   const [admin, setAdmin] = useState<boolean | null>(null);
@@ -127,11 +152,23 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
 
     async function refresh() {
       if (admin) {
-        const all = await listAllOrders();
-        if (!cancelled) setNotes(all.slice(0, 10).map(adminOrderToNotification));
+        const [all, msgs] = await Promise.all([listAllOrders(), fetchRecentMessages(15)]);
+        if (cancelled) return;
+        const merged: N[] = [
+          ...all.slice(0, 10).map(adminOrderToNotification),
+          ...msgs.map(messageToAdminNotification),
+        ].sort((a, b) => b.ts - a.ts).slice(0, 15);
+        setNotes(merged);
       } else {
-        const mine = await listMyOrders();
-        if (!cancelled) setNotes(mine.slice(0, 10).map(customerOrderToNotification));
+        const [mine, msgs] = await Promise.all([listMyOrders(), fetchRecentMessages(15)]);
+        if (cancelled) return;
+        // RLS already scopes fetchRecentMessages to the customer's own
+        // orders, so msgs is safe to merge as-is.
+        const merged: N[] = [
+          ...mine.slice(0, 10).map(customerOrderToNotification),
+          ...msgs.map(messageToCustomerNotification),
+        ].sort((a, b) => b.ts - a.ts).slice(0, 15);
+        setNotes(merged);
       }
     }
     void refresh();
