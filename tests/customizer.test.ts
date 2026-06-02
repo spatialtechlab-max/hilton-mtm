@@ -39,6 +39,10 @@ describe("stepsForCategory", () => {
     const slugs = stepsForCategory("shirt").map((s) => s.slug);
     expect(slugs).toEqual(expect.arrayContaining(["collar", "cuffs-shirt", "placket"]));
   });
+  test("shirt includes the cuff-tier upgrade step (brief: Signature initials, Bespoke buttons + unfused)", () => {
+    const slugs = stepsForCategory("shirt").map((s) => s.slug);
+    expect(slugs).toContain("cuff-tier");
+  });
   test("trouser excludes lapel + buttons + tuxedo", () => {
     const slugs = stepsForCategory("trouser").map((s) => s.slug);
     expect(slugs).not.toContain("lapel");
@@ -89,13 +93,15 @@ describe("measurementGroupsForCategory", () => {
   });
 });
 
-describe("categoryHasTiers — every garment now passes through tier picker", () => {
-  test.each(["suit", "jacket", "shirt", "trouser"] as const)(
-    "%s honours the tier flow",
-    (cat) => {
-      expect(categoryHasTiers(cat)).toBe(true);
-    },
-  );
+describe("categoryHasTiers — per client brief, only suit + jacket use the tier picker", () => {
+  test("suit and jacket show the Essentials / Signature / Bespoke tier picker", () => {
+    expect(categoryHasTiers("suit")).toBe(true);
+    expect(categoryHasTiers("jacket")).toBe(true);
+  });
+  test("shirt and trouser bypass the suit packages (brief: 'Individual Items… bypass the suit packages')", () => {
+    expect(categoryHasTiers("shirt")).toBe(false);
+    expect(categoryHasTiers("trouser")).toBe(false);
+  });
 });
 
 describe("tierPriceFor — category-specific tier pricing", () => {

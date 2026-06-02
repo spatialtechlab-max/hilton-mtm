@@ -20,12 +20,20 @@ const baseState = (cat: "suit" | "jacket" | "shirt" | "trouser") => ({
   stepCount: 6,
 });
 
-describe("nextPhase — uniform fabric→tier→spec flow", () => {
-  test.each(["suit", "jacket", "shirt", "trouser"] as const)(
-    "%s: fabric advances to tier (not straight to spec)",
+describe("nextPhase — fabric→tier→spec for suits/jackets; fabric→spec for shirts/trousers (brief)", () => {
+  test.each(["suit", "jacket"] as const)(
+    "%s: fabric advances to TIER (tier picker required)",
     (cat) => {
       const out = nextPhase("fabric", baseState(cat));
       expect(out).toEqual({ phase: "tier", stepIdx: 0 });
+    },
+  );
+
+  test.each(["shirt", "trouser"] as const)(
+    "%s: fabric advances straight to SPEC (bypasses the suit packages per brief)",
+    (cat) => {
+      const out = nextPhase("fabric", baseState(cat));
+      expect(out).toEqual({ phase: "spec", stepIdx: 0 });
     },
   );
 
@@ -34,8 +42,8 @@ describe("nextPhase — uniform fabric→tier→spec flow", () => {
     expect(out).toBeNull();
   });
 
-  test("tier advances to spec[0] for every category", () => {
-    for (const cat of ["suit", "jacket", "shirt", "trouser"] as const) {
+  test("tier advances to spec[0] (only ever reached on suit + jacket)", () => {
+    for (const cat of ["suit", "jacket"] as const) {
       expect(nextPhase("tier", baseState(cat))).toEqual({ phase: "spec", stepIdx: 0 });
     }
   });
@@ -55,16 +63,20 @@ describe("nextPhase — uniform fabric→tier→spec flow", () => {
   });
 });
 
-describe("backPhase — symmetric reverse with the same uniformity", () => {
-  test.each(["suit", "jacket", "shirt", "trouser"] as const)(
+describe("backPhase — symmetric reverse honouring the per-category tier rule", () => {
+  test.each(["suit", "jacket"] as const)(
     "%s: tier goes back to fabric",
     (cat) => {
       expect(backPhase("tier", baseState(cat))).toEqual({ phase: "fabric", stepIdx: 0 });
     },
   );
 
-  test("spec[0] goes back to tier", () => {
-    expect(backPhase("spec", baseState("shirt"))).toEqual({ phase: "tier", stepIdx: 0 });
+  test("suit spec[0] goes back to tier", () => {
+    expect(backPhase("spec", baseState("suit"))).toEqual({ phase: "tier", stepIdx: 0 });
+  });
+
+  test("shirt spec[0] goes back to fabric (no tier to return to)", () => {
+    expect(backPhase("spec", baseState("shirt"))).toEqual({ phase: "fabric", stepIdx: 0 });
   });
 
   test("spec[mid] goes back to spec[mid-1]", () => {
@@ -80,14 +92,23 @@ describe("backPhase — symmetric reverse with the same uniformity", () => {
   });
 });
 
-describe("Sebastian preselect honoured for every category", () => {
-  // Mimics the URL `?category=X&tier=signature` flow: the page boots in
-  // fabric, with hasTiers=true and tier=signature already in state.
-  test.each(["suit", "jacket", "shirt", "trouser"] as const)(
+describe("Sebastian preselect honoured per category type", () => {
+  // The URL `?category=X&tier=signature` flow boots in fabric. For
+  // tiered categories the next step IS the tier picker (so Sebastian's
+  // signature preselect is visible to the customer); for shirt/trouser
+  // the tier preselect lives in state but is bypassed in the flow.
+  test.each(["suit", "jacket"] as const)(
     "%s: fabric pick lands on tier where signature is pre-selected",
     (cat) => {
       const after = nextPhase("fabric", baseState(cat));
       expect(after?.phase).toBe("tier");
+    },
+  );
+  test.each(["shirt", "trouser"] as const)(
+    "%s: fabric pick goes straight to spec (no tier picker, per brief)",
+    (cat) => {
+      const after = nextPhase("fabric", baseState(cat));
+      expect(after?.phase).toBe("spec");
     },
   );
 });

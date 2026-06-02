@@ -477,6 +477,26 @@ export const steps: Step[] = [
       { value: "two-angled",  label: "Two-button angled" },
     ],
   },
+  {
+    // Per the client brief: the Cuff step is where the shirt's tier
+    // upgrades live. Essential = the house standard, included. Signature
+    // adds a hand-embroidered monogram. Bespoke adds premium horn or
+    // mother-of-pearl buttons AND a hand-finished, unfused collar +
+    // cuff treatment. Pricing follows the same surcharge mechanic the
+    // rest of the customizer uses.
+    slug: "cuff-tier",
+    eyebrow: "N° 12.1",
+    title: "Cuff up your style — finish",
+    subtitle: "Three finishes — choose the depth of the work on collar and cuff.",
+    description:
+      "Essentials keeps the house standard cuff. Signature adds a hand-embroidered monogram at the placket. Full Bespoke goes further with premium buttons and a hand-finished, unfused collar and cuff — the construction lifts the shirt's drape.",
+    kind: "choice",
+    options: [
+      { value: "essential", label: "Essentials · house standard", note: "Included.",                                       surcharge: 0  },
+      { value: "signature", label: "Signature · custom initials",  note: "Hand-embroidered monogram.",                       surcharge: 25 },
+      { value: "bespoke",   label: "Full Bespoke · hand-finished", note: "Premium buttons + unfused collar and cuff.",       surcharge: 60 },
+    ],
+  },
 ];
 
 export const tiers: Tier[] = [
@@ -632,6 +652,7 @@ const STEP_CATEGORIES: Record<string, StepCategory[]> = {
   canvas:            ["suit", "jacket"],
   collar:            ["shirt"],
   "cuffs-shirt":     ["shirt"],
+  "cuff-tier":       ["shirt"],
   placket:           ["shirt"],
   "shirt-pocket":    ["shirt"],
   "back-pleats":     ["shirt"],
@@ -649,7 +670,7 @@ const STEP_TIER: Record<string, TierLevel> = {
   "lining-fancy": "signature", "sport-jacket": "signature",
   tuxedo: "signature", "double-breasted": "signature",
   canvas: "bespoke",
-  collar: "essential", "cuffs-shirt": "essential", placket: "essential",
+  collar: "essential", "cuffs-shirt": "essential", "cuff-tier": "essential", placket: "essential",
   "shirt-pocket": "essential", "back-pleats": "essential",
   "tux-shirt": "signature",
 };
@@ -722,11 +743,14 @@ export function measurementGroupsForCategory(cat: StepCategory): MeasurementGrou
     .filter((g) => g.items.length > 0);
 }
 
-/** Every category goes through the same fabric → tier → spec → measure
- *  → review flow now. The tier *prices* differ per category (a shirt at
- *  Bespoke isn't the same number as a suit), see `tierPriceFor` below. */
-export function categoryHasTiers(_cat: StepCategory): boolean {
-  return true;
+/**
+ * Per the client brief: ONLY suits and jackets show the Essentials /
+ * Signature / Bespoke tier picker. Shirts and trousers bypass it and
+ * jump straight from fabric to their styling steps. (Shirts still get
+ * tier-like upgrades via the dedicated cuff-tier step.)
+ */
+export function categoryHasTiers(cat: StepCategory): boolean {
+  return cat === "suit" || cat === "jacket";
 }
 
 /**
