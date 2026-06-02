@@ -96,18 +96,5 @@ export async function GET(req: Request) {
     .filter((i) => includeDisabled || !disabled.has(String(i.id)))
     .map(toFabric);
 
-  // Show the breakdown of what the ERP actually classifies each cloth as,
-  // so the storefront can decide whether to surface them in any garment
-  // flow or only the one(s) the mill intended.
-  const erpCategoryCounts = items.reduce<Record<string, number>>((acc, i) => {
-    const k = (i.categoryName || "UNKNOWN").toUpperCase();
-    acc[k] = (acc[k] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  return NextResponse.json({
-    fabrics,
-    category,
-    erpCategoryCounts,
-  });
+  return NextResponse.json({ fabrics, category });
 }
