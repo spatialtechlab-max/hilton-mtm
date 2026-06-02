@@ -360,7 +360,11 @@ function OptionRow({
     if (!file) return;
     setUploading(true);
     try {
-      const url = await uploadOptionImage(file);
+      // Same client-side alpha-key + tight-crop we use on Add: any white
+      // pixels become transparent so the diagram sits on the customizer's
+      // ivory page without a card behind it.
+      const cleaned = await alphaKeyToPng(file);
+      const url = await uploadOptionImage(cleaned);
       setImage(url);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Upload failed. Is the 'mtm-media' bucket created and public?");
@@ -376,7 +380,9 @@ function OptionRow({
         label: label.trim() || option.value,
         surcharge: Number(surcharge) || 0,
         color: stepKind === "swatch" ? (color.trim() || null) : option.color,
-        image_url: stepKind === "gallery" ? (image.trim() || null) : option.image_url,
+        // Image is editable on every step kind — diagram, choice, gallery
+        // all support an option thumbnail in the customizer row.
+        image_url: image.trim() || null,
         note: note.trim() || null,
         active,
       });
@@ -406,16 +412,39 @@ function OptionRow({
             <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> Visible
           </label>
         </div>
-        {stepKind === "gallery" && (
-          <div className="flex items-center gap-4">
-            {image && <img src={image} alt="" className="w-14 h-14 object-cover border border-black/10" />}
-            <label className="text-eyebrow inline-flex items-center gap-2 border border-black/20 px-4 py-2.5 cursor-pointer hover:border-[var(--color-burgundy-700)] transition-colors">
-              <Upload size={13} strokeWidth={1.5} /> {uploading ? "Uploading…" : image ? "Replace image" : "Upload image"}
-              <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
-            </label>
-            {image && <button type="button" onClick={() => setImage("")} className="text-[0.72rem] uppercase tracking-wide text-[var(--color-charcoal-400)] hover:text-[var(--color-burgundy-700)]">Remove</button>}
+        {/* Image controls — available on every step kind. Shows the current
+            diagram (if any) on the ivory tile the customizer uses, click to
+            view full size in a new tab, replace, or remove. */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="w-14 h-14 bg-[var(--color-ivory-100)] border border-black/10 grid place-items-center overflow-hidden">
+            {image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <a href={image} target="_blank" rel="noreferrer" title="View full size">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={image} alt="" className="max-w-full max-h-full object-contain" />
+              </a>
+            ) : (
+              <span className="text-[0.55rem] uppercase tracking-[0.12em] text-[var(--color-charcoal-400)]">No image</span>
+            )}
           </div>
-        )}
+          <label className="text-eyebrow inline-flex items-center gap-2 border border-black/20 px-4 py-2.5 cursor-pointer hover:border-[var(--color-burgundy-700)] transition-colors">
+            <Upload size={13} strokeWidth={1.5} />
+            {uploading ? "Cleaning + uploading…" : image ? "Replace image" : "Upload image"}
+            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleUpload} className="hidden" />
+          </label>
+          {image && (
+            <button
+              type="button"
+              onClick={() => setImage("")}
+              className="text-[0.72rem] tracking-wide uppercase text-[var(--color-charcoal-400)] hover:text-[var(--color-burgundy-700)]"
+            >
+              Remove
+            </button>
+          )}
+          <span className="text-[0.7rem] text-[var(--color-charcoal-500)] basis-full sm:basis-auto">
+            White background is removed automatically on upload.
+          </span>
+        </div>
         <Field label="Note (optional)"><input value={note} onChange={(e) => setNote(e.target.value)} className={inputCls + " w-full max-w-md"} /></Field>
         <div className="flex gap-2 pt-1">
           <button onClick={save} disabled={busy} className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-4 py-2.5 hover:bg-[var(--color-burgundy-800)] disabled:opacity-60">
