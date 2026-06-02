@@ -23,6 +23,7 @@ import { buildSpecPdf } from "@/lib/specSheet";
 import { AuthForm } from "@/components/AuthForm";
 import { useAuth } from "@/components/AuthProvider";
 import { addToCart as pushToCart } from "@/lib/cart";
+import { DesignYoursPicker } from "@/components/DesignYoursPicker";
 
 type Phase = "fabric" | "tier" | "spec" | "measurements" | "summary" | "auth" | "cart";
 
@@ -77,6 +78,10 @@ export default function CustomizePage() {
   const [fabrics, setFabrics]       = useState<Fabric[]>([]);
   const [fabricsLoading, setFabricsLoading] = useState(false);
   const [selectedFabric, setSelectedFabric] = useState<Fabric | null>(null);
+  // Whether the visitor arrived with a category in the URL. If not, we
+  // show the Design Yours category-picker landing tiles instead of
+  // silently defaulting to suit.
+  const [hasUrlCategory, setHasUrlCategory] = useState(true);
   const { user } = useAuth();
   const router = useRouter();
 
@@ -125,7 +130,13 @@ export default function CustomizePage() {
     const raw = params.get("category") ?? params.get("garment");
     const skuParam = params.get("sku");
     setSku(skuParam);
-    const cat: StepCategory = isCustomizeCategory(raw) ? raw : "suit";
+    // Track whether the URL carried a real category. If not, the page
+    // renders the Design Yours picker tiles below instead of the
+    // customizer. We still set `category` to a safe default so the
+    // existing hooks behind the picker keep their types happy.
+    const validUrlCategory = isCustomizeCategory(raw);
+    setHasUrlCategory(validUrlCategory);
+    const cat: StepCategory = validUrlCategory ? raw : "suit";
     // Sebastian (the concierge) can pass ?tier=signature etc. We honour it
     // even when it overrides the user's prior saved state, so that picking
     // "Bespoke" in chat truly arrives in the bespoke flow.
@@ -315,6 +326,13 @@ export default function CustomizePage() {
     (phase === "tier" && !selectedFabric) ||
     (phase === "spec" && safeStepIdx === 0 && !hasTiers && !selectedFabric);
   const copy = CATEGORY_COPY[category];
+
+  // No category in the URL → show the home-style picker tiles so the
+  // visitor explicitly chooses what to make. This was the user's brief:
+  // "give them the options for everything" (mirror of the home page).
+  if (ready && !hasUrlCategory) {
+    return <DesignYoursPicker />;
+  }
 
   // The big "Design Your Own" hero only makes sense at the very start
   // (tier picker). Once the user is choosing options or measuring, shrink

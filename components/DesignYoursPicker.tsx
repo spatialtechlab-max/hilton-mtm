@@ -1,0 +1,208 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+import { Reveal, SplitReveal } from "./Reveal";
+
+/**
+ * Landing tiles for /customize when the visitor hasn't picked a garment
+ * yet. Mirrors the home page's `<Categories />` layout — one featured tile
+ * on the left (the brand's hero look) and three smaller ones on the
+ * right — so the visual register is consistent across the site.
+ *
+ * Each tile routes into the customizer with the correct ?category= query
+ * param so the existing flow (fabric → tier/spec → measure → review)
+ * handles the rest.
+ */
+
+type Tile = {
+  category: string;
+  title: string;
+  href: string;
+  image: string;
+  alt: string;
+  /** "cover" for editorial photographs, "contain" for transparent pngs */
+  fit?: "cover" | "contain";
+};
+
+const featured: Tile = {
+  category: "Two-piece commission",
+  title: "Design a suit",
+  href: "/customize?category=suit",
+  image: "/atelier/showroom-double-breasted.jpg",
+  alt: "A navy double-breasted suit on the form in the Manama atelier",
+  fit: "cover",
+};
+
+const rightTop: Tile[] = [
+  {
+    category: "Standalone",
+    title: "Design a jacket",
+    href: "/customize?category=jacket",
+    image: "/atelier/the-cut.jpg",
+    alt: "A master cutter at work on a sport coat",
+    fit: "cover",
+  },
+  {
+    category: "Shirting",
+    title: "Design a shirt",
+    href: "/customize?category=shirt",
+    image: "/atelier/alumo-shirting.jpg",
+    alt: "Alumo shirting swatches",
+    fit: "cover",
+  },
+];
+
+const bottom: Tile = {
+  category: "Tailored",
+  title: "Design a trouser",
+  href: "/customize?category=trouser",
+  image: "/atelier/trofeo-book.jpg",
+  alt: "Trofeo trouser cloth book",
+  fit: "cover",
+};
+
+export function DesignYoursPicker() {
+  return (
+    <section className="pt-32 md:pt-40 pb-20 md:pb-28">
+      <div className="container-editorial">
+        {/* Header — mirrors the eyebrow + headline rhythm of the rest of
+            the customizer so the visitor knows they're in the right place. */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mb-12 md:mb-16">
+          <div className="lg:col-span-5">
+            <Reveal>
+              <span className="text-eyebrow text-[var(--color-burgundy-700)]">Design Yours</span>
+            </Reveal>
+            <h1 className="text-display text-[clamp(2.75rem,6vw,5rem)] mt-5 leading-[0.98]">
+              <SplitReveal text="What would you like to make?" />
+            </h1>
+          </div>
+          <div className="lg:col-span-6 lg:col-start-7">
+            <Reveal delay={0.2}>
+              <p className="mt-4 text-[1.05rem] text-[var(--color-charcoal-700)] leading-relaxed max-w-prose">
+                Pick the garment you'd like to commission. Each flow is the
+                same considered sequence — cloth first, then style, then
+                measure — tuned to what you're making.
+              </p>
+            </Reveal>
+          </div>
+        </div>
+
+        {/* Tiles — same masonry as the home page */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+          <Reveal className="lg:row-span-2">
+            <CustomizeTile tile={featured} large />
+          </Reveal>
+          {rightTop.map((tile, i) => (
+            <Reveal key={tile.title} delay={0.1 + i * 0.08}>
+              <CustomizeTile tile={tile} />
+            </Reveal>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mt-6 lg:mt-8">
+          <Reveal>
+            <CustomizeTile tile={bottom} />
+          </Reveal>
+          {/* Quiet helper card on the right — sets expectation about pricing
+              + leads visitors to Sebastian if they're undecided. */}
+          <Reveal delay={0.08}>
+            <div className="relative h-full min-h-[280px] flex flex-col justify-between p-8 lg:p-10 bg-[var(--color-ivory-200)]">
+              <div>
+                <span className="text-eyebrow text-[var(--color-burgundy-700)]">
+                  Undecided?
+                </span>
+                <h3 className="text-display text-[clamp(1.5rem,2.4vw,2.25rem)] mt-3 leading-tight">
+                  Let Sebastian point you to the right commission.
+                </h3>
+                <p className="mt-4 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
+                  The concierge can recommend a tier and a cloth based on
+                  the occasion you have in mind.
+                </p>
+              </div>
+              <div className="mt-6">
+                <Link
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const bar = document.querySelector(
+                      'button[aria-label="Open Sebastian, the concierge"]',
+                    ) as HTMLButtonElement | null;
+                    bar?.click();
+                  }}
+                  className="text-eyebrow inline-flex items-center gap-2 border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] px-6 py-3 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] transition-colors"
+                >
+                  Ask Sebastian <ArrowUpRight size={14} strokeWidth={1.5} />
+                </Link>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CustomizeTile({ tile, large = false }: { tile: Tile; large?: boolean }) {
+  const fit = tile.fit ?? "cover";
+  const tileBg = fit === "contain" ? "bg-[var(--color-ivory-200)]" : "";
+  const imgClass = fit === "contain" ? "object-contain p-10 md:p-14" : "object-cover";
+  const labelTone =
+    fit === "contain"
+      ? "text-[var(--color-charcoal-900)]"
+      : "text-[var(--color-ivory-100)]";
+  const labelHover =
+    fit === "contain"
+      ? "group-hover:text-[var(--color-burgundy-700)]"
+      : "group-hover:text-[var(--color-burgundy-300)]";
+
+  return (
+    <Link
+      href={tile.href}
+      className={`group relative block overflow-hidden hover-grow ${tileBg} ${
+        large ? "aspect-[4/5] lg:aspect-auto lg:h-full" : "aspect-[16/10]"
+      }`}
+    >
+      <Image
+        src={tile.image}
+        alt={tile.alt}
+        fill
+        sizes="(min-width: 1024px) 50vw, 100vw"
+        className={imgClass}
+      />
+      {fit === "cover" && (
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+      )}
+      <div
+        className={`absolute inset-x-0 bottom-0 p-6 md:p-8 lg:p-10 ${labelTone} flex items-end justify-between gap-6`}
+      >
+        <div>
+          <span
+            className={`text-eyebrow ${
+              fit === "contain"
+                ? "text-[var(--color-charcoal-500)]"
+                : "text-[var(--color-ivory-100)]/75"
+            }`}
+          >
+            {tile.category}
+          </span>
+          <h3
+            className={`text-display mt-2 leading-tight transition-colors ${labelHover} ${
+              large
+                ? "text-[clamp(2rem,4vw,3.5rem)]"
+                : "text-[clamp(1.75rem,2.4vw,2.5rem)]"
+            }`}
+          >
+            {tile.title}
+          </h3>
+        </div>
+        <ArrowUpRight
+          size={large ? 28 : 22}
+          strokeWidth={1.4}
+          className="shrink-0 transition-transform duration-500 group-hover:-translate-y-1 group-hover:translate-x-1"
+        />
+      </div>
+    </Link>
+  );
+}
