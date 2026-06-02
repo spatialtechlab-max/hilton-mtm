@@ -354,6 +354,13 @@ function OptionRow({
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
+  // Bundled diagram path that ships with the storefront. Each diagram step
+  // has a PNG at /public/customizer/<stepSlug>/<value>.png — that's what
+  // the customer sees today when image_url is null. The edit form was
+  // saying "No image" because it only checked the DB field; show the
+  // static fallback too so the admin doesn't think the asset is missing.
+  const staticFallback = stepKind === "diagram" ? `/customizer/${stepSlug}/${option.value}.png` : "";
+  const [fallbackBroken, setFallbackBroken] = useState(false);
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -412,39 +419,67 @@ function OptionRow({
             <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> Visible
           </label>
         </div>
-        {/* Image controls — available on every step kind. Shows the current
-            diagram (if any) on the ivory tile the customizer uses, click to
-            view full size in a new tab, replace, or remove. */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="w-14 h-14 bg-[var(--color-ivory-100)] border border-black/10 grid place-items-center overflow-hidden">
-            {image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <a href={image} target="_blank" rel="noreferrer" title="View full size">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={image} alt="" className="max-w-full max-h-full object-contain" />
-              </a>
-            ) : (
-              <span className="text-[0.55rem] uppercase tracking-[0.12em] text-[var(--color-charcoal-400)]">No image</span>
-            )}
-          </div>
-          <label className="text-eyebrow inline-flex items-center gap-2 border border-black/20 px-4 py-2.5 cursor-pointer hover:border-[var(--color-burgundy-700)] transition-colors">
-            <Upload size={13} strokeWidth={1.5} />
-            {uploading ? "Cleaning + uploading…" : image ? "Replace image" : "Upload image"}
-            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleUpload} className="hidden" />
-          </label>
-          {image && (
-            <button
-              type="button"
-              onClick={() => setImage("")}
-              className="text-[0.72rem] tracking-wide uppercase text-[var(--color-charcoal-400)] hover:text-[var(--color-burgundy-700)]"
-            >
-              Remove
-            </button>
-          )}
-          <span className="text-[0.7rem] text-[var(--color-charcoal-500)] basis-full sm:basis-auto">
-            White background is removed automatically on upload.
-          </span>
-        </div>
+        {/* Image controls — available on every step kind. Shows the live
+            diagram on the ivory tile the customizer uses, including the
+            built-in fallback that ships with the storefront. Click to
+            view full size, replace, or remove. */}
+        {(() => {
+          // What the storefront actually renders for this option today:
+          // explicit upload wins; else the bundled PNG; else nothing.
+          const effective = image || (!fallbackBroken ? staticFallback : "");
+          const source = image
+            ? "Uploaded by admin"
+            : !fallbackBroken && staticFallback
+              ? "Built-in diagram (default)"
+              : "No image yet";
+          return (
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="w-14 h-14 bg-[var(--color-ivory-100)] border border-black/10 grid place-items-center overflow-hidden">
+                {effective ? (
+                  <a href={effective} target="_blank" rel="noreferrer" title="View full size">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={effective}
+                      alt=""
+                      className="max-w-full max-h-full object-contain"
+                      onError={() => {
+                        // Static asset missing for this value — fall back
+                        // to the "No image" state so the admin isn't
+                        // misled into thinking one exists.
+                        if (!image) setFallbackBroken(true);
+                      }}
+                    />
+                  </a>
+                ) : (
+                  <span className="text-[0.55rem] uppercase tracking-[0.12em] text-[var(--color-charcoal-400)]">No image</span>
+                )}
+              </div>
+              <div className="flex flex-col gap-1 min-w-0">
+                <label className="text-eyebrow inline-flex items-center gap-2 border border-black/20 px-4 py-2.5 cursor-pointer hover:border-[var(--color-burgundy-700)] transition-colors w-fit">
+                  <Upload size={13} strokeWidth={1.5} />
+                  {uploading ? "Cleaning + uploading…" : image ? "Replace image" : "Upload custom image"}
+                  <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleUpload} className="hidden" />
+                </label>
+                <span className="text-[0.66rem] uppercase tracking-[0.12em] text-[var(--color-charcoal-500)]">
+                  {source}
+                </span>
+              </div>
+              {image && (
+                <button
+                  type="button"
+                  onClick={() => setImage("")}
+                  className="text-[0.72rem] tracking-wide uppercase text-[var(--color-charcoal-400)] hover:text-[var(--color-burgundy-700)] self-start mt-1"
+                  title="Revert to the built-in diagram (or no image if there isn't one)"
+                >
+                  Remove
+                </button>
+              )}
+              <span className="text-[0.7rem] text-[var(--color-charcoal-500)] basis-full">
+                White background is removed automatically on upload. Removing reverts to the built-in diagram.
+              </span>
+            </div>
+          );
+        })()}
         <Field label="Note (optional)"><input value={note} onChange={(e) => setNote(e.target.value)} className={inputCls + " w-full max-w-md"} /></Field>
         <div className="flex gap-2 pt-1">
           <button onClick={save} disabled={busy} className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-4 py-2.5 hover:bg-[var(--color-burgundy-800)] disabled:opacity-60">
