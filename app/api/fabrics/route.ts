@@ -43,16 +43,44 @@ const cleanSrc = (src: string | undefined) => {
   return src;
 };
 
-// Every garment draws from the same cloth pool for now (SUITING + JACKETING
-// — the only fabric categories the ERP currently exposes). When the ERP
-// adds dedicated SHIRTING / TROUSERING categories, scope per garment below.
-const ALL_CLOTHS = ["SUITING", "JACKETING", "SHIRTING", "TROUSERING"];
+// Each ERP cloth carries a `categoryName` that the mill set when adding
+// it to the Hilton ERP. We honour that classification so the customer
+// only sees cloths actually appropriate for their commission:
+//
+//   SUITING    — used for matching two-piece suits AND can be cut as a
+//                separate trouser; suit + trouser see it.
+//   JACKETING  — heavier / textured cloth meant for standalone jackets
+//                and sport coats; only jacket sees it.
+//   SHIRTING   — shirt-weight cottons; shirt sees it.
+//   TROUSERING — dedicated trouser cloths; trouser sees it.
+//
+// A jacket commission can also be cut from suiting cloth (very common
+// in tailoring), so jacket inherits SUITING in addition to JACKETING.
 const ERP_CATEGORIES_FOR_GARMENT: Record<string, string[]> = {
-  suit:    ALL_CLOTHS,
-  jacket:  ALL_CLOTHS,
-  shirt:   ALL_CLOTHS,
-  trouser: ALL_CLOTHS,
+  suit:    ["SUITING"],
+  jacket:  ["SUITING", "JACKETING"],
+  shirt:   ["SHIRTING"],
+  trouser: ["SUITING", "TROUSERING"],
 };
+
+// Friendly placeholder for garments the ERP hasn't yet stocked cloth
+// for (today: SHIRTING + TROUSERING are missing). Keeps the customizer
+// flow intact — the customer picks "Sourced at the atelier" and can
+// finalise the cloth at their fitting with Sebastian.
+const PLACEHOLDER_FABRIC = (category: string) => ({
+  sku: `ATELIER-${category.toUpperCase()}`,
+  name: "Sourced at the atelier",
+  brand: "Hilton MTM",
+  composition: "Choose your cloth at the fitting",
+  pattern: "",
+  color: "",
+  weight: "",
+  origin: "Manama, Bahrain",
+  price: "د.ب 0",
+  priceNum: 0,
+  image: "/products/no-image.svg",
+  erpCategory: "PLACEHOLDER",
+});
 
 function stripPrefix(name: string, categoryName: string): string {
   const prefixes = [categoryName, "SUITS", "JACKET"];
@@ -76,9 +104,6 @@ function toFabric(item: ErpItem) {
     price: `د.ب ${item.sellingPrice}`,
     priceNum: item.sellingPrice,
     image: cleanSrc(item.thumbnail),
-    // What the ERP itself classifies this cloth as — SUITING / JACKETING /
-    // SHIRTING / TROUSERING. Surfacing this lets the customizer scope the
-    // fabric picker per garment instead of pooling everything together.
     erpCategory: (item.categoryName || "").toUpperCase(),
   };
 }
@@ -95,6 +120,18 @@ export async function GET(req: Request) {
     .filter((i) => wanted.includes(i.categoryName.toUpperCase()))
     .filter((i) => includeDisabled || !disabled.has(String(i.id)))
     .map(toFabric);
+
+  // If the ERP hasn't stocked cloth in the right category yet — currently
+  // SHIRTING and TROUSERING are both empty — drop in a single placeholder
+  // so the customizer flow doesn't dead-end. The /admin tools (and any
+  // future ERP entries) will replace this transparently.
+  if (fabrics.length === 0 && !includeDisabled) {
+    return NextResponse.json({
+      fabrics: [PLACEHOLDER_FABRIC(category)],
+      category,
+      placeholder: true,
+    });
+  }
 
   return NextResponse.json({ fabrics, category });
 }
