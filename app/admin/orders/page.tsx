@@ -7,6 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import { listAllOrders, ORDER_STATUS_LABEL, ORDER_STATUSES, type Order, type OrderStatus } from "@/lib/orders";
 import { supabase } from "@/lib/supabase";
+import { OrderDetailModal } from "@/components/OrderDetailModal";
 
 const fmt = (n: number) => `د.ب ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
@@ -17,6 +18,8 @@ export default function AdminOrdersPage() {
   const [filter, setFilter] = useState<OrderStatus | "all">("all");
   const [q, setQ]           = useState("");
   const [loadingData, setLoadingData] = useState(true);
+  // Selected order number drives the modal. Null = closed.
+  const [openOrder, setOpenOrder] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) { setAdmin(false); return; }
@@ -128,6 +131,17 @@ export default function AdminOrdersPage() {
           <p className="mt-4 text-[var(--color-charcoal-700)]">No orders match this filter.</p>
         </div>
       ) : (
+        <>
+        <OrderDetailModal
+          orderNumber={openOrder}
+          onClose={() => setOpenOrder(null)}
+          onUpdated={async () => {
+            // Refresh the list when the modal saved a change so the
+            // status badge in the table reflects what just happened.
+            const all = await listAllOrders();
+            setOrders(all);
+          }}
+        />
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
@@ -143,11 +157,13 @@ export default function AdminOrdersPage() {
             </thead>
             <tbody>
               {visible.map((o) => (
-                <tr key={o.id} className="border-b border-black/10 hover:bg-[var(--color-ivory-200)]/50 transition-colors">
-                  <td className="py-3 px-3">
-                    <Link href={`/admin/orders/${o.order_number}`} className="text-display text-[0.95rem] text-[var(--color-charcoal-900)] hover:text-[var(--color-burgundy-700)] transition-colors tabular-nums">
-                      {o.order_number}
-                    </Link>
+                <tr
+                  key={o.id}
+                  onClick={() => setOpenOrder(o.order_number)}
+                  className="border-b border-black/10 hover:bg-[var(--color-ivory-200)]/60 transition-colors cursor-pointer"
+                >
+                  <td className="py-3 px-3 text-display text-[0.95rem] text-[var(--color-charcoal-900)] tabular-nums">
+                    {o.order_number}
                   </td>
                   <td className="py-3 px-3 text-[0.9rem] text-[var(--color-charcoal-900)]">{o.customer_name || "—"}</td>
                   <td className="py-3 px-3 text-[0.85rem] text-[var(--color-charcoal-500)] hidden md:table-cell">{o.customer_email}</td>
@@ -166,6 +182,7 @@ export default function AdminOrdersPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </Shell>
   );

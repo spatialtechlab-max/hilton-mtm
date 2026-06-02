@@ -6,7 +6,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Bell, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./AuthProvider";
-import { ORDER_STATUS_LABEL, listMyOrders, type Order, type OrderStatus } from "@/lib/orders";
+import { isAdmin } from "@/lib/admin";
+import { ORDER_STATUS_LABEL, listMyOrders, listAllOrders, type Order, type OrderStatus } from "@/lib/orders";
 
 /**
  * Bell + dropdown — only meaningful for signed-in customers.
@@ -63,7 +64,9 @@ const SEBASTIAN_LINE: Record<OrderStatus, string> = {
   cancelled:        "Your commission has been cancelled.",
 };
 
-function orderToNotification(o: Order): N {
+// Customer-facing: the visitor cares about their OWN order's status, in
+// concierge voice. Click lands on the customer-side order detail page.
+function customerOrderToNotification(o: Order): N {
   return {
     id: `order-${o.id}-${o.updated_at}`,
     title: `${o.order_number} · ${ORDER_STATUS_LABEL[o.status]}`,
@@ -74,8 +77,27 @@ function orderToNotification(o: Order): N {
   };
 }
 
+// Admin-facing: operational. Sebastian flags any new commission and any
+// status change across the whole atelier. Click jumps into the admin
+// list (the modal opens from there).
+function adminOrderToNotification(o: Order): N {
+  const fresh = Math.abs(new Date(o.created_at).getTime() - new Date(o.updated_at).getTime()) < 5_000;
+  const body = fresh
+    ? `A new commission has come in from ${o.customer_name || o.customer_email}.`
+    : `Status now ${ORDER_STATUS_LABEL[o.status]}. Customer: ${o.customer_name || o.customer_email}.`;
+  return {
+    id: `admin-${o.id}-${o.updated_at}`,
+    title: `${o.order_number} · ${ORDER_STATUS_LABEL[o.status]}`,
+    body: `${body} — ${new Date(o.updated_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
+    href: `/admin/orders`,
+    ts: new Date(o.updated_at).getTime(),
+    unread: true,
+  };
+}
+
 export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" }) {
   const { user } = useAuth();
+  const [admin, setAdmin] = useState<boolean | null>(null);
   const [open, setOpen] = useState(false);
   const [notes, setNotes] = useState<N[]>([]);
   const [readSet, setReadSet] = useState<Set<string>>(() => new Set());
@@ -86,30 +108,48 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
     setReadSet(readReadSet());
   }, []);
 
-  // Hydrate signed-in customer's order list, then subscribe to live updates.
-  // Anonymous visitors get no notifications — the bell stays empty so it
-  // doesn't pretend to be more useful than it is.
+  // Resolve admin once per signed-in user — the bell content branches on this.
   useEffect(() => {
-    if (!user) {
-      setNotes([]);
+    if (!user) { setAdmin(null); return; }
+    isAdmin(user.email).then(setAdmin);
+  }, [user]);
+
+  // Hydrate the bell. Branches by role:
+  //   anon     → empty
+  //   customer → my orders + atelier messages addressed to me
+  //   admin    → ALL orders across the atelier in operational language
+  useEffect(() => {
+    if (!user || admin === null) {
+      if (!user) setNotes([]);
       return;
     }
     let cancelled = false;
-    (async () => {
-      const orders = await listMyOrders();
-      if (cancelled) return;
-      setNotes(orders.slice(0, 8).map(orderToNotification));
-    })();
 
+    async function refresh() {
+      if (admin) {
+        const all = await listAllOrders();
+        if (!cancelled) setNotes(all.slice(0, 10).map(adminOrderToNotification));
+      } else {
+        const mine = await listMyOrders();
+        if (!cancelled) setNotes(mine.slice(0, 10).map(customerOrderToNotification));
+      }
+    }
+    void refresh();
+
+    // Admin subscribes to ALL orders; customer only to their own. Both also
+    // listen to status_history so admin-sent messages land instantly.
+    const orderFilter = admin ? undefined : `user_id=eq.${user.id}`;
     const channel = supabase
-      .channel(`bell-orders-${user.id}`)
+      .channel(`bell-${admin ? "admin" : "user"}-${user.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "mtm_orders", filter: `user_id=eq.${user.id}` },
-        async () => {
-          const fresh = await listMyOrders();
-          setNotes(fresh.slice(0, 8).map(orderToNotification));
-        },
+        { event: "*", schema: "public", table: "mtm_orders", ...(orderFilter ? { filter: orderFilter } : {}) },
+        () => void refresh(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "mtm_order_status_history" },
+        () => void refresh(),
       )
       .subscribe();
 
@@ -117,7 +157,7 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, admin]);
 
   // Close on outside-click / Escape.
   useEffect(() => {
@@ -192,10 +232,10 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
                 </span>
                 <div className="min-w-0">
                   <div className="text-eyebrow text-[var(--color-burgundy-700)] text-[0.58rem]">
-                    From Sebastian
+                    {admin ? "Sebastian · Atelier desk" : "From Sebastian"}
                   </div>
                   <div className="text-display text-[1.0rem] text-[var(--color-charcoal-900)] leading-none mt-0.5">
-                    Notifications
+                    {admin ? "Activity" : "Notifications"}
                   </div>
                 </div>
               </div>
@@ -218,7 +258,9 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
                 </li>
               ) : notes.length === 0 ? (
                 <li className="px-4 py-6 text-[0.85rem] text-[var(--color-charcoal-500)]">
-                  No commissions yet. Begin one and I'll update you here.
+                  {admin
+                    ? "The atelier desk is quiet. New commissions and status changes will appear here."
+                    : "No commissions yet. Begin one and I'll update you here."}
                 </li>
               ) : (
                 notes.map((n) => (
@@ -231,11 +273,11 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
             {user && (
               <footer className="px-4 py-3 border-t border-black/10">
                 <Link
-                  href="/account"
+                  href={admin ? "/admin/orders" : "/account"}
                   onClick={() => setOpen(false)}
                   className="text-eyebrow text-[0.62rem] text-[var(--color-burgundy-700)] hover:underline"
                 >
-                  See all commissions →
+                  {admin ? "Open the atelier desk →" : "See all commissions →"}
                 </Link>
               </footer>
             )}

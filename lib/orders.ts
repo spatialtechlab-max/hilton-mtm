@@ -221,3 +221,22 @@ export async function updateOrderStatus(
     .eq("id", orderId);
   return { error: error?.message ?? null };
 }
+
+/**
+ * Post a free-form message from the atelier into the order's status
+ * history. The current status is repeated so the timeline stays readable;
+ * the customer's NotificationBell surfaces the note as a Sebastian-voiced
+ * notification. Only admins can write here (RLS).
+ */
+export async function postOrderMessage(
+  orderId: string,
+  status: OrderStatus,
+  note: string,
+): Promise<{ error: string | null }> {
+  const trimmed = note.trim();
+  if (!trimmed) return { error: "Message is empty." };
+  const { error } = await supabase
+    .from("mtm_order_status_history")
+    .insert({ order_id: orderId, status, note: trimmed });
+  return { error: error?.message ?? null };
+}
