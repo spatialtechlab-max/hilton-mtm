@@ -38,11 +38,12 @@ describe("Brief-aligned step sequence", () => {
     ]);
   });
 
-  test("TROUSER: standalone trouser flow (no tier picker, no jacket steps)", () => {
+  test("TROUSER: only pants steps from the brief — no fit (the diagram is a jacket), no tier picker", () => {
     const slugs = stepsForCategory("trouser").map((s) => s.slug);
     expect(slugs).toEqual([
-      "fit",
+      // Essentials — pants
       "pleats", "back-pocket",
+      // Signature — pants
       "cuffs-trouser", "suspenders", "belt",
     ]);
   });

@@ -648,9 +648,11 @@ export type TierLevel = "essential" | "signature" | "bespoke";
 // jacket steps only (no trouser steps); shirts/trousers get their own.
 const STEP_CATEGORIES: Record<string, StepCategory[]> = {
   // Per client brief, shirt has only 5 essentials (Placket, Pockets,
-  // Pleats, Collar, Cuff) + the new cuff-tier. "Find your fit" is a
-  // jacket-shaped diagram step — keep it on suit/jacket/trouser only.
-  fit:               ["suit", "jacket", "trouser"],
+  // Pleats, Collar, Cuff) and trouser has only Pleats + Back Pocket
+  // (essentials) + Fold-or-Hold + Suspend + Belt (signature). "Find
+  // your fit" is also a jacket-shaped diagram, so it has no place in
+  // either flow — keep it on suit / jacket only.
+  fit:               ["suit", "jacket"],
   buttons:           ["suit", "jacket"],
   lapel:             ["suit", "jacket"],
   vents:             ["suit", "jacket"],
