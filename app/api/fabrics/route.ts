@@ -64,9 +64,9 @@ const ERP_CATEGORIES_FOR_GARMENT: Record<string, string[]> = {
 };
 
 // Friendly placeholder for garments the ERP hasn't yet stocked cloth
-// for (today: SHIRTING + TROUSERING are missing). Keeps the customizer
-// flow intact — the customer picks "Sourced at the atelier" and can
-// finalise the cloth at their fitting with Sebastian.
+// for. Keeps the customizer flow intact — the customer picks "Sourced
+// at the atelier" and can finalise the cloth at their fitting with
+// Sebastian.
 const PLACEHOLDER_FABRIC = (category: string) => ({
   sku: `ATELIER-${category.toUpperCase()}`,
   name: "Sourced at the atelier",
@@ -81,6 +81,127 @@ const PLACEHOLDER_FABRIC = (category: string) => ({
   image: "/products/no-image.svg",
   erpCategory: "PLACEHOLDER",
 });
+
+// House shirting library — real mills the atelier sources from for
+// bespoke shirts. We carry this in code until the ERP starts returning
+// SHIRTING items; the API serves these only when the ERP has nothing
+// in SHIRTING, so the customer always sees real cloth on the picker.
+// Pricing is the standard Hilton bespoke-shirt cloth rate; the atelier
+// can adjust per fitting.
+const SHIRT_HOUSE_LIBRARY = [
+  {
+    sku: "HOUSE-ALUMO-OXFORD-WHITE",
+    name: "Alumo Oxford — Optic White",
+    brand: "Alumo",
+    composition: "100% Two-Ply Egyptian Cotton",
+    pattern: "Solid",
+    color: "Optic White",
+    weight: "120 Grams",
+    origin: "Switzerland",
+    price: "د.ب 95",
+    priceNum: 95,
+    image: "/atelier/alumo-shirting.jpg",
+    erpCategory: "SHIRTING",
+  },
+  {
+    sku: "HOUSE-ALUMO-POPLIN-SKY",
+    name: "Alumo Poplin — Sky Blue",
+    brand: "Alumo",
+    composition: "100% Two-Ply Egyptian Cotton",
+    pattern: "Solid",
+    color: "Sky Blue",
+    weight: "110 Grams",
+    origin: "Switzerland",
+    price: "د.ب 95",
+    priceNum: 95,
+    image: "/atelier/alumo-shirting.jpg",
+    erpCategory: "SHIRTING",
+  },
+  {
+    sku: "HOUSE-THOMAS-MASON-JOURNEY-WHITE",
+    name: "Thomas Mason Journey — White Twill",
+    brand: "Thomas Mason",
+    composition: "100% Cotton, Two-Ply Twill",
+    pattern: "Solid",
+    color: "White",
+    weight: "130 Grams",
+    origin: "Italy",
+    price: "د.ب 85",
+    priceNum: 85,
+    image: "/atelier/alumo-shirting.jpg",
+    erpCategory: "SHIRTING",
+  },
+  {
+    sku: "HOUSE-THOMAS-MASON-BENGAL-STRIPE",
+    name: "Thomas Mason — Bengal Stripe Blue",
+    brand: "Thomas Mason",
+    composition: "100% Cotton Broadcloth",
+    pattern: "Bengal Stripe",
+    color: "White & French Blue",
+    weight: "115 Grams",
+    origin: "Italy",
+    price: "د.ب 85",
+    priceNum: 85,
+    image: "/atelier/alumo-shirting.jpg",
+    erpCategory: "SHIRTING",
+  },
+  {
+    sku: "HOUSE-ALBINI-PINPOINT-BLUE",
+    name: "Albini Pinpoint — Powder Blue",
+    brand: "Albini",
+    composition: "100% Cotton Pinpoint",
+    pattern: "Solid",
+    color: "Powder Blue",
+    weight: "120 Grams",
+    origin: "Italy",
+    price: "د.ب 80",
+    priceNum: 80,
+    image: "/atelier/alumo-shirting.jpg",
+    erpCategory: "SHIRTING",
+  },
+  {
+    sku: "HOUSE-ALBINI-GINGHAM-NAVY",
+    name: "Albini — Navy Gingham Check",
+    brand: "Albini",
+    composition: "100% Cotton Broadcloth",
+    pattern: "Gingham",
+    color: "Navy & White",
+    weight: "115 Grams",
+    origin: "Italy",
+    price: "د.ب 80",
+    priceNum: 80,
+    image: "/atelier/alumo-shirting.jpg",
+    erpCategory: "SHIRTING",
+  },
+  {
+    sku: "HOUSE-CANCLINI-HERRINGBONE-WHITE",
+    name: "Canclini Herringbone — White",
+    brand: "Canclini",
+    composition: "100% Cotton Herringbone",
+    pattern: "Herringbone",
+    color: "White",
+    weight: "135 Grams",
+    origin: "Italy",
+    price: "د.ب 75",
+    priceNum: 75,
+    image: "/atelier/alumo-shirting.jpg",
+    erpCategory: "SHIRTING",
+  },
+  {
+    sku: "HOUSE-MONTI-ROYAL-OXFORD-BLUE",
+    name: "Monti Royal Oxford — Mid Blue",
+    brand: "Monti",
+    composition: "100% Cotton Royal Oxford",
+    pattern: "Solid",
+    color: "Mid Blue",
+    weight: "130 Grams",
+    origin: "Czechia",
+    price: "د.ب 70",
+    priceNum: 70,
+    image: "/atelier/alumo-shirting.jpg",
+    erpCategory: "SHIRTING",
+  },
+];
 
 function stripPrefix(name: string, categoryName: string): string {
   const prefixes = [categoryName, "SUITS", "JACKET"];
@@ -121,10 +242,20 @@ export async function GET(req: Request) {
     .filter((i) => includeDisabled || !disabled.has(String(i.id)))
     .map(toFabric);
 
-  // If the ERP hasn't stocked cloth in the right category yet — currently
-  // SHIRTING and TROUSERING are both empty — drop in a single placeholder
-  // so the customizer flow doesn't dead-end. The /admin tools (and any
-  // future ERP entries) will replace this transparently.
+  // SHIRTING is empty in the ERP today, so we serve the in-code house
+  // library (real mills the atelier sources from). Once SHIRTING items
+  // land in the ERP, they take precedence and the library steps out of
+  // the way automatically. Admin can hide any house sku with the same
+  // `mtm_fabric_overrides` row (active=false) used for ERP cloths.
+  if (category === "shirt" && fabrics.length === 0 && !includeDisabled) {
+    const lib = SHIRT_HOUSE_LIBRARY.filter((f) => !disabled.has(f.sku));
+    if (lib.length > 0) {
+      return NextResponse.json({ fabrics: lib, category, source: "house" });
+    }
+  }
+
+  // For any other garment where the ERP hasn't stocked cloth, fall back
+  // to a single "Sourced at the atelier" card so the flow doesn't dead-end.
   if (fabrics.length === 0 && !includeDisabled) {
     return NextResponse.json({
       fabrics: [PLACEHOLDER_FABRIC(category)],
