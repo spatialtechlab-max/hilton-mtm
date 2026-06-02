@@ -76,6 +76,10 @@ function toFabric(item: ErpItem) {
     price: `د.ب ${item.sellingPrice}`,
     priceNum: item.sellingPrice,
     image: cleanSrc(item.thumbnail),
+    // What the ERP itself classifies this cloth as — SUITING / JACKETING /
+    // SHIRTING / TROUSERING. Surfacing this lets the customizer scope the
+    // fabric picker per garment instead of pooling everything together.
+    erpCategory: (item.categoryName || "").toUpperCase(),
   };
 }
 
@@ -92,5 +96,18 @@ export async function GET(req: Request) {
     .filter((i) => includeDisabled || !disabled.has(String(i.id)))
     .map(toFabric);
 
-  return NextResponse.json({ fabrics, category });
+  // Show the breakdown of what the ERP actually classifies each cloth as,
+  // so the storefront can decide whether to surface them in any garment
+  // flow or only the one(s) the mill intended.
+  const erpCategoryCounts = items.reduce<Record<string, number>>((acc, i) => {
+    const k = (i.categoryName || "UNKNOWN").toUpperCase();
+    acc[k] = (acc[k] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  return NextResponse.json({
+    fabrics,
+    category,
+    erpCategoryCounts,
+  });
 }
