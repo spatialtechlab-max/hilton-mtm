@@ -1,9 +1,13 @@
 "use client";
 
+// useSearchParams triggers Next 15 to opt out of static prerendering for
+// this route. Mark it dynamic explicitly so the build doesn't try.
+export const dynamic = "force-dynamic";
+
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Download, Sparkles, Ruler, Play, Pause, Pencil, ShoppingBag, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -63,7 +67,25 @@ const CATEGORY_COPY: Record<StepCategory, { h1: string; intro: string }> = {
   },
 };
 
+/* useSearchParams in CustomizeInner requires a Suspense boundary at
+ * the page level for Next 15's prerender. The fallback is the same
+ * dark loading line the existing flows use so the transition reads as
+ * a single experience. */
 export default function CustomizePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="pt-40 pb-24 min-h-[70vh] flex items-center justify-center">
+          <span className="text-eyebrow text-[var(--color-charcoal-500)]">Loading…</span>
+        </div>
+      }
+    >
+      <CustomizeInner />
+    </Suspense>
+  );
+}
+
+function CustomizeInner() {
   const [category, setCategory] = useState<StepCategory>("suit");
   const [sku, setSku] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
