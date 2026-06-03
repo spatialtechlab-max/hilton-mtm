@@ -248,20 +248,29 @@ export function sectionsFromErp(slug: ErpBackedSlug, items: ErpItem[]): LibraryS
 // SUIUS) — so a misspelled category in the ERP never makes a cloth or
 // accessory go invisible on the storefront.
 export const ERP_CATEGORIES_FOR_SLUG: Record<
-  "ties" | "belts" | "cloths" | "shirts" | "trousers" | "shoes" | "tailoring",
+  | "ties" | "belts" | "cloths" | "shirts" | "trousers" | "shoes" | "tailoring"
+  | "wallets" | "pocket-squares" | "cufflinks" | "bow-ties"
+  | "overcoats" | "waistcoats",
   string[]
 > = {
-  ties:      ["TIE", "TIES", "BOW TIE", "RTW BOWTIE"],
-  belts:     ["BELT", "ZAMPIERE BELT"],
-  cloths:    ["SUITING", "SUITINGS", "SUITS", "SUIES", "SUIUS", "JACKETING", "BLAZER"],
-  shirts:    ["SHIRTING", "SHIIRTING", "SHIRTS"],
-  trousers:  ["PANTS", "CHINO PANTS"],
-  shoes:     ["SHOES"],
-  tailoring: ["SUITING", "SUITINGS", "SUITS", "JACKETING", "JACKET", "BLAZER", "OVERCOAT"],
+  ties:             ["TIE", "TIES"],
+  belts:            ["BELT", "ZAMPIERE BELT"],
+  cloths:           ["SUITING", "SUITINGS", "SUITS", "SUIES", "SUIUS", "JACKETING", "BLAZER"],
+  shirts:           ["SHIRTING", "SHIIRTING", "SHIRTS"],
+  trousers:         ["PANTS", "CHINO PANTS"],
+  shoes:            ["SHOES"],
+  tailoring:        ["SUITING", "SUITINGS", "SUITS", "JACKETING", "JACKET", "BLAZER", "OVERCOAT"],
+  wallets:          ["WALLET"],
+  "pocket-squares": ["POCKET SQUARE"],
+  cufflinks:        ["CUFFLINK", "STUDD CUFFLINK", "TIE PIN", "COLLAR PIN", "LAPEL PIN"],
+  "bow-ties":       ["BOW TIE", "RTW BOWTIE"],
+  overcoats:        ["OVERCOAT"],
+  waistcoats:       ["WAISTCOAT"],
 };
 
 export const ERP_BACKED_SLUGS = [
   "ties", "belts", "cloths", "shirts", "trousers", "shoes", "tailoring",
+  "wallets", "pocket-squares", "cufflinks", "bow-ties", "overcoats", "waistcoats",
 ] as const;
 export type ErpBackedSlug = (typeof ERP_BACKED_SLUGS)[number];
 export const isErpBacked = (slug: string): slug is ErpBackedSlug =>

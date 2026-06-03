@@ -134,28 +134,10 @@ export default async function LibraryPage({
         </div>
       </section>
 
-      {/* ─────────────── SUB-SECTION TABS ─────────────── */}
-      {!noErpData && (
-        <section className="border-b border-black/10">
-          <div className="container-editorial flex items-center gap-1 overflow-x-auto py-3 no-scrollbar">
-            <a
-              href="#all"
-              className="text-eyebrow shrink-0 px-3 py-2 border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] bg-[var(--color-burgundy-50)]"
-            >
-              All
-            </a>
-            {lib.sections.map((section) => (
-              <a
-                key={section.slug}
-                href={`#${section.slug}`}
-                className="text-eyebrow shrink-0 px-3 py-2 border border-transparent text-[var(--color-charcoal-700)] hover:text-[var(--color-burgundy-700)] hover:border-black/15 transition-colors"
-              >
-                {section.title} <span className="opacity-50 ml-2">{section.items.length}</span>
-              </a>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Brand sub-section anchors retired — the grid below renders
+          every piece side-by-side regardless of brand, so the
+          per-brand jump targets had no DOM to anchor into. The brand
+          stays printed on each card. */}
 
       {/* ─────────────── EMPTY STATE ─────────────── */}
       {noErpData && (
@@ -179,49 +161,28 @@ export default async function LibraryPage({
         </section>
       )}
 
-      {/* ─────────────── SECTIONS ─────────────── */}
-      <div id="all">
-        {lib.sections.map((section, sIdx) => (
-          <section
-            key={section.slug}
-            id={section.slug}
-            className={`py-14 md:py-20 ${sIdx > 0 ? "border-t border-black/10" : ""}`}
-          >
-            <div className="container-editorial">
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
-                <div className="max-w-xl">
-                  <Reveal>
-                    <span className="text-eyebrow text-[var(--color-burgundy-700)]">
-                      N° {String(sIdx + 1).padStart(2, "0")}
-                    </span>
-                  </Reveal>
-                  <h2 className="text-display text-[clamp(2rem,3.5vw,3rem)] mt-3 leading-[1.05]">
-                    <SplitReveal text={section.title} />
-                  </h2>
-                </div>
-                <Reveal delay={0.15}>
-                  <p className="md:max-w-sm text-[0.875rem] text-[var(--color-charcoal-700)] leading-relaxed">
-                    {section.note}
-                  </p>
-                </Reveal>
-              </div>
-
-              {/* Uniform 4-up grid on desktop, like Suitsupply / Indochino.
-                  All cards same size — no scale=2 mixing — to keep the rhythm. */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10">
-                {section.items.map((item, i) => (
-                  <Reveal
-                    key={item.sku}
-                    delay={(i % 4) * 0.05}
-                  >
+      {/* ─────────────── ALL ITEMS ─────────────── */}
+      {/* Flat, side-by-side grid. Brand-by-brand headings turned the
+          page into a stack of one-item rows once the catalogue thinned
+          out (Raymond / Nobility / VBC each on their own line), so we
+          collapse every section into a single dense grid and keep the
+          brand on the card itself. The brand sub-section tabs at the
+          top still anchor-jump because each card gets the brand id. */}
+      {!noErpData && (
+        <section className="py-14 md:py-20" id="all">
+          <div className="container-editorial">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 md:gap-x-5 gap-y-8 md:gap-y-10">
+              {lib.sections.flatMap((section) =>
+                section.items.map((item, i) => (
+                  <Reveal key={item.sku} delay={(i % 5) * 0.04}>
                     <ProductCard item={item} slug={slug} />
                   </Reveal>
-                ))}
-              </div>
+                )),
+              )}
             </div>
-          </section>
-        ))}
-      </div>
+          </div>
+        </section>
+      )}
 
       {/* ─────────────── OTHER LIBRARIES ─────────────── */}
       <section className="py-16 md:py-24 border-t border-black/10">
@@ -312,14 +273,16 @@ function ProductCard({ item, slug }: { item: LibraryItem; slug: string }) {
 
   return (
     <Link href={`/library/${slug}/${item.sku}`} className="group block">
-      <div className={`relative aspect-[3/4] overflow-hidden hover-grow ${tileBg}`}>
+      {/* 4:5 aspect (was 3:4) — smaller card so the grid lays out five
+          across on desktop without dwarfing the rest of the page. */}
+      <div className={`relative aspect-[4/5] overflow-hidden hover-grow ${tileBg}`}>
         {item.media.kind === "photo" && isPlaceholder(item.media.src) && <PlaceholderBadge />}
         {item.media.kind === "photo" ? (
           <Image
             src={item.media.src}
             alt={item.alt}
             fill
-            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+            sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
             className={imgClass}
           />
         ) : (
@@ -343,9 +306,9 @@ function ProductCard({ item, slug }: { item: LibraryItem; slug: string }) {
         </span>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-3">
         <span className="text-eyebrow text-[var(--color-charcoal-500)]">{item.type}</span>
-        <h3 className="text-display text-[1.25rem] mt-1.5 leading-tight text-[var(--color-charcoal-900)] group-hover:text-[var(--color-burgundy-700)] transition-colors">
+        <h3 className="text-display text-[1.05rem] mt-1 leading-tight text-[var(--color-charcoal-900)] group-hover:text-[var(--color-burgundy-700)] transition-colors">
           {item.name}
         </h3>
         {item.cloth && (
