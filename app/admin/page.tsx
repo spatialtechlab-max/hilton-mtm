@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Database, RefreshCw, AlertTriangle, Lock, Pencil, Trash2, Plus, Check, X, Upload, Package, Layers, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Database, RefreshCw, AlertTriangle, Lock, Pencil, Trash2, Plus, Check, X, Upload, Package, Layers, Eye, EyeOff, Shirt } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import {
@@ -11,6 +11,7 @@ import {
   updateStep,
   type DbStep, type DbOption,
 } from "@/lib/adminData";
+import { fetchGarments, type Garment } from "@/lib/garments";
 import { alphaKeyToPng } from "@/lib/imageKey";
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -29,7 +30,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-type CategoryFilter = "all" | "jacket" | "trouser" | "shirt";
+type CategoryFilter = string; // "all" | any garment slug
 
 export default function AdminPage() {
   const { user, loading } = useAuth();
@@ -42,6 +43,7 @@ export default function AdminPage() {
 
   const [steps, setSteps] = useState<DbStep[] | null>(null);
   const [options, setOptions] = useState<DbOption[]>([]);
+  const [garments, setGarments] = useState<Garment[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -51,9 +53,10 @@ export default function AdminPage() {
     setLoadingData(true);
     setError(null);
     try {
-      const [s, o] = await Promise.all([fetchSteps(), fetchOptions()]);
+      const [s, o, g] = await Promise.all([fetchSteps(), fetchOptions(), fetchGarments()]);
       setSteps(s);
       setOptions(o);
+      setGarments(g);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load configuration.");
       setSteps(null);
@@ -126,12 +129,17 @@ export default function AdminPage() {
   const notConfigured = !error && stepCount === 0 && !loadingData && !busy;
 
   const visible = (steps ?? []).filter((s) => filter === "all" || s.applies_to.includes(filter));
-  const filterCounts: Record<CategoryFilter, number> = {
-    all: stepCount,
-    jacket: (steps ?? []).filter((s) => s.applies_to.includes("jacket")).length,
-    trouser: (steps ?? []).filter((s) => s.applies_to.includes("trouser")).length,
-    shirt: (steps ?? []).filter((s) => s.applies_to.includes("shirt")).length,
-  };
+  // Counts are derived per-garment from whatever atelier has configured
+  // in /admin/garments, so adding "Overcoat" there reflects here without
+  // a code change.
+  const filterTabs: { key: CategoryFilter; label: string; count: number }[] = [
+    { key: "all", label: "All steps", count: stepCount },
+    ...garments.map((g) => ({
+      key: g.slug,
+      label: g.label,
+      count: (steps ?? []).filter((s) => s.applies_to.includes(g.slug)).length,
+    })),
+  ];
 
   return (
     <Shell>
@@ -149,6 +157,12 @@ export default function AdminPage() {
             className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)] px-5 py-3 hover:bg-[var(--color-burgundy-700)] transition-colors"
           >
             <Package size={14} strokeWidth={1.5} /> Orders & customers
+          </Link>
+          <Link
+            href="/admin/garments"
+            className="text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)] text-[var(--color-charcoal-900)] px-5 py-3 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
+          >
+            <Shirt size={14} strokeWidth={1.5} /> Garments
           </Link>
           <Link
             href="/admin/fabrics"
@@ -204,12 +218,7 @@ export default function AdminPage() {
           <aside className="lg:sticky lg:top-32">
             <div className="text-eyebrow text-[var(--color-charcoal-500)] mb-3">Garment</div>
             <nav className="flex lg:flex-col gap-1.5 flex-wrap">
-              {([
-                ["all", "All steps"],
-                ["jacket", "Jacket"],
-                ["trouser", "Trouser"],
-                ["shirt", "Shirt"],
-              ] as [CategoryFilter, string][]).map(([key, label]) => {
+              {filterTabs.map(({ key, label, count }) => {
                 const active = filter === key;
                 return (
                   <button
@@ -224,12 +233,20 @@ export default function AdminPage() {
                   >
                     <span>{label}</span>
                     <span className={active ? "text-[var(--color-ivory-100)]/70" : "text-[var(--color-charcoal-400)]"}>
-                      {filterCounts[key]}
+                      {count}
                     </span>
                   </button>
                 );
               })}
             </nav>
+            <div className="mt-4 hidden lg:block">
+              <Link
+                href="/admin/garments"
+                className="text-eyebrow inline-flex items-center gap-2 text-[var(--color-burgundy-700)] hover:underline"
+              >
+                <Plus size={12} strokeWidth={1.5} /> Manage garments
+              </Link>
+            </div>
             <p className="mt-6 text-[0.75rem] text-[var(--color-charcoal-400)] leading-relaxed hidden lg:block">
               Hover a row to edit or delete. Surcharge is the extra cost shown to the customer.
             </p>
