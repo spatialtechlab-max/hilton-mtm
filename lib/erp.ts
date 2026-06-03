@@ -195,15 +195,20 @@ function mapItem(item: ErpItem): LibraryItem {
   };
 }
 
-/** Does this ERP item have at least one on-form garment photo
- *  (pic1 / pic2 / pic3) in its gallery? If only the cropped swatch
- *  exists we hide the item from the library tiles — a customer
- *  browsing /library/shirts wants to see shirts, not cloth. The
- *  item still surfaces in the customizer fabric picker where the
- *  swatch IS the right context. */
+/** Does this ERP item have a real on-form garment photo? The atelier's
+ *  upload tool labels image slots as IMAGE *, IMAGE 1, IMAGE 2, IMAGE 3
+ *  and bakes those into the URL as `_pic_`, `_pic1_`, `_pic2_`, `_pic3_`.
+ *  By convention IMAGE 1 (`_pic1_`) is the on-form hero (shirt on form,
+ *  tie on box, jacket on form, etc.) — IMAGE 2 / 3 are back / detail
+ *  shots, IMAGE * is the cropped swatch. Some atelier uploads (e.g.
+ *  shirt 2835) only fill IMAGE 3 with another swatch, leaving IMAGE 1
+ *  empty — those items have no garment photo and we hide them from the
+ *  library tiles (a customer browsing /library/shirts wants to see
+ *  shirts, not cloth). The item still surfaces in the customizer fabric
+ *  picker where the swatch IS the right context. */
 function hasGarmentShot(item: ErpItem): boolean {
   const gallery = item.images ?? [];
-  return gallery.some((src) => /_pic\d+_/.test(src));
+  return gallery.some((src) => /_pic1_/.test(src));
 }
 
 /** Build LibrarySection[] for one ERP-backed slug from ERP. */

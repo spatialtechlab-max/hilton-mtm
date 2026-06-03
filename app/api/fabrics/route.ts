@@ -69,11 +69,17 @@ const cleanGallery = (arr: string[] | undefined) =>
 //   shirt   ← SHIRTING family (incl. typos) + SHIRTS
 //   trouser ← PANTS + CHINO PANTS, plus SUITING (matching suit cloth
 //             can be cut as a separate trouser)
+// Strict per-garment mapping — each garment only pulls cloths the
+// atelier has explicitly tagged for it. Per client direction: never
+// substitute suit cloth onto the trouser flow (or jacketing onto suit,
+// etc.) just because that garment's category is empty in the ERP. If
+// there are no real items for a garment, the picker falls through to
+// the PLACEHOLDER_FABRIC empty state below.
 const ERP_CATEGORIES_FOR_GARMENT: Record<string, string[]> = {
-  suit:    ["SUITING", "SUITINGS", "SUITS", "SUIES", "SUIUS", "BLAZER"],
-  jacket:  ["JACKETING", "JACKET", "BLAZER", "RTWJKT", "SUITING", "SUITINGS"],
+  suit:    ["SUITING", "SUITINGS", "SUITS", "SUIES", "SUIUS"],
+  jacket:  ["JACKETING", "JACKET", "BLAZER", "RTWJKT"],
   shirt:   ["SHIRTING", "SHIIRTING", "SHIRTS"],
-  trouser: ["PANTS", "CHINO PANTS", "SUITING", "SUITINGS"],
+  trouser: ["PANTS", "CHINO PANTS"],
 };
 
 // Friendly placeholder for garments the ERP hasn't yet stocked cloth
