@@ -216,6 +216,20 @@ export default async function ProductPage({
                 <li className="flex items-center gap-3"><Truck size={16} strokeWidth={1.5} className="text-[var(--color-burgundy-700)] shrink-0" /> Delivered in 2–4 weeks</li>
                 <li className="flex items-center gap-3"><ShieldCheck size={16} strokeWidth={1.5} className="text-[var(--color-burgundy-700)] shrink-0" /> Complimentary first alteration</li>
               </ul>
+
+              {/* Details panel — sits right next to the gallery so the
+                  customer can read the spec without scrolling. */}
+              <div className="mt-10 pt-7 border-t border-black/10">
+                <span className="text-eyebrow text-[var(--color-burgundy-700)]">Details</span>
+                <dl className="mt-5 border-t border-black/10">
+                  {specs.map((row) => (
+                    <div key={row.label} className="flex items-start justify-between gap-6 py-3 border-b border-black/10">
+                      <dt className="text-[0.72rem] tracking-[0.12em] uppercase text-[var(--color-charcoal-500)]">{row.label}</dt>
+                      <dd className="text-[0.88rem] text-[var(--color-charcoal-900)] text-right">{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
             </div>
           </Reveal>
         </div>
@@ -239,46 +253,34 @@ export default async function ProductPage({
           </section>
         )}
 
-        {/* Details + shipping / custom-made — given room below */}
-        <section className="mt-20 md:mt-28 border-t border-black/10 pt-14 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24">
+        {/* Shipping / Custom made / New-to-MTM — Details now lives next
+            to the gallery above, so this strip only carries the editorial
+            reassurance content. */}
+        <section className="mt-20 md:mt-28 border-t border-black/10 pt-14 grid grid-cols-1 md:grid-cols-3 gap-10 lg:gap-14">
           <div>
-            <span className="text-eyebrow text-[var(--color-burgundy-700)]">Details</span>
-            <dl className="mt-7 border-t border-black/10">
-              {specs.map((row) => (
-                <div key={row.label} className="flex items-start justify-between gap-6 py-4 border-b border-black/10">
-                  <dt className="text-[0.78rem] tracking-[0.12em] uppercase text-[var(--color-charcoal-500)]">{row.label}</dt>
-                  <dd className="text-[0.92rem] text-[var(--color-charcoal-900)] text-right">{row.value}</dd>
-                </div>
-              ))}
-            </dl>
+            <div className="text-eyebrow text-[var(--color-burgundy-700)] inline-flex items-center gap-2">
+              <Truck size={15} strokeWidth={1.5} /> Shipping
+            </div>
+            <p className="mt-3 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
+              Complimentary worldwide delivery on orders over BHD 150. Allow 2–4 weeks for the make.
+            </p>
           </div>
-
-          <div className="space-y-10 lg:pt-7">
-            <div>
-              <div className="text-eyebrow text-[var(--color-burgundy-700)] inline-flex items-center gap-2">
-                <Truck size={15} strokeWidth={1.5} /> Shipping
-              </div>
-              <p className="mt-3 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed max-w-md">
-                Complimentary worldwide delivery on orders over BHD 150. Allow 2–4 weeks for the make.
-              </p>
+          <div>
+            <div className="text-eyebrow text-[var(--color-burgundy-700)] inline-flex items-center gap-2">
+              <Scissors size={15} strokeWidth={1.5} /> Custom made
             </div>
-            <div>
-              <div className="text-eyebrow text-[var(--color-burgundy-700)] inline-flex items-center gap-2">
-                <Scissors size={15} strokeWidth={1.5} /> Custom made
-              </div>
-              <p className="mt-3 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed max-w-md">
-                Cut to your measurement profile and kept on file for life. Every piece is made to order, by hand.
-              </p>
-            </div>
-            <div className="bg-[var(--color-ivory-200)] p-7 max-w-md">
-              <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-2">New to Hilton Made to Measure?</div>
-              <p className="text-[0.9rem] text-[var(--color-charcoal-700)] leading-relaxed">
-                See how a bespoke commission comes together — from cloth, to cut, to your final fitting.
-              </p>
-              <Link href="/process" className="mt-3 inline-flex items-center gap-2 text-eyebrow text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)] transition-colors">
-                Learn how it works <ArrowRight size={14} strokeWidth={1.5} />
-              </Link>
-            </div>
+            <p className="mt-3 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
+              Cut to your measurement profile and kept on file for life. Every piece is made to order, by hand.
+            </p>
+          </div>
+          <div className="bg-[var(--color-ivory-200)] p-7">
+            <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-2">New to Hilton Made to Measure?</div>
+            <p className="text-[0.9rem] text-[var(--color-charcoal-700)] leading-relaxed">
+              See how a bespoke commission comes together — from cloth, to cut, to your final fitting.
+            </p>
+            <Link href="/process" className="mt-3 inline-flex items-center gap-2 text-eyebrow text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)] transition-colors">
+              Learn how it works <ArrowRight size={14} strokeWidth={1.5} />
+            </Link>
           </div>
         </section>
 
