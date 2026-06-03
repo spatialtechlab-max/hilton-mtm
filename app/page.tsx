@@ -11,7 +11,7 @@ import { AtelierStrip } from "@/components/AtelierStrip";
 import { ShowroomFeature } from "@/components/ShowroomFeature";
 import { PlaceholderBadge, isPlaceholder } from "@/components/PlaceholderBadge";
 import { MediaImage } from "@/components/MediaImage";
-import { MEDIA_SLOTS } from "@/lib/media";
+import { MEDIA_SLOTS } from "@/lib/mediaSlots";
 
 const HOME_HERO = MEDIA_SLOTS.find((s) => s.key === "home.hero")!;
 
