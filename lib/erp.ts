@@ -64,18 +64,36 @@ const titleCase = (s: string) =>
   s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()).replace(/\s+/g, " ").trim();
 
 /**
+ * The ERP stores HTML-escaped strings ("B&amp;S LINEN" rather than
+ * "B&S LINEN"). Decode the handful of entities that actually appear so
+ * the storefront reads cleanly.
+ */
+const decodeEntities = (s: string) =>
+  s
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+
+/**
  * Strip the various category prefixes the ERP bakes into the name field
  * ("BELTMAGNANNI1128 GREY" → "Magnanni1128 Grey"; "SILK TIEMARTIN 504 2"
- * → "Martin 504 2"), then title-case it.
+ * → "Martin 504 2"; "FABRICB&S LINEN BL0258-3" → "B&S Linen Bl0258-3"),
+ * then decode any HTML entities and title-case it.
  */
 function prettyName(name: string, categoryName: string): string {
-  const prefixes = [categoryName, "SILK TIE", "SUITS", "JACKET", "BELT", "TIE"];
+  const prefixes = [
+    categoryName, "FABRIC", "SILK TIE", "SUITS", "SUITING", "SUITINGS",
+    "JACKETING", "JACKET", "SHIRTING", "SHIIRTING", "SHIRTS",
+    "PANTS", "BELT", "TIE", "BLAZER",
+  ];
   let stripped = name;
   for (const p of prefixes) {
     const re = new RegExp(`^${p}\\s*`, "i");
     if (re.test(stripped)) { stripped = stripped.replace(re, ""); break; }
   }
-  return titleCase(stripped);
+  return titleCase(decodeEntities(stripped));
 }
 
 const FALLBACK_SRC = "/products/no-image.svg";
@@ -95,11 +113,12 @@ function cleanSrc(src: string | undefined): string {
   return src;
 }
 
-/** Normalise an ERP free-text value: title-case, trim, treat blanks as undefined. */
+/** Normalise an ERP free-text value: decode entities, title-case,
+ *  trim, and treat blanks as undefined. */
 function clean(v: string | number | undefined | null): string | undefined {
   if (v === undefined || v === null) return undefined;
   const s = String(v).trim();
-  return s ? titleCase(s) : undefined;
+  return s ? titleCase(decodeEntities(s)) : undefined;
 }
 
 function mapItem(item: ErpItem): LibraryItem {
