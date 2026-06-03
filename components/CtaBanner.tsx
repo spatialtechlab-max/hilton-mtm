@@ -16,7 +16,11 @@ export function CtaBanner({
   title = "Begin your wardrobe.",
   body = "A private fitting at our Manama tailoring house, by appointment.",
   ctaLabel = "Book a Fitting",
-  href = "/book",
+  // Default destination is the Design Yours configurator — the in-store
+  // fitting is still reachable via the explicit Contact link in the
+  // primary nav. Pages that need a different destination pass `href`
+  // through (heritage → /contact, collection → /contact).
+  href = "/customize",
 }: {
   title?: string;
   body?: string;

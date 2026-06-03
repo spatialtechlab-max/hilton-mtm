@@ -38,29 +38,6 @@ const timeline = [
   },
 ];
 
-const values = [
-  {
-    n: "I.",
-    t: "Slow is a virtue.",
-    d: "We have never sold a same-day suit and never will.",
-  },
-  {
-    n: "II.",
-    t: "The pattern is a promise.",
-    d: "Every pattern is drawn for one body, kept for life, and revised as the body changes.",
-  },
-  {
-    n: "III.",
-    t: "Cloth before colour.",
-    d: "We choose the weight, then the weave, then the cloth, and only then the colour.",
-  },
-  {
-    n: "IV.",
-    t: "Honest seams.",
-    d: "Nothing is fused. The canvas is natural. The lining is bemberg. The shoulder is hand-padded.",
-  },
-];
-
 export default function HeritagePage() {
   return (
     <>
@@ -155,34 +132,8 @@ export default function HeritagePage() {
         </div>
       </section>
 
-      {/* Values */}
-      <section className="py-16 md:py-24 bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)]">
-        <div className="container-editorial">
-          <Reveal>
-            <span className="text-eyebrow text-[var(--color-burgundy-300)]">The house rules</span>
-          </Reveal>
-          <h2 className="text-display text-[clamp(2.5rem,5vw,4.5rem)] mt-6 max-w-3xl leading-[1.02]">
-            <SplitReveal text="Four principles we will not surrender." />
-          </h2>
-          <div className="mt-20 grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-16">
-            {values.map((v, i) => (
-              <Reveal key={v.n} delay={i * 0.08}>
-                <div className="flex gap-8 items-start">
-                  <span className="text-display text-[2.5rem] text-[var(--color-burgundy-300)] leading-none">
-                    {v.n}
-                  </span>
-                  <div>
-                    <h3 className="text-display text-[2rem] leading-[1.1]">{v.t}</h3>
-                    <p className="mt-4 text-[1rem] text-[var(--color-ivory-200)]/80 leading-relaxed">
-                      {v.d}
-                    </p>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* "The House Rules / Four principles we will not surrender."
+          retired — invented editorial copy, not client-supplied. */}
 
       {/* Editorial gallery of swatch folios from the cloth library. */}
       <MillBookGallery />

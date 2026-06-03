@@ -57,9 +57,12 @@ export default function HomePage() {
 
             <Reveal delay={0.6}>
               <div className="mt-12 flex flex-wrap items-center gap-4">
-                <Button href="/book" variant="ivory">Book a Fitting</Button>
-                <Button href="/collection" variant="ghost" showArrow>
-                  <span className="text-[var(--color-ivory-100)]">View the Collection</span>
+                {/* Primary CTA routes into Design Yours rather than the
+                    booking page — the storefront sells the configurator,
+                    in-store fitting is a secondary path via Contact. */}
+                <Button href="/customize" variant="ivory">Book a Fitting</Button>
+                <Button href="/contact" variant="ghost" showArrow>
+                  <span className="text-[var(--color-ivory-100)]">Contact</span>
                 </Button>
               </div>
             </Reveal>
