@@ -125,10 +125,17 @@ export default function AdminPage() {
     );
   }
 
-  const stepCount = steps?.length ?? 0;
-  const notConfigured = !error && stepCount === 0 && !loadingData && !busy;
+  // Admin should mirror what the customer sees — steps with active=false
+  // (the retired non-booklet inventions, or anything an atelier turns off
+  // later) belong in the disabled pile, not in the live grid or the
+  // sidebar counts.
+  const allSteps = steps ?? [];
+  const activeSteps = allSteps.filter((s) => s.active);
+  const disabledSteps = allSteps.filter((s) => !s.active);
+  const stepCount = activeSteps.length;
+  const notConfigured = !error && allSteps.length === 0 && !loadingData && !busy;
 
-  const visible = (steps ?? []).filter((s) => filter === "all" || s.applies_to.includes(filter));
+  const visible = activeSteps.filter((s) => filter === "all" || s.applies_to.includes(filter));
   // Counts are derived per-garment from whatever atelier has configured
   // in /admin/garments, so adding "Overcoat" there reflects here without
   // a code change.
@@ -137,7 +144,7 @@ export default function AdminPage() {
     ...garments.map((g) => ({
       key: g.slug,
       label: g.label,
-      count: (steps ?? []).filter((s) => s.applies_to.includes(g.slug)).length,
+      count: activeSteps.filter((s) => s.applies_to.includes(g.slug)).length,
     })),
   ];
 
@@ -254,6 +261,36 @@ export default function AdminPage() {
 
           {/* Main — step cards in a masonry column layout (no height gaps) */}
           <div className="columns-1 xl:columns-2 gap-5 [&>*]:mb-5">
+            {filter === "all" && disabledSteps.length > 0 && (
+              <div className="break-inside-avoid border border-dashed border-black/15 bg-[var(--color-ivory-200)] p-5">
+                <p className="text-eyebrow text-[var(--color-charcoal-500)] mb-3">
+                  Disabled steps ({disabledSteps.length})
+                </p>
+                <p className="text-[0.78rem] text-[var(--color-charcoal-600)] mb-3 leading-relaxed">
+                  Hidden from the customer customizer. Click <em>Re-enable</em> to bring one back.
+                </p>
+                <ul className="divide-y divide-black/10">
+                  {disabledSteps.map((s) => (
+                    <li key={s.slug} className="flex items-center justify-between gap-3 py-2">
+                      <div>
+                        <span className="text-[0.95rem] text-[var(--color-charcoal-900)]">{s.title}</span>
+                        <span className="ml-2 text-[0.7rem] text-[var(--color-charcoal-400)]">{s.slug}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await updateStep(s.slug, { active: true });
+                          await load();
+                        }}
+                        className="text-eyebrow inline-flex items-center gap-1.5 border border-black/15 px-3 py-1.5 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
+                      >
+                        <Eye size={12} strokeWidth={1.5} /> Re-enable
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {visible.map((s) => (
               <div key={s.slug} className="break-inside-avoid border border-black/10 bg-[var(--color-ivory-100)]">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-4 border-b border-black/10">
