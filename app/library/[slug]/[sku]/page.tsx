@@ -13,6 +13,20 @@ import {
 } from "@/lib/libraries";
 import { fetchErpItems, sectionsFromErp, isErpBacked } from "@/lib/erp";
 
+/** Map an ERP categoryName onto the customizer's garment slug, so every
+ *  ERP-backed PDP gets the Customise CTA driving into the right flow.
+ *  Cloth categories (SUITING / JACKETING) land on suit / jacket so the
+ *  customer can commission a garment cut from that cloth. Accessories
+ *  (TIE / BELT / SHOES) don't have a configurator and return undefined. */
+function customizeForErpType(type: string | undefined): CustomizeCategory | undefined {
+  const t = (type ?? "").toUpperCase();
+  if (["SUITING", "SUITINGS", "SUITS", "SUIES", "SUIUS"].includes(t)) return "suit";
+  if (["JACKETING", "JACKET", "BLAZER", "RTWJKT"].includes(t)) return "jacket";
+  if (["SHIRTING", "SHIIRTING", "SHIRTS"].includes(t)) return "shirt";
+  if (["PANTS", "CHINO PANTS"].includes(t)) return "trouser";
+  return undefined;
+}
+
 /**
  * Resolve a product by sku. Static products via libraries; ERP items by id,
  * fetched live with ISR caching.
@@ -27,7 +41,13 @@ async function resolveProduct(slug: string, sku: string): Promise<ProductHit | n
   const sections = sectionsFromErp(slug, await fetchErpItems());
   for (const section of sections) {
     const item = section.items.find((it) => it.sku === sku);
-    if (item) return { item, library: { ...lib, sections }, section, customize: undefined };
+    if (item) {
+      // ERP items inherit their customise category from the ERP
+      // categoryName so each PDP exposes the right configurator flow
+      // (SUITING → suit, SHIRTING → shirt, etc.).
+      const customize = customizeForErpType(item.type);
+      return { item, library: { ...lib, sections }, section, customize };
+    }
   }
   return null;
 }
@@ -150,7 +170,18 @@ export default async function ProductPage({
               <div className="mt-9 space-y-3">
                 {customize ? (
                   <Link
-                    href={`/customize?category=${customize}&sku=${item.sku}`}
+                    // Suit / jacket carry the Essentials / Signature / Bespoke
+                    // tier picker. Per client direction we expose the FULL
+                    // step set straight from the PDP — defaulting tier to
+                    // 'bespoke' surfaces every booklet option (lapel, vents,
+                    // tuxedo, double-breasted, sport jacket, canvas, lining
+                    // colour, etc.) so the customer doesn't have to commit
+                    // to a tier before they've explored the options.
+                    href={
+                      customize === "suit" || customize === "jacket"
+                        ? `/customize?category=${customize}&sku=${item.sku}&tier=bespoke`
+                        : `/customize?category=${customize}&sku=${item.sku}`
+                    }
                     className="w-full text-eyebrow inline-flex items-center justify-center gap-3 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-8 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors"
                   >
                     <Sparkles size={16} strokeWidth={1.5} /> {CUSTOMIZE_LABEL[customize]}

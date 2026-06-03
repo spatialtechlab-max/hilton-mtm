@@ -239,7 +239,15 @@ function CustomizeInner() {
   function pickFabric(f: Fabric) {
     setSelectedFabric(f);
     setSku(f.sku);
-    setPhase(hasTiers ? "tier" : "spec");
+    // If a tier was pre-set in the URL (e.g. arriving from a library PDP
+    // 'Customise this jacket' CTA which appends &tier=bespoke), skip the
+    // tier picker — the customer is already in the full-bespoke flow and
+    // should land straight on the spec steps with every booklet option
+    // visible.
+    const params = new URLSearchParams(window.location.search);
+    const validTiers = ["essential", "signature", "bespoke"] as const;
+    const urlHasTier = (validTiers as readonly string[]).includes(params.get("tier") ?? "");
+    setPhase(hasTiers && !urlHasTier ? "tier" : "spec");
   }
 
   const safeStepIdx = Math.min(stepIdx, Math.max(activeSteps.length - 1, 0));
