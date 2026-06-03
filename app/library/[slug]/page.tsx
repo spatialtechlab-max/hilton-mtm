@@ -37,11 +37,16 @@ export default async function LibraryPage({
   const baseLib = libraries[slug];
   if (!baseLib) notFound();
 
-  // ERP-backed libraries (ties / belts / cloths) build their sections at
-  // request time from the live ERP feed (ISR-cached for ~5 min).
-  const sections = isErpBacked(slug)
-    ? sectionsFromErp(slug, await fetchErpItems())
-    : baseLib.sections;
+  // ERP-backed libraries build their sections at request time from the
+  // live ERP feed (ISR-cached for ~5 min). If the ERP returns nothing
+  // for the slug (e.g. PANTS / SHOES today), fall back to the static
+  // editorial sections so the page is never empty — the moment the
+  // atelier loads real items into the ERP, the live feed takes over.
+  let sections = baseLib.sections;
+  if (isErpBacked(slug)) {
+    const erpSections = sectionsFromErp(slug, await fetchErpItems());
+    if (erpSections.length > 0) sections = erpSections;
+  }
   const lib = { ...baseLib, sections };
 
   const totalItems = lib.sections.reduce((n, s) => n + s.items.length, 0);

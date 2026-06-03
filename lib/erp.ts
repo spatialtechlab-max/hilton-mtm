@@ -146,8 +146,8 @@ function mapItem(item: ErpItem): LibraryItem {
   };
 }
 
-/** Build LibrarySection[] for one slug ('ties' | 'belts' | 'cloths') from ERP. */
-export function sectionsFromErp(slug: "ties" | "belts" | "cloths", items: ErpItem[]): LibrarySection[] {
+/** Build LibrarySection[] for one ERP-backed slug from ERP. */
+export function sectionsFromErp(slug: ErpBackedSlug, items: ErpItem[]): LibrarySection[] {
   const wanted = ERP_CATEGORIES_FOR_SLUG[slug];
   const filtered = items.filter((i) => wanted.includes(i.categoryName.toUpperCase()));
   if (filtered.length === 0) return [];
@@ -166,13 +166,27 @@ export function sectionsFromErp(slug: "ties" | "belts" | "cloths", items: ErpIte
   }));
 }
 
-const ERP_CATEGORIES_FOR_SLUG: Record<"ties" | "belts" | "cloths", string[]> = {
-  ties:   ["TIE"],
-  belts:  ["BELT"],
-  cloths: ["SUITING", "JACKETING"],
+// Each library slug maps to the set of ERP categoryName values (matched
+// case-insensitively, includes the spreadsheet variants/typos) that
+// should populate it. SHIRTING / PANTS / SHOES went live as ERP categories
+// after the initial build, so they need to be wired here for the
+// existing /library/[slug] page to surface real ERP items instead of
+// the static placeholders.
+const ERP_CATEGORIES_FOR_SLUG: Record<
+  "ties" | "belts" | "cloths" | "shirts" | "trousers" | "shoes",
+  string[]
+> = {
+  ties:     ["TIE", "TIES", "BOW TIE", "RTW BOWTIE"],
+  belts:    ["BELT", "ZAMPIERE BELT"],
+  cloths:   ["SUITING", "JACKETING", "SUITINGS", "SUITS"],
+  shirts:   ["SHIRTING", "SHIIRTING", "SHIRTS"],
+  trousers: ["PANTS", "CHINO PANTS"],
+  shoes:    ["SHOES"],
 };
 
-export const ERP_BACKED_SLUGS = ["ties", "belts", "cloths"] as const;
+export const ERP_BACKED_SLUGS = [
+  "ties", "belts", "cloths", "shirts", "trousers", "shoes",
+] as const;
 export type ErpBackedSlug = (typeof ERP_BACKED_SLUGS)[number];
 export const isErpBacked = (slug: string): slug is ErpBackedSlug =>
   (ERP_BACKED_SLUGS as readonly string[]).includes(slug);
