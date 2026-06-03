@@ -142,6 +142,15 @@ function mapItem(item: ErpItem): LibraryItem {
   const thumb = cleanSrc(item.thumbnail);
   const cleanGallery = (item.images ?? []).map(cleanSrc).filter((g) => g !== FALLBACK_SRC);
 
+  // The ERP convention (confirmed with the atelier) is:
+  //   thumbnail   → cropped fabric swatch close-up
+  //   images[0..] → garment shots (front / back / detail) + extra swatches
+  // The library tiles want the dressed garment as the hero image — they
+  // read as "a shirt", not as "a cloth" — so we prefer the first gallery
+  // photo when present. The customizer fabric picker still wants the
+  // swatch and uses /api/fabrics which keeps `thumbnail` as `image`.
+  const hero = cleanGallery[0] ?? thumb;
+
   return {
     sku: String(item.id),
     name: prettyName(item.name, item.categoryName),
@@ -150,8 +159,13 @@ function mapItem(item: ErpItem): LibraryItem {
     price: `د.ب ${item.sellingPrice}`,
     alt: [brand, pattern, color].filter(Boolean).join(" ").trim(),
     description: detail,
-    media: { kind: "photo", src: thumb },
-    gallery: cleanGallery.length ? cleanGallery : thumb !== FALLBACK_SRC ? [thumb] : undefined,
+    media: { kind: "photo", src: hero },
+    // Gallery includes the swatch alongside the garment shots so the PDP
+    // carousel can show the cloth as one of the views.
+    gallery: (() => {
+      const all = [thumb, ...cleanGallery].filter((s, i, a) => s && a.indexOf(s) === i);
+      return all.length > 0 ? all : undefined;
+    })(),
     // Richer spec fields surfaced on the PDP details table.
     brand,
     code,
@@ -171,10 +185,13 @@ export function sectionsFromErp(slug: ErpBackedSlug, items: ErpItem[]): LibraryS
   const filtered = items.filter((i) => wanted.includes(i.categoryName.toUpperCase()));
   if (filtered.length === 0) return [];
 
-  // Group by brand for a clean sub-section header.
+  // Group by brand for a clean sub-section header. Decode entities first
+  // so "B&amp;S LINEN" lands as "B&S Linen" — both the displayed title
+  // ("B&S Linen") and the count line ("6 pieces from B&S Linen.") read
+  // cleanly.
   const groups = new Map<string, ErpItem[]>();
   for (const i of filtered) {
-    const b = titleCase(i.brandName || "House");
+    const b = titleCase(decodeEntities(i.brandName || "House"));
     groups.set(b, [...(groups.get(b) ?? []), i]);
   }
   return [...groups.entries()].map(([brand, list], idx) => ({
