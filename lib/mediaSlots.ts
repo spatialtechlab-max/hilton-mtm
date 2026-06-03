@@ -67,14 +67,23 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     aspect: "3/4",
   },
   {
-    key: "home.category.tailoring",
+    key: "home.category.suits",
     group: "Home",
-    label: "Homepage Category — Suits & Jackets",
+    label: "Homepage Category — Suits",
     description: "Large featured tile in the homepage Categories block.",
     fallback:
       "https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=1800&auto=format&fit=crop",
-    fallbackAlt: "A bespoke jacket being shaped on the form",
+    fallbackAlt: "A bespoke navy suit on the form",
     aspect: "4/5",
+  },
+  {
+    key: "home.category.jackets",
+    group: "Home",
+    label: "Homepage Category — Jackets",
+    description: "Standalone jackets / sport coats tile on the homepage.",
+    fallback: "https://erp.hiltontailoringhouse.com/uploads/item_rawmaterial/1585_pic_cropped.jpg",
+    fallbackAlt: "A standalone Delfino sport coat",
+    aspect: "16/10",
   },
   {
     key: "home.category.shirts",

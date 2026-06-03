@@ -371,8 +371,46 @@ const cloths: Library = {
   sections: [],
 };
 
+// Suits and Jackets are split into their own libraries so the homepage
+// tiles can route to each independently. Each one borrows the
+// editorial copy of the combined Tailoring library and is ERP-backed
+// against the matching categoryName (SUITING / JACKETING).
+const suits: Library = {
+  slug: "suits",
+  eyebrow: "The Suit Library",
+  title: "Suits.",
+  intro:
+    "Two- and three-piece commissions cut from the mills we trust — Vitale Barberis Canonico, Nobility, Raymond. Every suit is patterned for one body.",
+  heroImage: tailoring.heroImage,
+  heroAlt: tailoring.heroAlt,
+  stats: [
+    { label: "Hours per suit", value: "≈ 300" },
+    { label: "Mills curated",  value: "47" },
+    { label: "Fittings",       value: "3" },
+  ],
+  sections: [],
+};
+
+const jackets: Library = {
+  slug: "jackets",
+  eyebrow: "The Jacket Library",
+  title: "Jackets.",
+  intro:
+    "Standalone jackets and sport coats — from house-cut single-breasteds to Delfino jacketing in wool, linen and the heavier weights for the cooler months.",
+  heroImage: "https://erp.hiltontailoringhouse.com/uploads/item_rawmaterial/1585_pic_cropped.jpg",
+  heroAlt: "A standalone bespoke jacket on the form",
+  stats: [
+    { label: "Cuts",          value: "Slim · Tailored · Standard" },
+    { label: "Mills curated", value: "Delfino · Loro Piana · Solbiati" },
+    { label: "Fittings",      value: "2" },
+  ],
+  sections: [],
+};
+
 export const libraries: Record<string, Library> = {
   tailoring,
+  suits,
+  jackets,
   shirts,
   trousers,
   cloths,

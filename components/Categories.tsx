@@ -16,14 +16,21 @@ type Tile = {
 const slotMap = Object.fromEntries(MEDIA_SLOTS.map((s) => [s.key, s]));
 
 const featured: Tile = {
-  slot: "home.category.tailoring",
+  slot: "home.category.suits",
   category: "Tailoring",
-  title: "Suits & Jackets",
-  href: "/library/tailoring",
+  title: "Suits",
+  href: "/library/suits",
   fit: "cover",
 };
 
 const rightTop: Tile[] = [
+  {
+    slot: "home.category.jackets",
+    category: "Standalone",
+    title: "Jackets",
+    href: "/library/jackets",
+    fit: "cover",
+  },
   {
     slot: "home.category.shirts",
     category: "Shirting",
@@ -31,6 +38,9 @@ const rightTop: Tile[] = [
     href: "/library/shirts",
     fit: "cover",
   },
+];
+
+const bottom: Tile[] = [
   {
     slot: "home.category.trousers",
     category: "Tailored",
@@ -38,9 +48,6 @@ const rightTop: Tile[] = [
     href: "/library/trousers",
     fit: "cover",
   },
-];
-
-const bottom: Tile[] = [
   {
     slot: "home.category.shoes",
     category: "Footwear",
@@ -94,8 +101,9 @@ export function Categories() {
           ))}
         </div>
 
-        {/* Footwear + accessories row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mt-6 lg:mt-8">
+        {/* Trousers + footwear + accessories row (three across so the
+            new Jackets tile lands cleanly in the top group). */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mt-6 lg:mt-8">
           {bottom.map((tile, i) => (
             <Reveal key={tile.title} delay={i * 0.08}>
               <CategoryTile tile={tile} />

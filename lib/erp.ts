@@ -248,7 +248,8 @@ export function sectionsFromErp(slug: ErpBackedSlug, items: ErpItem[]): LibraryS
 // SUIUS) — so a misspelled category in the ERP never makes a cloth or
 // accessory go invisible on the storefront.
 export const ERP_CATEGORIES_FOR_SLUG: Record<
-  | "ties" | "belts" | "cloths" | "shirts" | "trousers" | "shoes" | "tailoring"
+  | "ties" | "belts" | "cloths" | "shirts" | "trousers" | "shoes"
+  | "tailoring" | "suits" | "jackets"
   | "wallets" | "pocket-squares" | "cufflinks" | "bow-ties"
   | "overcoats" | "waistcoats",
   string[]
@@ -259,7 +260,12 @@ export const ERP_CATEGORIES_FOR_SLUG: Record<
   shirts:           ["SHIRTING", "SHIIRTING", "SHIRTS"],
   trousers:         ["PANTS", "CHINO PANTS"],
   shoes:            ["SHOES"],
+  // Tailoring stays as a combined view (suits + jackets) for any old
+  // links / nav that still point at it. The new dedicated /library/suits
+  // and /library/jackets pages own the homepage tiles going forward.
   tailoring:        ["SUITING", "SUITINGS", "SUITS", "JACKETING", "JACKET", "BLAZER", "OVERCOAT"],
+  suits:            ["SUITING", "SUITINGS", "SUITS", "SUIES", "SUIUS"],
+  jackets:          ["JACKETING", "JACKET", "BLAZER", "RTWJKT"],
   wallets:          ["WALLET"],
   "pocket-squares": ["POCKET SQUARE"],
   cufflinks:        ["CUFFLINK", "STUDD CUFFLINK", "TIE PIN", "COLLAR PIN", "LAPEL PIN"],
@@ -269,7 +275,8 @@ export const ERP_CATEGORIES_FOR_SLUG: Record<
 };
 
 export const ERP_BACKED_SLUGS = [
-  "ties", "belts", "cloths", "shirts", "trousers", "shoes", "tailoring",
+  "ties", "belts", "cloths", "shirts", "trousers", "shoes",
+  "tailoring", "suits", "jackets",
   "wallets", "pocket-squares", "cufflinks", "bow-ties", "overcoats", "waistcoats",
 ] as const;
 export type ErpBackedSlug = (typeof ERP_BACKED_SLUGS)[number];

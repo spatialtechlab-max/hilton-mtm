@@ -43,12 +43,28 @@ const GENERIC_TILE = {
   alt: "The Hilton atelier at work",
 };
 
+// Map each garment slug to the matching library slug so Design Yours
+// routes into the same browse → PDP → Customise flow that the
+// Made to Measure nav uses. Anything not in the map falls back to
+// /library/<garment-slug> if the slug already exists, or the
+// customizer landing.
+const LIBRARY_FOR_GARMENT: Record<string, string> = {
+  suit: "suits",
+  jacket: "jackets",
+  shirt: "shirts",
+  trouser: "trousers",
+};
+
 function tileFor(g: Garment, featured: boolean): Tile {
   const assets = TILE_ASSETS[g.slug] ?? GENERIC_TILE;
+  const librarySlug = LIBRARY_FOR_GARMENT[g.slug] ?? g.slug;
   return {
     category: g.tile_eyebrow || (featured ? "Bespoke commission" : "Made to measure"),
     title: `Design a ${g.label.toLowerCase()}`,
-    href: `/customize?category=${g.slug}`,
+    // Land on the library so the customer browses the cloth catalogue
+    // first (identical UX to Made to Measure), picks a piece, then hits
+    // the 'Customise this …' CTA on the PDP.
+    href: `/library/${librarySlug}`,
     image: g.tile_image || assets.image,
     alt: assets.alt,
     fit: "cover",
