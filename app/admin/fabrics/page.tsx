@@ -10,28 +10,46 @@ import { supabase } from "@/lib/supabase";
 
 type Fabric = {
   sku: string;
+  code?: string;
   name: string;
   brand: string;
   composition: string;
   pattern: string;
   color: string;
+  shade?: string;
   weight: string;
+  size?: string;
   origin: string;
   price: string;
   priceNum: number;
   image: string;
+  gallery?: string[];
+  erpCategory?: string;
+  erpCategoryID?: number;
 };
+
+const GARMENTS = [
+  { key: "suit",    label: "Suit"    },
+  { key: "jacket",  label: "Jacket"  },
+  { key: "shirt",   label: "Shirt"   },
+  { key: "trouser", label: "Trouser" },
+] as const;
+type Garment = (typeof GARMENTS)[number]["key"];
 
 export default function AdminFabricsPage() {
   const { user, loading } = useAuth();
   const [admin, setAdmin] = useState<boolean | null>(null);
 
-  const [fabrics, setFabrics]     = useState<Fabric[]>([]);
+  const [garment, setGarment]     = useState<Garment>("suit");
+  const [fabricsByGarment, setFabricsByGarment] = useState<Record<Garment, Fabric[]>>({
+    suit: [], jacket: [], shirt: [], trouser: [],
+  });
   const [disabled, setDisabled]   = useState<Set<string>>(new Set());
   const [q, setQ]                 = useState("");
   const [filter, setFilter]       = useState<"all" | "enabled" | "disabled">("all");
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError]         = useState<string | null>(null);
+  const fabrics = fabricsByGarment[garment];
 
   useEffect(() => {
     if (!user) { setAdmin(false); return; }
@@ -45,13 +63,24 @@ export default function AdminFabricsPage() {
       setLoadingData(true);
       setError(null);
       try {
-        const [r, ovr] = await Promise.all([
-          // includeDisabled=1 returns ALL fabrics so admin can see + re-enable
+        // Pull every garment in parallel — the admin needs to see all
+        // four buckets so a typo in the ERP categoryName never makes a
+        // cloth go invisible. includeDisabled=1 returns ALL fabrics so
+        // hidden ones still appear for re-enabling.
+        const [suitR, jacketR, shirtR, trouserR, ovr] = await Promise.all([
           fetch("/api/fabrics?category=suit&includeDisabled=1").then((x) => x.json()),
+          fetch("/api/fabrics?category=jacket&includeDisabled=1").then((x) => x.json()),
+          fetch("/api/fabrics?category=shirt&includeDisabled=1").then((x) => x.json()),
+          fetch("/api/fabrics?category=trouser&includeDisabled=1").then((x) => x.json()),
           supabase.from("mtm_fabric_overrides").select("sku, active").eq("active", false),
         ]);
         if (cancelled) return;
-        setFabrics((r.fabrics ?? []) as Fabric[]);
+        setFabricsByGarment({
+          suit:    (suitR.fabrics    ?? []) as Fabric[],
+          jacket:  (jacketR.fabrics  ?? []) as Fabric[],
+          shirt:   (shirtR.fabrics   ?? []) as Fabric[],
+          trouser: (trouserR.fabrics ?? []) as Fabric[],
+        });
         const off = new Set<string>((ovr.data ?? []).map((d: { sku: string }) => String(d.sku)));
         setDisabled(off);
       } catch (e) {
@@ -115,8 +144,11 @@ export default function AdminFabricsPage() {
             <span className="text-eyebrow text-[var(--color-burgundy-700)]">Admin · Fabrics</span>
             <h1 className="text-display text-[clamp(2rem,4vw,3rem)] mt-2 leading-tight">Fabric visibility</h1>
             <p className="mt-3 text-[0.9rem] text-[var(--color-charcoal-500)] max-w-2xl">
-              Fabrics come from the ERP. Toggle any one off to hide it from the storefront without removing it from
-              the ERP. Disabled fabrics still show below for review.
+              Fabrics come live from the ERP, mapped to garments by their
+              <span className="font-medium"> categoryName</span> (SUITING, JACKETING,
+              SHIRTING, PANTS — including the typos we've seen). Switch garment
+              tabs to review each bucket. Toggle any one off to hide it from
+              the storefront without removing it from the ERP.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -130,12 +162,39 @@ export default function AdminFabricsPage() {
         </div>
 
         <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Stat label="Total fabrics" value={fabrics.length.toString()} icon={<Layers size={14} strokeWidth={1.5} />} />
-          <Stat label="Enabled" value={(fabrics.length - disabled.size).toString()} />
-          <Stat label="Disabled" value={disabled.size.toString()} />
+          <Stat
+            label={`${garment[0].toUpperCase() + garment.slice(1)} fabrics`}
+            value={fabrics.length.toString()}
+            icon={<Layers size={14} strokeWidth={1.5} />}
+          />
+          <Stat label="Enabled" value={(fabrics.length - fabrics.filter((f) => disabled.has(f.sku)).length).toString()} />
+          <Stat label="Across all garments" value={
+            Object.values(fabricsByGarment).reduce((s, list) => s + list.length, 0).toString()
+          } />
           <Stat label="Source" value="Live ERP" />
         </div>
       </header>
+
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        {GARMENTS.map((g) => {
+          const count = fabricsByGarment[g.key].length;
+          const active = garment === g.key;
+          return (
+            <button
+              key={g.key}
+              type="button"
+              onClick={() => setGarment(g.key)}
+              className={`text-eyebrow border px-4 py-2 transition-colors ${
+                active
+                  ? "border-[var(--color-burgundy-700)] bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)]"
+                  : "border-black/15 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)]"
+              }`}
+            >
+              {g.label} <span className="tabular-nums opacity-70">({count})</span>
+            </button>
+          );
+        })}
+      </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <div className="relative flex-1 min-w-[220px] max-w-md">
@@ -154,8 +213,8 @@ export default function AdminFabricsPage() {
           className="border border-black/15 bg-[var(--color-ivory-100)] px-3 py-2.5 text-[0.9rem] focus:outline-none focus:border-[var(--color-burgundy-700)]"
         >
           <option value="all">All ({fabrics.length})</option>
-          <option value="enabled">Enabled ({fabrics.length - disabled.size})</option>
-          <option value="disabled">Disabled ({disabled.size})</option>
+          <option value="enabled">Enabled ({fabrics.length - fabrics.filter((f) => disabled.has(f.sku)).length})</option>
+          <option value="disabled">Disabled ({fabrics.filter((f) => disabled.has(f.sku)).length})</option>
         </select>
       </div>
 
@@ -186,11 +245,18 @@ export default function AdminFabricsPage() {
                 <div className="col-span-6 sm:col-span-3">
                   <span className="text-eyebrow text-[var(--color-charcoal-500)]">{f.brand}</span>
                   <p className="text-display text-[1rem] mt-0.5 leading-tight">{f.name}</p>
-                  <p className="text-[0.7rem] text-[var(--color-charcoal-500)] mt-1 tabular-nums">SKU {f.sku}</p>
+                  <p className="text-[0.7rem] text-[var(--color-charcoal-500)] mt-1 tabular-nums">
+                    SKU {f.sku}
+                    {f.erpCategory && (
+                      <> · <span className="uppercase tracking-wider">{f.erpCategory}</span></>
+                    )}
+                  </p>
                 </div>
                 <div className="col-span-6 sm:col-span-3 text-[0.82rem] text-[var(--color-charcoal-700)]">
                   {f.composition}<br />
-                  <span className="text-[var(--color-charcoal-500)]">{[f.pattern, f.color, f.origin].filter(Boolean).join(" · ")}</span>
+                  <span className="text-[var(--color-charcoal-500)]">
+                    {[f.pattern, f.color, f.weight, f.origin].filter(Boolean).join(" · ")}
+                  </span>
                 </div>
                 <div className="col-span-6 sm:col-span-2 text-[0.9rem] tabular-nums">{f.price}</div>
                 <div className="col-span-6 sm:col-span-3 flex items-center justify-end gap-3">

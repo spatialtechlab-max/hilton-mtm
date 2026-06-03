@@ -36,16 +36,22 @@ const DESIGN_PHASES: Phase[] = ["fabric", "tier", "spec", "measurements", "summa
 
 type Fabric = {
   sku: string;
+  code?: string;
   name: string;
   brand: string;
   composition: string;
   pattern: string;
   color: string;
+  shade?: string;
   weight: string;
+  size?: string;
   origin: string;
   price: string;
   priceNum: number;
   image: string;
+  gallery?: string[];
+  erpCategory?: string;
+  erpCategoryID?: number;
 };
 
 const CATEGORY_COPY: Record<StepCategory, { h1: string; intro: string }> = {
@@ -932,8 +938,34 @@ function FabricPicker({
                     <p className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">{f.composition}</p>
                   )}
                   <div className="mt-2 flex items-center justify-between gap-2 text-[0.78rem] text-[var(--color-charcoal-700)]">
-                    <span>{[f.pattern, f.origin].filter(Boolean).join(" · ")}</span>
+                    <span>
+                      {[f.pattern, f.color, f.weight, f.origin]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
                   </div>
+                  {f.gallery && f.gallery.length > 0 && (
+                    <div className="mt-3 flex items-center gap-1.5">
+                      {f.gallery.slice(0, 3).map((g) => (
+                        <div
+                          key={g}
+                          className="relative w-10 h-10 overflow-hidden bg-[var(--color-ivory-200)]"
+                        >
+                          <img
+                            src={g}
+                            alt=""
+                            loading="lazy"
+                            className="absolute inset-0 w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                      {f.gallery.length > 3 && (
+                        <span className="text-[0.7rem] text-[var(--color-charcoal-500)] tabular-nums ml-1">
+                          +{f.gallery.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="mt-3 flex items-center justify-between border-t border-black/10 pt-3">
                     <span className="text-[0.875rem] text-[var(--color-charcoal-900)]">{f.price}</span>
                     <span className="text-eyebrow text-[var(--color-burgundy-700)] group-hover:underline">

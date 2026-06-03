@@ -35,6 +35,17 @@ async function fetchDisabledSkus(): Promise<Set<string>> {
 const titleCase = (s: string) =>
   s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()).replace(/\s+/g, " ").trim();
 
+// The ERP encodes "&" as "&amp;" in name/brand fields (it stores HTML-
+// escaped strings). Decode the handful of entities that actually appear
+// so the storefront reads "B&S Linen" instead of "B&amp;S Linen".
+const decodeEntities = (s: string) =>
+  s
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+
 const FALLBACK_SRC = "/products/no-image.svg";
 const cleanSrc = (src: string | undefined) => {
   if (!src) return FALLBACK_SRC;
@@ -42,25 +53,27 @@ const cleanSrc = (src: string | undefined) => {
   if (!/^https?:\/\//i.test(src)) return FALLBACK_SRC;
   return src;
 };
+const cleanGallery = (arr: string[] | undefined) =>
+  (arr ?? []).map(cleanSrc).filter((g) => g !== FALLBACK_SRC);
 
-// Each ERP cloth carries a `categoryName` that the mill set when adding
-// it to the Hilton ERP. We honour that classification so the customer
-// only sees cloths actually appropriate for their commission:
+// Each ERP cloth carries a `categoryName` set by the atelier when
+// adding the item. The Hilton ERP has been seeded with a long tail of
+// active categories (see Active_categories spreadsheet) including
+// variants/typos like SUITINGS / SUITS / SHIIRTING. We collapse all of
+// those into the four customizer garments so the storefront stays
+// resilient to ERP naming choices.
 //
-//   SUITING    — used for matching two-piece suits AND can be cut as a
-//                separate trouser; suit + trouser see it.
-//   JACKETING  — heavier / textured cloth meant for standalone jackets
-//                and sport coats; only jacket sees it.
-//   SHIRTING   — shirt-weight cottons; shirt sees it.
-//   TROUSERING — dedicated trouser cloths; trouser sees it.
-//
-// A jacket commission can also be cut from suiting cloth (very common
-// in tailoring), so jacket inherits SUITING in addition to JACKETING.
+//   suit    ← SUITING family (incl. typos) + BLAZER
+//   jacket  ← JACKETING + JACKET + BLAZER + RTWJKT,
+//             plus SUITING (a jacket can be cut from suiting)
+//   shirt   ← SHIRTING family (incl. typos) + SHIRTS
+//   trouser ← PANTS + CHINO PANTS, plus SUITING (matching suit cloth
+//             can be cut as a separate trouser)
 const ERP_CATEGORIES_FOR_GARMENT: Record<string, string[]> = {
-  suit:    ["SUITING"],
-  jacket:  ["SUITING", "JACKETING"],
-  shirt:   ["SHIRTING"],
-  trouser: ["SUITING", "TROUSERING"],
+  suit:    ["SUITING", "SUITINGS", "SUITS", "SUIES", "SUIUS", "BLAZER"],
+  jacket:  ["JACKETING", "JACKET", "BLAZER", "RTWJKT", "SUITING", "SUITINGS"],
+  shirt:   ["SHIRTING", "SHIIRTING", "SHIRTS"],
+  trouser: ["PANTS", "CHINO PANTS", "SUITING", "SUITINGS"],
 };
 
 // Friendly placeholder for garments the ERP hasn't yet stocked cloth
@@ -204,7 +217,15 @@ const SHIRT_HOUSE_LIBRARY = [
 ];
 
 function stripPrefix(name: string, categoryName: string): string {
-  const prefixes = [categoryName, "SUITS", "JACKET"];
+  // The ERP often prefixes the item name with its category (or a
+  // related noun) — e.g. "FABRICRAYMOND 04", "SUITSWM19027 58104",
+  // "JACKETDELFINO 2601", "SILK TIEMARTIN 504 2". Strip each known
+  // prefix so the display name reads cleanly.
+  const prefixes = [
+    categoryName, "FABRIC", "SUITS", "SUITING", "SUITINGS",
+    "JACKETING", "JACKET", "SHIRTING", "SHIRTS", "PANTS",
+    "BELT", "SILK TIE", "TIE", "BLAZER",
+  ];
   for (const p of prefixes) {
     const re = new RegExp(`^${p}\\s*`, "i");
     if (re.test(name)) return name.replace(re, "");
@@ -213,19 +234,30 @@ function stripPrefix(name: string, categoryName: string): string {
 }
 
 function toFabric(item: ErpItem) {
+  const thumb = cleanSrc(item.thumbnail);
+  const gallery = cleanGallery(item.images);
   return {
     sku: String(item.id),
-    name: titleCase(stripPrefix(item.name, item.categoryName)),
-    brand: titleCase(item.brandName || ""),
-    composition: item.description ? titleCase(item.description) : "",
-    pattern: titleCase(item.design || ""),
-    color: titleCase(item.color || ""),
-    weight: item.weight || "",
-    origin: titleCase(item.origin || ""),
+    code: item.code ? decodeEntities(item.code) : "",
+    name: titleCase(decodeEntities(stripPrefix(item.name, item.categoryName))),
+    brand: titleCase(decodeEntities(item.brandName || "")),
+    composition: item.description ? titleCase(decodeEntities(item.description)) : "",
+    pattern: titleCase(decodeEntities(item.design || "")),
+    color: titleCase(decodeEntities(item.color || "")),
+    shade: item.shade ? decodeEntities(item.shade) : "",
+    weight: item.weight ? item.weight.replace(/\s+/g, " ").trim() : "",
+    size: item.size ? decodeEntities(item.size) : "",
+    origin: titleCase(decodeEntities(item.origin || "")),
     price: `د.ب ${item.sellingPrice}`,
     priceNum: item.sellingPrice,
-    image: cleanSrc(item.thumbnail),
+    // `image` is the primary swatch the picker tile shows; `gallery`
+    // is the additional photos the atelier uploaded (usually a
+    // garment-on-form shot + close-up weave). The customizer will
+    // surface them in a modal when the customer wants more detail.
+    image: thumb,
+    gallery: gallery.length ? gallery : undefined,
     erpCategory: (item.categoryName || "").toUpperCase(),
+    erpCategoryID: item.categoryID,
   };
 }
 
