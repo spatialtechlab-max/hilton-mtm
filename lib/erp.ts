@@ -142,14 +142,29 @@ function mapItem(item: ErpItem): LibraryItem {
   const thumb = cleanSrc(item.thumbnail);
   const cleanGallery = (item.images ?? []).map(cleanSrc).filter((g) => g !== FALLBACK_SRC);
 
-  // The ERP convention (confirmed with the atelier) is:
-  //   thumbnail   → cropped fabric swatch close-up
-  //   images[0..] → garment shots (front / back / detail) + extra swatches
+  // The ERP convention (confirmed with the atelier's upload tool: IMAGE *
+  // is the swatch, IMAGE 1 is the on-form garment hero, IMAGE 2 / 3 are
+  // back / detail) bakes the upload slot into the filename — `pic` for
+  // the swatch, `pic1` / `pic2` / `pic3` for the gallery. The ERP's
+  // `images` array, however, is in upload-order and varies per item
+  // (we've seen [pic3, pic1, pic2] for shirt 2832), so picking
+  // gallery[0] blindly can land on a swatch. Sorting by the numeric
+  // suffix in the filename gives us pic1 → pic2 → pic3 consistently,
+  // which means the library tile always shows the garment hero.
+  const sortedGallery = [...cleanGallery].sort((a, b) => {
+    const n = (s: string) => {
+      const m = s.match(/_pic(\d+)_/);
+      return m ? Number(m[1]) : 999;
+    };
+    return n(a) - n(b);
+  });
+
   // The library tiles want the dressed garment as the hero image — they
-  // read as "a shirt", not as "a cloth" — so we prefer the first gallery
-  // photo when present. The customizer fabric picker still wants the
-  // swatch and uses /api/fabrics which keeps `thumbnail` as `image`.
-  const hero = cleanGallery[0] ?? thumb;
+  // read as "a shirt" / "a jacket" / "a tie", not as "a cloth" — so we
+  // prefer the first sorted gallery photo (pic1) when present. The
+  // customizer fabric picker still wants the swatch and uses
+  // /api/fabrics which keeps `thumbnail` as `image`.
+  const hero = sortedGallery[0] ?? thumb;
 
   return {
     sku: String(item.id),
@@ -160,10 +175,11 @@ function mapItem(item: ErpItem): LibraryItem {
     alt: [brand, pattern, color].filter(Boolean).join(" ").trim(),
     description: detail,
     media: { kind: "photo", src: hero },
-    // Gallery includes the swatch alongside the garment shots so the PDP
-    // carousel can show the cloth as one of the views.
+    // Gallery on the PDP shows sorted garment photos first, then the
+    // swatch, so the carousel opens on the dressed garment but the
+    // cloth itself is still browseable.
     gallery: (() => {
-      const all = [thumb, ...cleanGallery].filter((s, i, a) => s && a.indexOf(s) === i);
+      const all = [...sortedGallery, thumb].filter((s, i, a) => s && a.indexOf(s) === i);
       return all.length > 0 ? all : undefined;
     })(),
     // Richer spec fields surfaced on the PDP details table.
