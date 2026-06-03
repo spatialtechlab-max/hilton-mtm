@@ -9,7 +9,7 @@ import { listAllOrders, ORDER_STATUS_LABEL, ORDER_STATUSES, type Order, type Ord
 import { supabase } from "@/lib/supabase";
 import { OrderDetailModal } from "@/components/OrderDetailModal";
 
-const fmt = (n: number) => `د.ب ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+const fmt = (n: number) => `BHD ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
 export default function AdminOrdersPage() {
   const { user, loading } = useAuth();

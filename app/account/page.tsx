@@ -242,7 +242,7 @@ function AccountDashboard({ user, onSignOut }: { user: User; onSignOut: () => vo
                         {ORDER_STATUS_LABEL[o.status]}
                       </span>
                       <span className="col-span-9 sm:col-span-2 text-[0.9rem] text-[var(--color-charcoal-900)] tabular-nums">
-                        د.ب {o.subtotal.toLocaleString()}
+                        BHD {o.subtotal.toLocaleString()}
                       </span>
                       <ArrowRight size={14} strokeWidth={1.5} className="col-span-3 sm:col-span-1 justify-self-end text-[var(--color-charcoal-500)] group-hover:text-[var(--color-burgundy-700)] group-hover:translate-x-0.5 transition-all" />
                     </Link>

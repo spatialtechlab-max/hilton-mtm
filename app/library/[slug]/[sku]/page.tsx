@@ -158,9 +158,14 @@ export default async function ProductPage({
               {item.cloth && (
                 <p className="mt-3 text-[0.95rem] text-[var(--color-charcoal-500)]">{item.cloth}</p>
               )}
-              <div className="mt-5 text-display text-[1.75rem] text-[var(--color-burgundy-700)]">
-                {item.price}
-              </div>
+              {/* Only render real ERP prices — items with placeholder
+                  "From BHD …" labels (legacy editorial fakes) are
+                  suppressed so the PDP doesn't show made-up numbers. */}
+              {item.price && !/^From\b/i.test(item.price) && (
+                <div className="mt-5 text-display text-[1.75rem] text-[var(--color-burgundy-700)]">
+                  {item.price}
+                </div>
+              )}
 
               <p className="mt-6 text-[1rem] text-[var(--color-charcoal-700)] leading-relaxed">
                 {item.description ?? item.alt}
@@ -254,7 +259,7 @@ export default async function ProductPage({
                 <Truck size={15} strokeWidth={1.5} /> Shipping
               </div>
               <p className="mt-3 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed max-w-md">
-                Complimentary worldwide delivery on orders over د.ب 150. Allow 2–4 weeks for the make.
+                Complimentary worldwide delivery on orders over BHD 150. Allow 2–4 weeks for the make.
               </p>
             </div>
             <div>

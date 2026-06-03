@@ -443,7 +443,7 @@ export const tiers: Tier[] = [
     slug: "essential",
     name: "Essentials",
     tagline: "The refined foundation of our made-to-measure tailoring.",
-    price: "د.ب 800",
+    price: "BHD 800",
     lead: "3 – 4 weeks",
     fittings: "Single fitting",
     features: [
@@ -457,7 +457,7 @@ export const tiers: Tier[] = [
     slug: "signature",
     name: "Signature",
     tagline: "The impeccable Hilton house standard.",
-    price: "د.ب 1,400",
+    price: "BHD 1,400",
     lead: "4 – 5 weeks",
     fittings: "Two fittings",
     features: [
@@ -473,7 +473,7 @@ export const tiers: Tier[] = [
     slug: "bespoke",
     name: "Full Bespoke",
     tagline: "The pinnacle of our art — entirely hand-cut and hand-stitched.",
-    price: "د.ب 2,200",
+    price: "BHD 2,200",
     lead: "6 – 8 weeks",
     fittings: "Three fittings + atelier visit",
     features: [
@@ -700,24 +700,24 @@ export function categoryHasTiers(cat: StepCategory): boolean {
  */
 const TIER_PRICE_BY_CATEGORY: Record<StepCategory, Record<TierLevel, string>> = {
   suit: {
-    essential: "د.ب 800",
-    signature: "د.ب 1,400",
-    bespoke:   "د.ب 2,200",
+    essential: "BHD 800",
+    signature: "BHD 1,400",
+    bespoke:   "BHD 2,200",
   },
   jacket: {
-    essential: "د.ب 500",
-    signature: "د.ب 900",
-    bespoke:   "د.ب 1,500",
+    essential: "BHD 500",
+    signature: "BHD 900",
+    bespoke:   "BHD 1,500",
   },
   shirt: {
-    essential: "د.ب 140",
-    signature: "د.ب 220",
-    bespoke:   "د.ب 380",
+    essential: "BHD 140",
+    signature: "BHD 220",
+    bespoke:   "BHD 380",
   },
   trouser: {
-    essential: "د.ب 280",
-    signature: "د.ب 440",
-    bespoke:   "د.ب 720",
+    essential: "BHD 280",
+    signature: "BHD 440",
+    bespoke:   "BHD 720",
   },
 };
 

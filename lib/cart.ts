@@ -14,7 +14,7 @@ export type CartItem = {
   sku: string;
   name: string;
   type: string;        // e.g. "Whole-Cut Oxford"
-  price: string;       // e.g. "د.ب 1,000"
+  price: string;       // e.g. "BHD 1,000"
   priceNum: number;    // numeric for totals
   image: string;
   contain?: boolean;   // true for transparent product photos (display case)

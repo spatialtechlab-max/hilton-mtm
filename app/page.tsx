@@ -15,38 +15,16 @@ import { MEDIA_SLOTS } from "@/lib/mediaSlots";
 
 const HOME_HERO = MEDIA_SLOTS.find((s) => s.key === "home.hero")!;
 
+// Collection tiles read from /admin/media slots so the atelier can swap
+// the photography per tile. No price labels — actual cloth/garment
+// pricing comes from the ERP on the PDP, not the homepage tile.
 const collection = [
-  {
-    name: "The Two-Piece",
-    type: "Suit",
-    price: "From د.ب 800",
-    image:
-      "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=1600&auto=format&fit=crop",
-    href: "/library/tailoring",
-  },
-  {
-    name: "Vintage Marrone",
-    type: "Shoe · Double Monk",
-    price: "د.ب 1,000",
-    image: "/products/shoes/5308-marrone.png",
-    href: "/library/shoes",
-  },
-  {
-    name: "Navy Paisley",
-    type: "Tie · 8-Fold Como Silk",
-    price: "د.ب 100",
-    image: "/products/ties/HBTS082.webp",
-    href: "/library/ties",
-  },
-  {
-    name: "The Evening Shirt",
-    type: "Shirting",
-    price: "From د.ب 120",
-    image:
-      "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=1600&auto=format&fit=crop",
-    href: "/library/shirts",
-  },
+  { name: "The Two-Piece",     slot: "home.collection.1", href: "/library/tailoring" },
+  { name: "Vintage Marrone",   slot: "home.collection.2", href: "/library/shoes" },
+  { name: "Navy Paisley",      slot: "home.collection.3", href: "/library/ties" },
+  { name: "The Evening Shirt", slot: "home.collection.4", href: "/library/shirts" },
 ];
+const slotMap = Object.fromEntries(MEDIA_SLOTS.map((s) => [s.key, s]));
 
 export default function HomePage() {
   return (
@@ -166,35 +144,30 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {collection.map((item, i) => (
-              <Reveal key={item.name} delay={i * 0.08}>
-                <Link href={item.href} className="group block">
-                  <div className="relative aspect-[3/4] overflow-hidden bg-[var(--color-ivory-200)] hover-grow">
-                    {isPlaceholder(item.image) && <PlaceholderBadge />}
-                    <Image
-                      src={item.image}
-                      alt={item.name}
-                      fill
-                      sizes="(min-width: 1024px) 25vw, 50vw"
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="mt-6 flex items-baseline justify-between">
-                    <div>
-                      <span className="text-eyebrow text-[var(--color-charcoal-500)]">
-                        {item.type}
-                      </span>
-                      <h3 className="text-display text-[1.6rem] mt-2 text-[var(--color-charcoal-900)] group-hover:text-[var(--color-burgundy-700)] transition-colors">
+            {collection.map((item, i) => {
+              const def = slotMap[item.slot];
+              return (
+                <Reveal key={item.slot} delay={i * 0.08}>
+                  <Link href={item.href} className="group block">
+                    <div className="relative aspect-[3/4] overflow-hidden bg-[var(--color-ivory-200)] hover-grow">
+                      <MediaImage
+                        slot={item.slot}
+                        fallback={def?.fallback ?? "/products/no-image.svg"}
+                        fallbackAlt={def?.fallbackAlt ?? item.name}
+                        fill
+                        sizes="(min-width: 1024px) 25vw, 50vw"
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="mt-6">
+                      <h3 className="text-display text-[1.6rem] text-[var(--color-charcoal-900)] group-hover:text-[var(--color-burgundy-700)] transition-colors">
                         {item.name}
                       </h3>
                     </div>
-                    <span className="text-[0.85rem] text-[var(--color-charcoal-500)]">
-                      {item.price}
-                    </span>
-                  </div>
-                </Link>
-              </Reveal>
-            ))}
+                  </Link>
+                </Reveal>
+              );
+            })}
           </div>
         </div>
       </section>

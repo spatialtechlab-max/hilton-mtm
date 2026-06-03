@@ -207,57 +207,6 @@ export default function ProcessPage() {
         </div>
       </section>
 
-      {/* ─────────────── TIERS ─────────────── */}
-      <section className="bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)] py-16">
-        <div className="container-editorial">
-          <Reveal>
-            <span className="text-eyebrow text-[var(--color-burgundy-300)]">Three levels of craft</span>
-          </Reveal>
-          <h2 className="text-display text-[clamp(2.5rem,5vw,4.5rem)] mt-6 max-w-3xl leading-[1.02]">
-            <SplitReveal text="One custom garment, three distinct levels." />
-          </h2>
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-y-12 gap-x-10">
-            {[
-              {
-                tier: "Essentials",
-                from: "د.ب 800",
-                note: "The refined foundation of our made-to-measure tailoring.",
-              },
-              {
-                tier: "Signature",
-                from: "د.ب 1,400",
-                note: "The impeccable Hilton house standard.",
-              },
-              {
-                tier: "Full Bespoke",
-                from: "د.ب 2,200",
-                note: "The pinnacle of our art — entirely hand-cut and hand-stitched, with dedicated personal fittings.",
-              },
-            ].map((p) => (
-              <div key={p.tier} className="border-l border-[var(--color-ivory-300)]/25 pl-6">
-                <h3 className="text-eyebrow text-[var(--color-ivory-300)]/80">{p.tier}</h3>
-                <p className="text-display text-[3rem] mt-3 leading-none">{p.from}</p>
-                <p className="mt-3 text-[0.95rem] text-[var(--color-ivory-200)]/70 leading-relaxed">
-                  {p.note}
-                </p>
-              </div>
-            ))}
-          </div>
-          <Reveal delay={0.3}>
-            <div className="mt-16 flex flex-wrap items-center gap-4">
-              <Button href="/customize" variant="ivory">Design online</Button>
-              <Button href="/book" variant="ghost" showArrow>
-                <span className="text-[var(--color-ivory-100)]">Book in store</span>
-              </Button>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      <CtaBanner
-        title="Whichever path you choose."
-        body="The first conversation is free. Bring a jacket you love and we will tell you why."
-      />
     </>
   );
 }

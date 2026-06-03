@@ -17,7 +17,7 @@ import {
 } from "@/lib/orders";
 
 const fmt = (n: number) =>
-  `د.ب ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  `BHD ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
 /**
  * The big admin pop-up. Open from a click on any row in /admin/orders.

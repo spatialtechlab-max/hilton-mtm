@@ -810,7 +810,7 @@ function OptionGrid({
                   <div className="text-[0.7rem] text-[var(--color-charcoal-500)] mt-1.5 leading-snug">{opt.note}</div>
                 )}
                 <div className="text-eyebrow text-[0.65rem] mt-2 text-[var(--color-burgundy-700)]">
-                  {opt.surcharge && opt.surcharge > 0 ? `+ د.ب ${opt.surcharge}` : "Included"}
+                  {opt.surcharge && opt.surcharge > 0 ? `+ BHD ${opt.surcharge}` : "Included"}
                 </div>
               </div>
             </button>
@@ -871,7 +871,7 @@ function OptionGrid({
                 <div className="text-[0.7rem] text-[var(--color-charcoal-500)] mt-1 leading-snug">{opt.note}</div>
               )}
               <div className="text-eyebrow text-[0.6rem] mt-1.5 text-[var(--color-burgundy-700)]">
-                {opt.surcharge && opt.surcharge > 0 ? `+ د.ب ${opt.surcharge}` : "Included"}
+                {opt.surcharge && opt.surcharge > 0 ? `+ BHD ${opt.surcharge}` : "Included"}
               </div>
             </div>
           </button>
@@ -995,7 +995,7 @@ function FabricPicker({
                 color: "",
                 weight: "",
                 origin: "",
-                price: "د.ب 0",
+                price: "BHD 0",
                 priceNum: 0,
                 image: "/products/no-image.svg",
               })

@@ -144,7 +144,7 @@ export function surchargeTotal(visible: LiveStep[], selections: Selections): num
   }, 0);
 }
 
-/** Parse a price label like "د.ب 1,400" or "From $2,400" into a number. */
+/** Parse a price label like "BHD 1,400" or "From $2,400" into a number. */
 export function parsePrice(s: string | undefined | null): number {
   if (!s) return 0;
   const m = s.replace(/,/g, "").match(/(\d+(?:\.\d+)?)/);
@@ -153,5 +153,5 @@ export function parsePrice(s: string | undefined | null): number {
 
 /** Format a BHD amount the same way the rest of the site does. */
 export function formatBhd(n: number): string {
-  return `د.ب ${n.toLocaleString("en-US")}`;
+  return `BHD ${n.toLocaleString("en-US")}`;
 }

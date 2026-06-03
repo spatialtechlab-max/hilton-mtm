@@ -13,7 +13,7 @@ import {
   type Order, type OrderItem, type StatusHistoryEntry, type OrderStatus,
 } from "@/lib/orders";
 
-const fmt = (n: number) => `د.ب ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+const fmt = (n: number) => `BHD ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
 export default function AdminOrderDetailPage() {
   const params = useParams<{ orderNumber: string }>();

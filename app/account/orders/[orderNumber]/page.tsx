@@ -11,7 +11,7 @@ import {
 } from "@/lib/orders";
 import { supabase } from "@/lib/supabase";
 
-const fmt = (n: number) => `د.ب ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+const fmt = (n: number) => `BHD ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
 export default function OrderDetailPage() {
   const params = useParams<{ orderNumber: string }>();

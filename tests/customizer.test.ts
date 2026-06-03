@@ -98,7 +98,7 @@ describe("categoryHasTiers — per client brief, only suit + jacket use the tier
 });
 
 describe("tierPriceFor — category-specific tier pricing", () => {
-  test("suit signature is د.ب 1,400 (unchanged baseline)", () => {
+  test("suit signature is BHD 1,400 (unchanged baseline)", () => {
     expect(parsePrice(tierPriceFor("suit", "signature"))).toBe(1400);
   });
   test("shirt is priced as a single garment, not a commission", () => {

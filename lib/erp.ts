@@ -171,7 +171,7 @@ function mapItem(item: ErpItem): LibraryItem {
     name: prettyName(item.name, item.categoryName),
     type: titleCase(item.categoryName),
     cloth,
-    price: `د.ب ${item.sellingPrice}`,
+    price: `BHD ${item.sellingPrice}`,
     alt: [brand, pattern, color].filter(Boolean).join(" ").trim(),
     description: detail,
     media: { kind: "photo", src: hero },

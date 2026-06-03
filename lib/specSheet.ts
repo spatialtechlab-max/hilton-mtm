@@ -24,7 +24,7 @@ const A4 = { w: 595.28, h: 841.89 };
 
 /**
  * pdf-lib's standard fonts (WinAnsi-encoded) can't render Arabic glyphs.
- * Convert the د.ب dinar symbol to the Latin "BHD" abbreviation for PDF
+ * Convert the BHD dinar symbol to the Latin "BHD" abbreviation for PDF
  * output only — the site keeps the Arabic symbol everywhere else.
  */
 const toLatin = (s: string) => s.replace(/د\.?ب\.?/g, "BHD").trim();

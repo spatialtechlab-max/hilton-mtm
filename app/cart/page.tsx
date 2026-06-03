@@ -12,7 +12,7 @@ import { AuthForm } from "@/components/AuthForm";
 import { createOrderFromCart, fetchProfile, isProfileComplete, type Profile } from "@/lib/orders";
 
 const fmt = (n: number) =>
-  `د.ب ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  `BHD ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
 export default function CartPage() {
   const { items, subtotal, count } = useCart();

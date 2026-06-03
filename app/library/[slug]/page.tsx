@@ -315,7 +315,12 @@ function ProductCard({ item, slug }: { item: LibraryItem; slug: string }) {
           <p className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">{item.cloth}</p>
         )}
         <div className="mt-3 flex items-center justify-between">
-          <span className="text-[0.875rem] text-[var(--color-charcoal-900)]">{item.price}</span>
+          {/* Only real ERP prices render — static editorial items have
+              price="" so the line collapses rather than displaying made-up
+              numbers. */}
+          <span className="text-[0.875rem] text-[var(--color-charcoal-900)]">
+            {item.price && !/^From\b/i.test(item.price) ? item.price : ""}
+          </span>
           <ArrowUpRight
             size={14}
             strokeWidth={1.5}

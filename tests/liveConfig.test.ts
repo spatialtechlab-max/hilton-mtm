@@ -10,18 +10,18 @@ import { parsePrice, formatBhd, surchargeTotal, type LiveStep } from "@/lib/live
 
 describe("parsePrice", () => {
   test("plain BHD label", () => {
-    expect(parsePrice("د.ب 1,400")).toBe(1400);
+    expect(parsePrice("BHD 1,400")).toBe(1400);
   });
-  test("handles the leading dot in د.ب (the regex used to drop after the .)", () => {
-    expect(parsePrice("د.ب 1,000")).toBe(1000);
+  test("handles the leading dot in BHD (the regex used to drop after the .)", () => {
+    expect(parsePrice("BHD 1,000")).toBe(1000);
   });
   test("`From $2,400` style", () => {
     expect(parsePrice("From $2,400")).toBe(2400);
   });
   test("decimal", () => {
-    expect(parsePrice("د.ب 199.50")).toBe(199.5);
+    expect(parsePrice("BHD 199.50")).toBe(199.5);
   });
-  test.each([null, undefined, "", "Priced per spec", "د.ب —"])(
+  test.each([null, undefined, "", "Priced per spec", "BHD —"])(
     "non-numeric input returns 0",
     (v) => {
       expect(parsePrice(v as string)).toBe(0);
@@ -31,9 +31,9 @@ describe("parsePrice", () => {
 
 describe("formatBhd", () => {
   test("adds thousands separators", () => {
-    expect(formatBhd(1400)).toBe("د.ب 1,400");
-    expect(formatBhd(1590)).toBe("د.ب 1,590");
-    expect(formatBhd(0)).toBe("د.ب 0");
+    expect(formatBhd(1400)).toBe("BHD 1,400");
+    expect(formatBhd(1590)).toBe("BHD 1,590");
+    expect(formatBhd(0)).toBe("BHD 0");
   });
 });
 
