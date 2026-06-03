@@ -118,21 +118,7 @@ export default async function LibraryPage({
         </div>
       </section>
 
-      {/* ─────────────── STATS RAIL ─────────────── */}
-      <section className="border-y border-black/10 py-5">
-        <div className="container-editorial grid grid-cols-3 gap-6 items-baseline">
-          {lib.stats.map((s, i) => (
-            <Reveal key={s.label} delay={i * 0.06}>
-              <div className="flex flex-col">
-                <span className="text-eyebrow text-[var(--color-charcoal-500)]">{s.label}</span>
-                <span className="text-display text-[clamp(1.25rem,2.4vw,1.75rem)] mt-1 leading-none text-[var(--color-burgundy-700)]">
-                  {s.value}
-                </span>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
+      {/* Stats rail retired — they were curated copy, not ERP data. */}
 
       {/* Brand sub-section anchors retired — the grid below renders
           every piece side-by-side regardless of brand, so the
