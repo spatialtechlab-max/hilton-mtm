@@ -131,8 +131,14 @@ function CustomizeInner() {
   // Pricing: every category now uses tier-based pricing, but the tier
   // *price* depends on the category — a Bespoke shirt isn't a Bespoke
   // suit. `tierPriceFor` returns the right BHD label per (cat × tier).
-  const product    = useMemo(() => (sku ? findProduct(sku) : null), [sku]);
-  const basePrice  = parsePrice(tierPriceFor(category, tier));
+  //
+  // For the Essentials tier we mirror the front-end (PDP / library)
+  // price of the selected fabric so the number the customer saw on the
+  // product card carries straight into the customizer. Signature and
+  // Full Bespoke keep their configured baseline (admin-editable later).
+  const product           = useMemo(() => (sku ? findProduct(sku) : null), [sku]);
+  const essentialOverride = selectedFabric?.priceNum ?? null;
+  const basePrice  = parsePrice(tierPriceFor(category, tier, { essentialOverride }));
   const surcharge  = useMemo(() => surchargeTotal(activeSteps, selections), [activeSteps, selections]);
   const grandTotal = basePrice + surcharge;
 
@@ -580,7 +586,12 @@ function CustomizeInner() {
                 </p>
               </div>
 
-              <TierPicker tier={tier} onPick={setTier} />
+              <TierPicker
+                tier={tier}
+                onPick={setTier}
+                category={category}
+                essentialOverride={essentialOverride}
+              />
             </motion.section>
           )}
 
@@ -602,6 +613,7 @@ function CustomizeInner() {
                 measurements={measurements}
                 unit={unit}
                 tier={tier}
+                essentialOverride={essentialOverride}
                 basePrice={basePrice}
                 surcharge={surcharge}
                 grandTotal={grandTotal}
@@ -1268,11 +1280,19 @@ function FabricLightbox({
 
 /* ─────────────────────────── Tier picker ─────────────────────────── */
 
-function TierPicker({ tier, onPick }: { tier: string; onPick: (slug: string) => void }) {
+function TierPicker({
+  tier, onPick, category, essentialOverride,
+}: {
+  tier: string;
+  onPick: (slug: string) => void;
+  category: StepCategory;
+  essentialOverride: number | null;
+}) {
   return (
     <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
       {tiers.map((t) => {
         const active = t.slug === tier;
+        const priceLabel = tierPriceFor(category, t.slug, { essentialOverride });
         return (
           <button
             key={t.slug}
@@ -1298,7 +1318,7 @@ function TierPicker({ tier, onPick }: { tier: string; onPick: (slug: string) => 
             <h3 className="text-display text-[clamp(2rem,3.2vw,3rem)] mt-3 text-[var(--color-charcoal-900)]">
               {t.name}
             </h3>
-            <div className="text-display text-[1.85rem] mt-2 text-[var(--color-burgundy-700)]">{t.price}</div>
+            <div className="text-display text-[1.85rem] mt-2 text-[var(--color-burgundy-700)]">{priceLabel}</div>
             <div className="mt-3 text-[0.85rem] text-[var(--color-charcoal-500)]">
               {t.lead} · {t.fittings}
             </div>
@@ -1520,6 +1540,7 @@ function MeasurementCard({
 function SummaryPanel({
   steps, groups, hasTiers, category,
   selections, measurements, unit, tier,
+  essentialOverride,
   basePrice, surcharge, grandTotal,
   onDownload, downloading, onReset,
   onAddToCart, onEditStep, onEditTier, onEditMeasurements,
@@ -1531,6 +1552,7 @@ function SummaryPanel({
   selections: Selections;
   measurements: MeasurementValues;
   unit: MeasurementUnit;
+  essentialOverride: number | null;
   tier: string;
   basePrice: number;
   surcharge: number;
@@ -1615,7 +1637,7 @@ function SummaryPanel({
             <div>
               <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-1">Commission</div>
               <div className="text-display text-[2.25rem] text-[var(--color-charcoal-900)] leading-none">{tierObj.name}</div>
-              <div className="text-display text-[1.5rem] text-[var(--color-burgundy-700)] mt-1">{tierObj.price}</div>
+              <div className="text-display text-[1.5rem] text-[var(--color-burgundy-700)] mt-1">{tierPriceFor(category, tier, { essentialOverride })}</div>
               <div className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">
                 {tierObj.lead} · {tierObj.fittings}
               </div>

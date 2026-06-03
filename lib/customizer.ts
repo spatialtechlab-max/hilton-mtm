@@ -721,8 +721,33 @@ const TIER_PRICE_BY_CATEGORY: Record<StepCategory, Record<TierLevel, string>> = 
   },
 };
 
-export function tierPriceFor(cat: StepCategory, tierSlug: string): string {
+/**
+ * Format a BHD price label from a number or an already-formatted string.
+ * Accepts "BHD 350", "350", 350 — all return "BHD 350".
+ */
+function formatBhd(v: string | number): string {
+  if (typeof v === "number") return `BHD ${v.toLocaleString()}`;
+  const trimmed = v.trim();
+  if (/^BHD\b/i.test(trimmed)) return trimmed;
+  const n = Number(trimmed.replace(/[^\d.]/g, ""));
+  return Number.isFinite(n) ? `BHD ${n.toLocaleString()}` : trimmed;
+}
+
+/**
+ * Optional override hook so the Essentials tier can mirror the front-end
+ * (PDP / library) price of the selected fabric instead of the static
+ * baseline. Signature and Full Bespoke keep their configured values
+ * (admin can edit those later via mtm_settings).
+ */
+export function tierPriceFor(
+  cat: StepCategory,
+  tierSlug: string,
+  opts?: { essentialOverride?: string | number | null },
+): string {
   const slug = (tierSlug as TierLevel) in TIER_RANK ? (tierSlug as TierLevel) : "signature";
+  if (slug === "essential" && opts?.essentialOverride != null && opts.essentialOverride !== "") {
+    return formatBhd(opts.essentialOverride);
+  }
   return TIER_PRICE_BY_CATEGORY[cat][slug];
 }
 

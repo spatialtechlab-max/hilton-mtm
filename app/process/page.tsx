@@ -1,9 +1,12 @@
-import Image from "next/image";
 import { PageHero } from "@/components/PageHero";
 import { Reveal, SplitReveal } from "@/components/Reveal";
 import { CtaBanner } from "@/components/CtaBanner";
 import { Button } from "@/components/Button";
-import { PlaceholderBadge } from "@/components/PlaceholderBadge";
+import { MediaImage } from "@/components/MediaImage";
+import { MEDIA_SLOTS } from "@/lib/mediaSlots";
+
+const PROCESS_INSTORE = MEDIA_SLOTS.find((s) => s.key === "process.instore")!;
+const PROCESS_ONLINE = MEDIA_SLOTS.find((s) => s.key === "process.online")!;
 
 const inStore = [
   {
@@ -116,10 +119,10 @@ export default function ProcessPage() {
             <div className="lg:col-span-6 lg:col-start-7">
               <Reveal delay={0.2}>
                 <div className="relative aspect-[4/5] overflow-hidden hover-grow">
-                  <PlaceholderBadge />
-                  <Image
-                    src="https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=1600&auto=format&fit=crop"
-                    alt="The master tailor at work"
+                  <MediaImage
+                    slot={PROCESS_INSTORE.key}
+                    fallback={PROCESS_INSTORE.fallback}
+                    fallbackAlt={PROCESS_INSTORE.fallbackAlt}
                     fill
                     sizes="(min-width: 1024px) 50vw, 100vw"
                     className="object-cover"
@@ -174,10 +177,10 @@ export default function ProcessPage() {
             <div className="lg:col-span-5 lg:order-1">
               <Reveal delay={0.2}>
                 <div className="relative aspect-[4/5] overflow-hidden hover-grow">
-                  <PlaceholderBadge />
-                  <Image
-                    src="https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=1600&auto=format&fit=crop"
-                    alt="A bespoke jacket detail"
+                  <MediaImage
+                    slot={PROCESS_ONLINE.key}
+                    fallback={PROCESS_ONLINE.fallback}
+                    fallbackAlt={PROCESS_ONLINE.fallbackAlt}
                     fill
                     sizes="(min-width: 1024px) 40vw, 100vw"
                     className="object-cover"

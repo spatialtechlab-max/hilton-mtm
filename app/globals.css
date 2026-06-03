@@ -33,7 +33,7 @@
   --font-sans:    "Inter", system-ui, -apple-system, sans-serif;
   --font-mono:    "JetBrains Mono", ui-monospace, monospace;
 
-  --container-screen-xl: 1800px;
+  --container-screen-xl: 1440px;
 
   --animate-marquee:    marquee 40s linear infinite;
   --animate-marquee-slow: marquee 80s linear infinite;
@@ -122,8 +122,12 @@
   .container-editorial {
     width: 100%;
     margin-inline: auto;
-    padding-inline: clamp(1.25rem, 4vw, 3rem);
-    max-width: var(--container-screen-xl);
+    padding-inline: clamp(1.25rem, 3vw, 2.5rem);
+    /* Fluid: scales with the viewport so the content expands on wide and
+       ultrawide monitors instead of leaving large ivory margins, but is
+       still constrained on a standard 1440-class screen so the page reads
+       middle-aligned rather than corner-to-corner. */
+    max-width: clamp(1200px, 88vw, 2200px);
   }
 
   .divider {

@@ -34,11 +34,11 @@ export function CtaBanner({
           <Reveal>
             <span className="text-eyebrow text-[var(--color-burgundy-700)]">An invitation</span>
           </Reveal>
-          <h2 className="text-display mt-6 text-[clamp(3rem,7vw,6.5rem)] leading-[0.95] text-[var(--color-burgundy-700)]">
+          <h2 className="text-display mt-6 text-[clamp(2.25rem,4.5vw,4.5rem)] leading-[0.95] text-[var(--color-burgundy-700)]">
             <SplitReveal text={title} />
           </h2>
           <Reveal delay={0.2}>
-            <p className="mt-8 max-w-xl text-[1.1rem] text-[var(--color-charcoal-700)] leading-relaxed">
+            <p className="mt-6 max-w-xl text-[1rem] text-[var(--color-charcoal-700)] leading-relaxed">
               {body}
             </p>
           </Reveal>

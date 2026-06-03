@@ -73,7 +73,7 @@ export function Categories() {
             <Reveal>
               <span className="text-eyebrow text-[var(--color-burgundy-700)]">The House</span>
             </Reveal>
-            <h2 className="text-display text-[clamp(2.5rem,6vw,5.5rem)] mt-6 leading-[0.98]">
+            <h2 className="text-display text-[clamp(2rem,4.5vw,4rem)] mt-6 leading-[0.98]">
               <SplitReveal text="A complete wardrobe, made by hand." />
             </h2>
           </div>
@@ -158,7 +158,7 @@ function CategoryTile({ tile, large = false }: { tile: Tile; large?: boolean }) 
           </span>
           <h3
             className={`text-display mt-2 leading-tight transition-colors ${labelHover} ${
-              large ? "text-[clamp(2rem,4vw,3.5rem)]" : "text-[clamp(1.75rem,2.4vw,2.5rem)]"
+              large ? "text-[clamp(1.5rem,3vw,2.5rem)]" : "text-[clamp(1.375rem,2vw,2rem)]"
             }`}
           >
             {tile.title}

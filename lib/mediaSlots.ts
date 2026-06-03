@@ -197,4 +197,26 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     fallbackAlt: "Inside the Manama atelier",
     aspect: "16/10",
   },
+  {
+    key: "process.instore",
+    group: "Editorial",
+    label: "Process — In-Store Experience photo",
+    description:
+      "The portrait image beside 'The In-Store Experience.' on /process.",
+    fallback:
+      "https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=1600&auto=format&fit=crop",
+    fallbackAlt: "The master tailor at work",
+    aspect: "4/5",
+  },
+  {
+    key: "process.online",
+    group: "Editorial",
+    label: "Process — Online Experience photo",
+    description:
+      "The portrait image beside 'The Online Experience.' on /process.",
+    fallback:
+      "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=1600&auto=format&fit=crop",
+    fallbackAlt: "A bespoke jacket detail",
+    aspect: "4/5",
+  },
 ];

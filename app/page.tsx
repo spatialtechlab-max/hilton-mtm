@@ -42,14 +42,14 @@ export default function HomePage() {
               </span>
             </Reveal>
 
-            <h1 className="text-display mt-6 text-[clamp(3rem,8.5vw,8.5rem)] leading-[0.95] max-w-[14ch]">
+            <h1 className="text-display mt-6 text-[clamp(2.5rem,6vw,6rem)] leading-[0.95] max-w-[14ch]">
               <SplitReveal text="Tailored," delay={0.05} />
               <br />
               <SplitReveal text="not merely fitted." delay={0.25} />
             </h1>
 
             <Reveal delay={0.45}>
-              <p className="mt-10 max-w-md text-[1.1rem] text-[var(--color-ivory-200)]/90 leading-relaxed">
+              <p className="mt-8 max-w-md text-[1rem] text-[var(--color-ivory-200)]/90 leading-relaxed">
                 Impeccably tailored suits and crisp shirting. Footwear and the finishing touches.
                 At Hilton MTM, we don&rsquo;t just sell garments — we craft them around you.
               </p>
@@ -90,7 +90,7 @@ export default function HomePage() {
             </Reveal>
           </div>
           <div className="lg:col-span-7 lg:col-start-6">
-            <h2 className="text-display text-[clamp(2.5rem,5vw,4.5rem)] leading-[1.05]">
+            <h2 className="text-display text-[clamp(2rem,3.8vw,3.5rem)] leading-[1.05]">
               <SplitReveal
                 text="Every piece in our collection is merely a starting point — the beginning of a conversation about your personal style."
                 staggerWord={0.025}
@@ -136,7 +136,7 @@ export default function HomePage() {
             <Reveal>
               <span className="text-eyebrow text-[var(--color-burgundy-700)]">The Journey</span>
             </Reveal>
-            <h2 className="text-display text-[clamp(2.25rem,4.5vw,4rem)] mt-6 leading-[1.02]">
+            <h2 className="text-display text-[clamp(1.875rem,3.4vw,3.25rem)] mt-6 leading-[1.02]">
               <SplitReveal text="Five chapters, one wardrobe." />
             </h2>
             <Reveal delay={0.3}>
@@ -181,14 +181,14 @@ export default function HomePage() {
               },
             ].map((s, i) => (
               <Reveal key={s.n} delay={i * 0.07} as="li">
-                <div className="grid grid-cols-12 gap-4 items-baseline py-8 border-b border-black/10 group">
-                  <span className="col-span-2 text-display text-[1.5rem] text-[var(--color-burgundy-700)]">
+                <div className="grid grid-cols-12 gap-4 items-baseline py-6 border-b border-black/10 group">
+                  <span className="col-span-2 text-display text-[1.125rem] text-[var(--color-burgundy-700)]">
                     {s.n}
                   </span>
-                  <h3 className="col-span-4 text-display text-[2rem] text-[var(--color-charcoal-900)] group-hover:text-[var(--color-burgundy-700)] transition-colors">
+                  <h3 className="col-span-4 text-display text-[1.5rem] text-[var(--color-charcoal-900)] group-hover:text-[var(--color-burgundy-700)] transition-colors">
                     {s.t}
                   </h3>
-                  <p className="col-span-6 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
+                  <p className="col-span-6 text-[0.9rem] text-[var(--color-charcoal-700)] leading-relaxed">
                     {s.d}
                   </p>
                 </div>
