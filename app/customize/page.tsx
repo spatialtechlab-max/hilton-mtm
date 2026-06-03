@@ -681,13 +681,19 @@ function ProgressDock({
   stepCount: number;
   hasTiers: boolean;
 }) {
+  // During the spec walk, show exactly stepCount bars so the count
+  // matches the 'Step 1 of N' label. The earlier multi-phase bar
+  // (fabric + tier + spec + measurements + summary) drifted out of
+  // sync with the label, showing two filled bars on step 1 because
+  // the fabric tick had already been carried forward. Outside of
+  // spec we still surface the multi-phase progress.
   const tierOffset = hasTiers ? 1 : 0;
-  // dots = fabric + [tier?] + spec steps + measurements + summary
-  const total = 1 + stepCount + tierOffset + 2;
+  const total =
+    phase === "spec" ? stepCount : 1 + stepCount + tierOffset + 2;
   const currentIndex =
     phase === "fabric"       ? 0 :
     phase === "tier"         ? 1 :
-    phase === "spec"         ? 1 + stepIdx + tierOffset :
+    phase === "spec"         ? stepIdx :
     phase === "measurements" ? 1 + stepCount + tierOffset :
                                 1 + stepCount + tierOffset + 1;
   const label =

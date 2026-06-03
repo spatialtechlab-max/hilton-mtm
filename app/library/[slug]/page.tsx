@@ -10,6 +10,7 @@ import { PlaceholderBadge, isPlaceholder } from "@/components/PlaceholderBadge";
 import { libraries, librarySlugs, type LibraryItem } from "@/lib/libraries";
 import { fetchErpItems, sectionsFromErp, isErpBacked, ERP_CATEGORIES_FOR_SLUG } from "@/lib/erp";
 import { MediaImage } from "@/components/MediaImage";
+import { LibraryFilteredGrid } from "@/components/LibraryFilteredGrid";
 
 export function generateStaticParams() {
   return librarySlugs.map((slug) => ({ slug }));
@@ -157,15 +158,10 @@ export default async function LibraryPage({
       {!noErpData && (
         <section className="py-14 md:py-20" id="all">
           <div className="container-editorial">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 md:gap-x-5 gap-y-8 md:gap-y-10">
-              {lib.sections.flatMap((section) =>
-                section.items.map((item, i) => (
-                  <Reveal key={item.sku} delay={(i % 5) * 0.04}>
-                    <ProductCard item={item} slug={slug} />
-                  </Reveal>
-                )),
-              )}
-            </div>
+            <LibraryFilteredGrid
+              items={lib.sections.flatMap((s) => s.items)}
+              slug={slug}
+            />
           </div>
         </section>
       )}

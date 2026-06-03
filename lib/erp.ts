@@ -175,13 +175,16 @@ function mapItem(item: ErpItem): LibraryItem {
     alt: [brand, pattern, color].filter(Boolean).join(" ").trim(),
     description: detail,
     media: { kind: "photo", src: hero },
-    // Gallery on the PDP shows sorted garment photos first, then the
-    // swatch, so the carousel opens on the dressed garment but the
-    // cloth itself is still browseable.
-    gallery: (() => {
-      const all = [...sortedGallery, thumb].filter((s, i, a) => s && a.indexOf(s) === i);
-      return all.length > 0 ? all : undefined;
-    })(),
+    // Gallery on the PDP uses only the on-form / detail shots the
+    // atelier uploaded into `images[]`. We deliberately don't append
+    // the cropped thumb swatch — for items where the atelier filled
+    // IMAGE 3 with the swatch too (shirts 2832 etc.) that produced
+    // two visually identical thumbnails at the end of the strip. The
+    // customer can still see the swatch on the customizer fabric
+    // picker, where it's the natural context. If the item has no
+    // gallery at all, we fall back to the swatch so the PDP isn't
+    // empty.
+    gallery: sortedGallery.length > 0 ? sortedGallery : [thumb],
     // Richer spec fields surfaced on the PDP details table.
     brand,
     code,
