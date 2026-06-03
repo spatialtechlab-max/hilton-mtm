@@ -212,17 +212,23 @@ function CustomizeInner() {
     // page reacts to picking a tile from the Design Yours landing.
   }, [searchParams]);
 
-  // Fetch fabrics whenever we land on (or return to) the fabric phase.
+  // Fetch fabrics whenever we land on (or return to) the fabric phase
+  // OR the garment category changes. The previous version short-circuited
+  // when `fabrics.length > 0` which meant navigating from one garment to
+  // another (e.g. /customize?category=shirt → ?category=trouser) left the
+  // first garment's cloths on screen.
   useEffect(() => {
     if (phase !== "fabric") return;
-    if (fabrics.length > 0) return;
+    let cancelled = false;
     setFabricsLoading(true);
-    fetch(`/api/fabrics?category=${category}`)
+    setFabrics([]);
+    fetch(`/api/fabrics?category=${category}`, { cache: "no-store" })
       .then((r) => r.json())
-      .then((d) => setFabrics(d.fabrics ?? []))
-      .catch(() => setFabrics([]))
-      .finally(() => setFabricsLoading(false));
-  }, [phase, category, fabrics.length]);
+      .then((d) => { if (!cancelled) setFabrics(d.fabrics ?? []); })
+      .catch(() => { if (!cancelled) setFabrics([]); })
+      .finally(() => { if (!cancelled) setFabricsLoading(false); });
+    return () => { cancelled = true; };
+  }, [phase, category]);
 
   // Persist (per category) once initialised.
   useEffect(() => {
