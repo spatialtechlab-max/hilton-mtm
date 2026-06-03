@@ -2,57 +2,61 @@ import { describe, test, expect } from "vitest";
 import { stepsForCategory } from "@/lib/customizer";
 
 /**
- * Pins the wizard step sequence per garment to the client brief (V1).
- * If anyone reorders the static config or adds a step without thinking
- * about flow, these tests break and force the conversation.
+ * Pins the wizard step sequence per garment to the Hilton Bespoke
+ * Booklet V4 (the client's authoritative document). Only steps that
+ * appear in the booklet are wired — no invented add-ons. If anyone
+ * reorders the static config or re-introduces a non-booklet step,
+ * these tests break and force the conversation.
  */
 
-describe("Brief-aligned step sequence", () => {
-  test("SUIT: Essentials (jacket then pants then waistcoat) → Signature (jacket then pants) → polishes → Bespoke", () => {
-    const slugs = stepsForCategory("suit").map((s) => s.slug);
-    expect(slugs).toEqual([
-      // Essentials — jacket
-      "fit", "buttons", "lapel", "vents", "pockets", "ticket", "lining-color",
-      // Essentials — pants
+describe("Booklet-aligned step set", () => {
+  // Each garment's set of steps must match the Hilton Bespoke Booklet
+  // V4 — nothing more, nothing less. Order is a separate concern the
+  // atelier tunes via /admin sort_order, so we assert as a Set.
+  const setOf = (slugs: string[]) => new Set(slugs);
+
+  test("SUIT has booklet items 1-15 + 17-19, plus waistcoat (9-10); no sport-jacket", () => {
+    const got = setOf(stepsForCategory("suit").map((s) => s.slug));
+    expect(got).toEqual(setOf([
+      // Essentials — jacket (booklet 1-6)
+      "fit", "buttons", "lapel", "vents", "pockets", "ticket",
+      // Essentials — pants (booklet 7-8)
       "pleats", "back-pocket",
-      // Essentials — optional waistcoat (last two are conditional on add-waistcoat=yes)
-      "add-waistcoat", "waistcoat-style", "waistcoat-lining",
-      // Signature — jacket first (per brief)
-      "sleeve-buttons", "stitching", "lining", "lining-fancy",
-      // Signature — pants second
+      // Waistcoat (booklet 9-10) — unconditional, suit only
+      "waistcoat-style", "waistcoat-lining",
+      // Signature — pants (booklet 11-13)
       "cuffs-trouser", "suspenders", "belt",
-      // Polishes (kept as upsells per client direction)
+      // Signature — jacket (booklet 14-15)
+      "sleeve-buttons", "stitching",
+      // To-line-or-not (booklet 17)
+      "lining",
+      // Polishes (booklet 18-19)
       "double-breasted", "tuxedo",
-      // Bespoke
-      "canvas",
-    ]);
+    ]));
   });
 
-  test("JACKET: same as suit minus pants steps + waistcoat + plus sport-jacket polish", () => {
-    const slugs = stepsForCategory("jacket").map((s) => s.slug);
-    expect(slugs).toEqual([
-      "fit", "buttons", "lapel", "vents", "pockets", "ticket", "lining-color",
-      "sleeve-buttons", "stitching", "lining", "lining-fancy",
+  test("JACKET has suit minus pants/waistcoat, plus sport-jacket (booklet 16)", () => {
+    const got = setOf(stepsForCategory("jacket").map((s) => s.slug));
+    expect(got).toEqual(setOf([
+      "fit", "buttons", "lapel", "vents", "pockets", "ticket",
+      "sleeve-buttons", "stitching", "lining",
       "double-breasted", "tuxedo", "sport-jacket",
-      "canvas",
-    ]);
+    ]));
   });
 
-  test("TROUSER: only pants steps from the brief — no fit (the diagram is a jacket), no tier picker", () => {
-    const slugs = stepsForCategory("trouser").map((s) => s.slug);
-    expect(slugs).toEqual([
-      // Essentials — pants
+  test("TROUSER has only the trouser-specific booklet items (7-8, 11-13)", () => {
+    const got = setOf(stepsForCategory("trouser").map((s) => s.slug));
+    expect(got).toEqual(setOf([
       "pleats", "back-pocket",
-      // Signature — pants
       "cuffs-trouser", "suspenders", "belt",
-    ]);
+    ]));
   });
 
-  test("SHIRT: exactly the 5 brief essentials + cuff finish, no fit / no tux", () => {
-    const slugs = stepsForCategory("shirt").map((s) => s.slug);
-    expect(slugs).toEqual([
+  test("SHIRT has exactly booklet items 20-25", () => {
+    const got = setOf(stepsForCategory("shirt").map((s) => s.slug));
+    expect(got).toEqual(setOf([
       "placket", "shirt-pocket", "back-pleats",
-      "collar", "cuffs-shirt", "cuff-tier",
-    ]);
+      "collar", "cuffs-shirt", "tux-shirt",
+    ]));
   });
 });

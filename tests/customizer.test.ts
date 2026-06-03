@@ -28,20 +28,15 @@ describe("isCustomizeCategory", () => {
 });
 
 describe("stepsForCategory", () => {
-  test("shirt has no lapel/vents/waistcoat/tuxedo", () => {
+  test("shirt has no lapel/vents/tuxedo", () => {
     const slugs = stepsForCategory("shirt").map((s) => s.slug);
     expect(slugs).not.toContain("lapel");
     expect(slugs).not.toContain("vents");
-    expect(slugs).not.toContain("add-waistcoat");
     expect(slugs).not.toContain("tuxedo");
   });
   test("shirt includes collar + cuffs-shirt + placket", () => {
     const slugs = stepsForCategory("shirt").map((s) => s.slug);
     expect(slugs).toEqual(expect.arrayContaining(["collar", "cuffs-shirt", "placket"]));
-  });
-  test("shirt includes the cuff-tier upgrade step (brief: Signature initials, Bespoke buttons + unfused)", () => {
-    const slugs = stepsForCategory("shirt").map((s) => s.slug);
-    expect(slugs).toContain("cuff-tier");
   });
   test("trouser excludes lapel + buttons + tuxedo", () => {
     const slugs = stepsForCategory("trouser").map((s) => s.slug);
@@ -53,9 +48,9 @@ describe("stepsForCategory", () => {
     const slugs = stepsForCategory("trouser").map((s) => s.slug);
     expect(slugs).toEqual(expect.arrayContaining(["pleats", "back-pocket", "cuffs-trouser"]));
   });
-  test("suit inherits everything jacket + trouser have, plus waistcoat", () => {
+  test("suit inherits everything jacket + trouser have, plus waistcoat (booklet 9-10)", () => {
     const slugs = stepsForCategory("suit").map((s) => s.slug);
-    expect(slugs).toEqual(expect.arrayContaining(["lapel", "pleats", "add-waistcoat"]));
+    expect(slugs).toEqual(expect.arrayContaining(["lapel", "pleats", "waistcoat-style", "waistcoat-lining"]));
   });
 });
 
@@ -64,17 +59,15 @@ describe("visibleSteps respects tier ranking", () => {
     const visible = visibleSteps("suit", "essential", defaultSelections()).map((s) => s.slug);
     expect(visible).not.toContain("suspenders");
     expect(visible).not.toContain("stitching");
-    expect(visible).not.toContain("canvas");
   });
-  test("bespoke tier sees the bespoke-only canvas step", () => {
+  test("bespoke tier sees every signature step (the booklet's Bespoke Options section)", () => {
     const visible = visibleSteps("suit", "bespoke", defaultSelections()).map((s) => s.slug);
-    expect(visible).toContain("canvas");
+    expect(visible).toEqual(expect.arrayContaining(["suspenders", "stitching", "tuxedo", "double-breasted"]));
   });
-  test("waistcoat-style is gated by add-waistcoat=yes", () => {
-    const off = visibleSteps("suit", "signature", { ...defaultSelections(), "add-waistcoat": "no" });
-    expect(off.find((s) => s.slug === "waistcoat-style")).toBeUndefined();
-    const on = visibleSteps("suit", "signature", { ...defaultSelections(), "add-waistcoat": "yes" });
-    expect(on.find((s) => s.slug === "waistcoat-style")).toBeTruthy();
+  test("waistcoat-style appears unconditionally on suit (booklet treats it as standard, no Yes/No gate)", () => {
+    const visible = visibleSteps("suit", "essential", defaultSelections()).map((s) => s.slug);
+    expect(visible).toContain("waistcoat-style");
+    expect(visible).toContain("waistcoat-lining");
   });
 });
 

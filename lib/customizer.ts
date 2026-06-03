@@ -133,24 +133,6 @@ export const steps: Step[] = [
     ],
   },
   {
-    slug: "lining-color",
-    eyebrow: "Lining colour",
-    title: "Line in colour",
-    subtitle: "The shade behind the jacket.",
-    description:
-      "Choose a lining colour. The house basics sit close to the cloth; the brighter tones are a private flourish only you will know is there.",
-    kind: "swatch",
-    options: [
-      { value: "burgundy", label: "Burgundy", color: "#6e2639" },
-      { value: "navy",     label: "Navy",     color: "#1f2d4d" },
-      { value: "charcoal", label: "Charcoal", color: "#2b2622" },
-      { value: "forest",   label: "Forest",   color: "#2f4030" },
-      { value: "claret",   label: "Claret",   color: "#7a2233" },
-      { value: "silver",   label: "Silver",   color: "#c9c4bb" },
-    ],
-    defaultValue: "burgundy",
-  },
-  {
     slug: "pleats",
     eyebrow: "N° 06",
     title: "Pleat your case",
@@ -179,20 +161,6 @@ export const steps: Step[] = [
       { value: "double-buttons", label: "Double pocket · buttons", surcharge: 40 },
     ],
     defaultValue: "left-single",
-  },
-  {
-    slug: "add-waistcoat",
-    eyebrow: "Waistcoat · Optional",
-    title: "Add a waistcoat",
-    subtitle: "Make it a three-piece.",
-    description:
-      "Add a matching waistcoat to your commission. A three-piece reads more formal and keeps its line even with the jacket off. Priced as an add-on.",
-    kind: "choice",
-    options: [
-      { value: "no",  label: "No waistcoat",   surcharge: 0 },
-      { value: "yes", label: "Add a waistcoat", note: "+ add-on cost", surcharge: 250 },
-    ],
-    defaultValue: "no",
   },
   {
     slug: "waistcoat-style",
@@ -269,23 +237,6 @@ export const steps: Step[] = [
       { value: "half", label: "Half lining", surcharge: 0 },
       { value: "none", label: "No lining",   surcharge: 0 },
     ],
-  },
-  {
-    slug: "lining-fancy",
-    eyebrow: "Fancy lining",
-    title: "A lining with character",
-    subtitle: "Patterned silks for the inside of the jacket.",
-    description:
-      "Beyond the house basics — patterned and printed silks for the lining, seen only when the jacket opens. (Placeholder swatches; the house gallery uploads via the admin panel.)",
-    kind: "gallery",
-    options: [
-      { value: "none",      label: "Keep it plain",     surcharge: 0 },
-      { value: "paisley",   label: "Cardinal Paisley",  image: "/products/ties/HBTS001.webp", surcharge: 80 },
-      { value: "botanical", label: "Botanical Print",   image: "/products/ties/HBTS002.webp", surcharge: 80 },
-      { value: "foulard",   label: "Estate Foulard",    image: "/products/ties/HBTS003.webp", surcharge: 80 },
-      { value: "medallion", label: "Garnet Medallion",  image: "/products/ties/HBTS080.webp", surcharge: 80 },
-    ],
-    defaultValue: "none",
   },
   /* ── Signature tier — pants (brief: Fold or Hold, Suspend, Belt) ── */
   {
@@ -371,20 +322,6 @@ export const steps: Step[] = [
       { value: "hand-stitching", label: "With hand stitching",   surcharge: 90  },
     ],
     defaultValue: "regular",
-  },
-  {
-    slug: "canvas",
-    eyebrow: "Canvas",
-    title: "Full canvas or half",
-    subtitle: "The structure beneath the cloth.",
-    description:
-      "A full floating canvas runs the length of the jacket and moulds to the body over time — the hallmark of the finest tailoring. A half canvas structures the chest and lapel only. (Illustration to be provided.)",
-    kind: "choice",
-    options: [
-      { value: "full", label: "Full canvas", surcharge: 150 },
-      { value: "half", label: "Half canvas", surcharge: 0 },
-    ],
-    defaultValue: "full",
   },
   /* ──────────────────────────────────────────────────────────────────
    * SHIRT — sequence per client brief (V1):
@@ -497,26 +434,6 @@ export const steps: Step[] = [
       { value: "two-rounded", label: "Two-button rounded" },
       { value: "two-square",  label: "Two-button square" },
       { value: "two-angled",  label: "Two-button angled" },
-    ],
-  },
-  {
-    // Per the client brief: the Cuff step is where the shirt's tier
-    // upgrades live. Essential = the house standard, included. Signature
-    // adds a hand-embroidered monogram. Bespoke adds premium horn or
-    // mother-of-pearl buttons AND a hand-finished, unfused collar +
-    // cuff treatment. Pricing follows the same surcharge mechanic the
-    // rest of the customizer uses.
-    slug: "cuff-tier",
-    eyebrow: "N° 6",
-    title: "Cuff up your style — finish",
-    subtitle: "Three finishes — choose the depth of the work on collar and cuff.",
-    description:
-      "Essentials keeps the house standard cuff. Signature adds a hand-embroidered monogram at the placket. Full Bespoke goes further with premium buttons and a hand-finished, unfused collar and cuff — the construction lifts the shirt's drape.",
-    kind: "choice",
-    options: [
-      { value: "essential", label: "Essentials · house standard", note: "Included.",                                       surcharge: 0  },
-      { value: "signature", label: "Signature · custom initials",  note: "Hand-embroidered monogram.",                       surcharge: 25 },
-      { value: "bespoke",   label: "Full Bespoke · hand-finished", note: "Premium buttons + unfused collar and cuff.",       surcharge: 60 },
     ],
   },
 ];
@@ -658,12 +575,10 @@ const STEP_CATEGORIES: Record<string, StepCategory[]> = {
   vents:             ["suit", "jacket"],
   pockets:           ["suit", "jacket"],
   ticket:            ["suit", "jacket"],
-  "lining-color":    ["suit", "jacket"],
   pleats:            ["suit", "trouser"],
   "back-pocket":     ["suit", "trouser"],
-  // Waistcoat is the suit-only "three-piece" upsell — never applies to a
+  // Waistcoat is suit-only per booklet (#9, #10) — never applies to a
   // standalone jacket commission.
-  "add-waistcoat":   ["suit"],
   "waistcoat-style": ["suit"],
   "waistcoat-lining":["suit"],
   "cuffs-trouser":   ["suit", "trouser"],
@@ -675,41 +590,36 @@ const STEP_CATEGORIES: Record<string, StepCategory[]> = {
   tuxedo:            ["suit", "jacket"],
   "double-breasted": ["suit", "jacket"],
   lining:            ["suit", "jacket"],
-  "lining-fancy":    ["suit", "jacket"],
-  canvas:            ["suit", "jacket"],
   collar:            ["shirt"],
   "cuffs-shirt":     ["shirt"],
-  "cuff-tier":       ["shirt"],
   placket:           ["shirt"],
   "shirt-pocket":    ["shirt"],
   "back-pleats":     ["shirt"],
-  // tux-shirt was a signature-tier extra; it isn't in the client brief
-  // for shirt and would confuse the 5-step Essentials sequence. Removed
-  // from shirt; can be re-added in admin if the atelier wants it.
-  "tux-shirt":       [],
+  "tux-shirt":       ["shirt"],
 };
 
-// Minimum package tier that unlocks each step (suits/jackets only).
+// Minimum package tier that unlocks each step. Booklet's "Bespoke
+// Options" section (items 11-19) is the Signature/Bespoke upgrade
+// tier over the Essentials (items 1-10).
 const STEP_TIER: Record<string, TierLevel> = {
   fit: "essential", buttons: "essential", lapel: "essential", vents: "essential",
-  pockets: "essential", ticket: "essential", "lining-color": "essential",
-  pleats: "essential", "back-pocket": "essential", "add-waistcoat": "essential",
+  pockets: "essential", ticket: "essential",
+  pleats: "essential", "back-pocket": "essential",
   "waistcoat-style": "essential", "waistcoat-lining": "essential",
   "cuffs-trouser": "signature", suspenders: "signature", belt: "signature",
   "sleeve-buttons": "signature", stitching: "signature", lining: "signature",
-  "lining-fancy": "signature", "sport-jacket": "signature",
+  "sport-jacket": "signature",
   tuxedo: "signature", "double-breasted": "signature",
-  canvas: "bespoke",
-  collar: "essential", "cuffs-shirt": "essential", "cuff-tier": "essential", placket: "essential",
+  collar: "essential", "cuffs-shirt": "essential", placket: "essential",
   "shirt-pocket": "essential", "back-pleats": "essential",
   "tux-shirt": "signature",
 };
 
-// Steps shown only when another selection is set (the waistcoat add-on).
-const STEP_REQUIRES: Record<string, { slug: string; value: string }> = {
-  "waistcoat-style":  { slug: "add-waistcoat", value: "yes" },
-  "waistcoat-lining": { slug: "add-waistcoat", value: "yes" },
-};
+// No conditional dependencies — the booklet treats Sporting the
+// Waistcoat (#9) and Lining the Waistcoat (#10) as unconditional suit
+// steps. The Yes/No 'Add a waistcoat' gate was our own invention and
+// has been retired per client direction.
+const STEP_REQUIRES: Record<string, { slug: string; value: string }> = {};
 
 const TIER_RANK: Record<TierLevel, number> = { essential: 0, signature: 1, bespoke: 2 };
 export function tierRank(slug: string): number {
