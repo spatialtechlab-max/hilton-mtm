@@ -8,7 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Download, Sparkles, Ruler, Play, Pause, Pencil, ShoppingBag, Lock } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Download, Sparkles, Ruler, Play, Pause, Pencil, ShoppingBag, Lock, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   tiers, defaultSelections, type Selections,
@@ -916,6 +916,41 @@ function FabricPicker({
   selectedSku?: string;
   onPick: (f: Fabric) => void;
 }) {
+  // Lightbox: when a fabric thumbnail is clicked, open the full image
+  // gallery (swatch + on-form garment + back + detail) so the customer
+  // can inspect the cloth and the garment-on-form properly. Same idea
+  // as the library PDP carousel, scoped to one fabric at a time.
+  const [lightbox, setLightbox] = useState<
+    | { fabric: Fabric; index: number }
+    | null
+  >(null);
+  useEffect(() => {
+    if (!lightbox) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setLightbox(null);
+      if (e.key === "ArrowRight") {
+        setLightbox((s) => {
+          if (!s) return s;
+          const list = [s.fabric.image, ...(s.fabric.gallery ?? [])].filter(
+            (v, i, a) => v && a.indexOf(v) === i,
+          );
+          return { ...s, index: (s.index + 1) % list.length };
+        });
+      }
+      if (e.key === "ArrowLeft") {
+        setLightbox((s) => {
+          if (!s) return s;
+          const list = [s.fabric.image, ...(s.fabric.gallery ?? [])].filter(
+            (v, i, a) => v && a.indexOf(v) === i,
+          );
+          return { ...s, index: (s.index - 1 + list.length) % list.length };
+        });
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightbox]);
+
   return (
     <div>
       <div className="max-w-3xl">
@@ -976,23 +1011,34 @@ function FabricPicker({
         <div className="mt-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10">
           {fabrics.map((f) => {
             const active = f.sku === selectedSku;
+            // Build the per-fabric gallery (cloth swatch first, then on-form
+            // garment shots) once so the lightbox + thumbnail strip stay in
+            // sync. De-duplicate so identical entries don't show twice.
+            const allShots = [f.image, ...(f.gallery ?? [])].filter(
+              (v, i, a) => v && a.indexOf(v) === i,
+            );
             return (
-              <button
+              <div
                 key={f.sku}
-                type="button"
-                onClick={() => onPick(f)}
+                role="group"
+                aria-label={`${f.brand} ${f.name}`}
                 className={`group block text-left transition-all duration-300 ${
                   active ? "ring-2 ring-[var(--color-burgundy-700)] ring-offset-2 ring-offset-[var(--color-ivory-100)]" : ""
                 }`}
               >
-                <div className="relative aspect-[3/4] overflow-hidden bg-[var(--color-ivory-200)] hover-grow">
+                <button
+                  type="button"
+                  onClick={() => setLightbox({ fabric: f, index: 0 })}
+                  aria-label={`Enlarge ${f.brand} ${f.name}`}
+                  className="relative w-full aspect-[3/4] overflow-hidden bg-[var(--color-ivory-200)] hover-grow block cursor-zoom-in"
+                >
                   <img
                     src={f.image}
                     alt={`${f.brand} ${f.name}`}
                     loading="lazy"
                     className="absolute inset-0 w-full h-full object-cover"
                   />
-                </div>
+                </button>
                 <div className="mt-4">
                   <span className="text-eyebrow text-[var(--color-charcoal-500)]">{f.brand}</span>
                   <h3 className="text-display text-[1.25rem] mt-1.5 leading-tight text-[var(--color-charcoal-900)] group-hover:text-[var(--color-burgundy-700)] transition-colors">
@@ -1010,38 +1056,188 @@ function FabricPicker({
                   </div>
                   {f.gallery && f.gallery.length > 0 && (
                     <div className="mt-3 flex items-center gap-1.5">
-                      {f.gallery.slice(0, 3).map((g) => (
-                        <div
-                          key={g}
-                          className="relative w-10 h-10 overflow-hidden bg-[var(--color-ivory-200)]"
-                        >
-                          <img
-                            src={g}
-                            alt=""
-                            loading="lazy"
-                            className="absolute inset-0 w-full h-full object-cover"
-                          />
-                        </div>
-                      ))}
+                      {f.gallery.slice(0, 3).map((g, gi) => {
+                        // Thumbnail index inside the de-duplicated gallery —
+                        // +1 to skip the cloth swatch which is index 0 in
+                        // allShots.
+                        const idx = allShots.indexOf(g);
+                        return (
+                          <button
+                            key={g}
+                            type="button"
+                            onClick={() => setLightbox({ fabric: f, index: idx >= 0 ? idx : gi + 1 })}
+                            aria-label={`Enlarge photo ${gi + 1} of ${f.name}`}
+                            className="relative w-10 h-10 overflow-hidden bg-[var(--color-ivory-200)] cursor-zoom-in hover:ring-1 hover:ring-[var(--color-burgundy-700)] transition-all"
+                          >
+                            <img
+                              src={g}
+                              alt=""
+                              loading="lazy"
+                              className="absolute inset-0 w-full h-full object-cover"
+                            />
+                          </button>
+                        );
+                      })}
                       {f.gallery.length > 3 && (
-                        <span className="text-[0.7rem] text-[var(--color-charcoal-500)] tabular-nums ml-1">
+                        <button
+                          type="button"
+                          onClick={() => setLightbox({ fabric: f, index: 4 })}
+                          className="text-[0.7rem] text-[var(--color-charcoal-500)] tabular-nums ml-1 hover:text-[var(--color-burgundy-700)] transition-colors"
+                        >
                           +{f.gallery.length - 3}
-                        </span>
+                        </button>
                       )}
                     </div>
                   )}
-                  <div className="mt-3 flex items-center justify-between border-t border-black/10 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => onPick(f)}
+                    className="w-full mt-3 flex items-center justify-between border-t border-black/10 pt-3 hover:text-[var(--color-burgundy-700)] transition-colors"
+                  >
                     <span className="text-[0.875rem] text-[var(--color-charcoal-900)]">{f.price}</span>
                     <span className="text-eyebrow text-[var(--color-burgundy-700)] group-hover:underline">
                       Choose →
                     </span>
-                  </div>
+                  </button>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
       )}
+
+      {/* Lightbox — large hero photo + thumbnail strip + a single
+          'Choose this cloth' CTA so the customer can commit straight
+          from the enlarged view. */}
+      {lightbox && (
+        <FabricLightbox
+          fabric={lightbox.fabric}
+          index={lightbox.index}
+          onIndex={(i) => setLightbox((s) => (s ? { ...s, index: i } : s))}
+          onClose={() => setLightbox(null)}
+          onPick={(f) => { setLightbox(null); onPick(f); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function FabricLightbox({
+  fabric, index, onIndex, onClose, onPick,
+}: {
+  fabric: Fabric;
+  index: number;
+  onIndex: (i: number) => void;
+  onClose: () => void;
+  onPick: (f: Fabric) => void;
+}) {
+  const shots = [fabric.image, ...(fabric.gallery ?? [])].filter(
+    (v, i, a) => v && a.indexOf(v) === i,
+  );
+  const safeIndex = Math.min(Math.max(index, 0), shots.length - 1);
+  const current = shots[safeIndex];
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${fabric.brand} ${fabric.name}`}
+      className="fixed inset-0 z-[60] bg-[var(--color-charcoal-900)]/92 backdrop-blur-sm flex items-center justify-center p-4 md:p-10"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-5xl bg-[var(--color-ivory-100)] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close enlarged view"
+          className="absolute top-3 right-3 z-10 inline-flex items-center justify-center w-10 h-10 bg-[var(--color-ivory-100)]/90 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] rounded-full transition-colors"
+        >
+          <X size={18} strokeWidth={1.5} />
+        </button>
+
+        <div className="relative aspect-[4/5] md:aspect-[16/10] bg-[var(--color-ivory-200)]">
+          <img
+            src={current}
+            alt={`${fabric.brand} ${fabric.name}`}
+            className="absolute inset-0 w-full h-full object-contain"
+          />
+          {shots.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() => onIndex((safeIndex - 1 + shots.length) % shots.length)}
+                aria-label="Previous photo"
+                className="absolute left-3 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-11 h-11 bg-[var(--color-ivory-100)]/90 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] rounded-full transition-colors"
+              >
+                <ArrowLeft size={18} strokeWidth={1.5} />
+              </button>
+              <button
+                type="button"
+                onClick={() => onIndex((safeIndex + 1) % shots.length)}
+                aria-label="Next photo"
+                className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-11 h-11 bg-[var(--color-ivory-100)]/90 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] rounded-full transition-colors"
+              >
+                <ArrowRight size={18} strokeWidth={1.5} />
+              </button>
+            </>
+          )}
+        </div>
+
+        <div className="border-t border-black/10 p-5 md:p-6 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-5 items-center">
+          <div>
+            <span className="text-eyebrow text-[var(--color-burgundy-700)]">{fabric.brand}</span>
+            <h3 className="text-display text-[1.5rem] mt-1.5 leading-tight">{fabric.name}</h3>
+            {fabric.composition && (
+              <p className="text-[0.9rem] text-[var(--color-charcoal-500)] mt-1.5">{fabric.composition}</p>
+            )}
+            <p className="text-[0.85rem] text-[var(--color-charcoal-700)] mt-1.5">
+              {[fabric.pattern, fabric.color, fabric.weight, fabric.origin].filter(Boolean).join(" · ")}
+            </p>
+          </div>
+          <div className="flex items-center justify-between md:justify-end gap-5">
+            <span className="text-display text-[1.5rem] text-[var(--color-burgundy-700)] whitespace-nowrap">
+              {fabric.price}
+            </span>
+            <button
+              type="button"
+              onClick={() => onPick(fabric)}
+              className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-6 py-3 hover:bg-[var(--color-burgundy-800)] transition-colors"
+            >
+              Choose this cloth <ArrowRight size={14} strokeWidth={1.5} />
+            </button>
+          </div>
+        </div>
+
+        {shots.length > 1 && (
+          <div className="border-t border-black/10 px-5 md:px-6 py-4 flex items-center gap-2 overflow-x-auto">
+            {shots.map((s, i) => {
+              const active = i === safeIndex;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onIndex(i)}
+                  aria-label={`View photo ${i + 1}`}
+                  className={`relative shrink-0 w-16 h-16 overflow-hidden bg-[var(--color-ivory-200)] transition-all ${
+                    active
+                      ? "ring-2 ring-[var(--color-burgundy-700)] ring-offset-2 ring-offset-[var(--color-ivory-100)]"
+                      : "opacity-70 hover:opacity-100"
+                  }`}
+                >
+                  <img
+                    src={s}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
