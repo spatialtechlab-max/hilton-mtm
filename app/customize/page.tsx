@@ -255,6 +255,24 @@ function CustomizeInner() {
     return () => { cancelled = true; };
   }, [phase, category]);
 
+  // PDP entry shortcut — when the URL carries ?sku=… (visitor clicked
+  // 'Customise this jacket' from the library), find that cloth in the
+  // freshly-loaded fabric list and skip the fabric phase entirely so
+  // the customizer opens straight on the spec steps (or the tier
+  // picker for suits/jackets without a pre-chosen tier). The fabric
+  // they were looking at on the PDP IS the cloth they want.
+  useEffect(() => {
+    if (phase !== "fabric") return;
+    if (!sku || fabrics.length === 0) return;
+    const match = fabrics.find((f) => f.sku === sku);
+    if (!match) return;
+    setSelectedFabric(match);
+    const urlParams = new URLSearchParams(window.location.search);
+    const validTiers = ["essential", "signature", "bespoke"] as const;
+    const urlHasTier = (validTiers as readonly string[]).includes(urlParams.get("tier") ?? "");
+    setPhase(hasTiers && !urlHasTier ? "tier" : "spec");
+  }, [phase, sku, fabrics, hasTiers]);
+
   // Persist (per category) once initialised.
   useEffect(() => {
     if (!ready) return;

@@ -15,16 +15,6 @@ import { MEDIA_SLOTS } from "@/lib/mediaSlots";
 
 const HOME_HERO = MEDIA_SLOTS.find((s) => s.key === "home.hero")!;
 
-// Collection tiles read from /admin/media slots so the atelier can swap
-// the photography per tile. No price labels — actual cloth/garment
-// pricing comes from the ERP on the PDP, not the homepage tile.
-const collection = [
-  { name: "The Two-Piece",     slot: "home.collection.1", href: "/library/tailoring" },
-  { name: "Vintage Marrone",   slot: "home.collection.2", href: "/library/shoes" },
-  { name: "Navy Paisley",      slot: "home.collection.3", href: "/library/ties" },
-  { name: "The Evening Shirt", slot: "home.collection.4", href: "/library/shirts" },
-];
-const slotMap = Object.fromEntries(MEDIA_SLOTS.map((s) => [s.key, s]));
 
 export default function HomePage() {
   return (
@@ -121,56 +111,9 @@ export default function HomePage() {
       {/* ─────────────────────────── HOUSE OF CLOTH (partner mills) ────────── */}
       <Partners />
 
-      {/* ─────────────────────────── COLLECTION GRID ─────────────────────────── */}
-      <section className="py-16 md:py-24">
-        <div className="container-editorial">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-20">
-            <div className="max-w-2xl">
-              <Reveal>
-                <span className="text-eyebrow text-[var(--color-burgundy-700)]">The Collection</span>
-              </Reveal>
-              <h2 className="text-display text-[clamp(2.5rem,6vw,5.5rem)] mt-6 leading-[0.98]">
-                <SplitReveal text="A wardrobe, considered." />
-              </h2>
-            </div>
-            <Reveal delay={0.2}>
-              <Link
-                href="/collection"
-                className="text-eyebrow link-underline text-[var(--color-charcoal-900)]"
-              >
-                Browse all garments →
-              </Link>
-            </Reveal>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {collection.map((item, i) => {
-              const def = slotMap[item.slot];
-              return (
-                <Reveal key={item.slot} delay={i * 0.08}>
-                  <Link href={item.href} className="group block">
-                    <div className="relative aspect-[3/4] overflow-hidden bg-[var(--color-ivory-200)] hover-grow">
-                      <MediaImage
-                        slot={item.slot}
-                        fallback={def?.fallback ?? "/products/no-image.svg"}
-                        fallbackAlt={def?.fallbackAlt ?? item.name}
-                        fill
-                        sizes="(min-width: 1024px) 25vw, 50vw"
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="mt-6">
-                      <h3 className="text-display text-[1.6rem] text-[var(--color-charcoal-900)] group-hover:text-[var(--color-burgundy-700)] transition-colors">
-                        {item.name}
-                      </h3>
-                    </div>
-                  </Link>
-                </Reveal>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      {/* "A wardrobe, considered." Collection grid retired per client
+          direction — the homepage now flows Categories → Atelier
+          strip directly without the curated 4-tile interlude. */}
 
       {/* ─────────────────────────── ATELIER PHOTO STRIP ─────────────────────── */}
       <AtelierStrip />
