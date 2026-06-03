@@ -210,16 +210,13 @@ export default async function ProductPage({
                 )}
               </div>
 
-              {/* Reassurance */}
-              <ul className="mt-9 pt-7 border-t border-black/10 space-y-3.5 text-[0.85rem] text-[var(--color-charcoal-700)]">
-                <li className="flex items-center gap-3"><Ruler size={16} strokeWidth={1.5} className="text-[var(--color-burgundy-700)] shrink-0" /> Made to your measurements</li>
-                <li className="flex items-center gap-3"><Truck size={16} strokeWidth={1.5} className="text-[var(--color-burgundy-700)] shrink-0" /> Delivered in 2–4 weeks</li>
-                <li className="flex items-center gap-3"><ShieldCheck size={16} strokeWidth={1.5} className="text-[var(--color-burgundy-700)] shrink-0" /> Complimentary first alteration</li>
-              </ul>
+              {/* Reassurance bullets retired per client direction.
+                  The Details panel below now follows directly under
+                  the CTA, sitting next to the gallery. */}
 
               {/* Details panel — sits right next to the gallery so the
                   customer can read the spec without scrolling. */}
-              <div className="mt-10 pt-7 border-t border-black/10">
+              <div className="mt-9 pt-7 border-t border-black/10">
                 <span className="text-eyebrow text-[var(--color-burgundy-700)]">Details</span>
                 <dl className="mt-5 border-t border-black/10">
                   {specs.map((row) => (
