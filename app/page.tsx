@@ -10,6 +10,10 @@ import { Partners } from "@/components/Partners";
 import { AtelierStrip } from "@/components/AtelierStrip";
 import { ShowroomFeature } from "@/components/ShowroomFeature";
 import { PlaceholderBadge, isPlaceholder } from "@/components/PlaceholderBadge";
+import { MediaImage } from "@/components/MediaImage";
+import { MEDIA_SLOTS } from "@/lib/media";
+
+const HOME_HERO = MEDIA_SLOTS.find((s) => s.key === "home.hero")!;
 
 const collection = [
   {
@@ -49,10 +53,10 @@ export default function HomePage() {
     <>
       {/* ─────────────────────────── HERO ─────────────────────────── */}
       <section className="relative h-[100svh] min-h-[680px] w-full overflow-hidden">
-        <PlaceholderBadge />
-        <Image
-          src="https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=2400&auto=format&fit=crop"
-          alt="A master tailor at the cutting table, Hilton atelier"
+        <MediaImage
+          slot={HOME_HERO.key}
+          fallback={HOME_HERO.fallback}
+          fallbackAlt={HOME_HERO.fallbackAlt}
           fill
           priority
           sizes="100vw"

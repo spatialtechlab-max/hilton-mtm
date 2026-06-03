@@ -9,6 +9,7 @@ import { TieIllustration } from "@/components/TieIllustration";
 import { PlaceholderBadge, isPlaceholder } from "@/components/PlaceholderBadge";
 import { libraries, librarySlugs, type LibraryItem } from "@/lib/libraries";
 import { fetchErpItems, sectionsFromErp, isErpBacked, ERP_CATEGORIES_FOR_SLUG } from "@/lib/erp";
+import { MediaImage } from "@/components/MediaImage";
 
 export function generateStaticParams() {
   return librarySlugs.map((slug) => ({ slug }));
@@ -97,10 +98,10 @@ export default async function LibraryPage({
                     lib.heroImage.startsWith("/products/") ? "bg-[var(--color-ivory-200)]" : "grain"
                   }`}
                 >
-                  {isPlaceholder(lib.heroImage) && <PlaceholderBadge />}
-                  <Image
-                    src={lib.heroImage}
-                    alt={lib.heroAlt}
+                  <MediaImage
+                    slot={`library.${slug}.cover`}
+                    fallback={lib.heroImage}
+                    fallbackAlt={lib.heroAlt}
                     fill
                     sizes="(min-width: 1024px) 50vw, 100vw"
                     className={
