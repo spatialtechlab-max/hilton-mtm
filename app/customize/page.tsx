@@ -745,28 +745,48 @@ function OptionGrid({
           ? "border-[var(--color-burgundy-700)] bg-[var(--color-ivory-200)]"
           : "border-black/10 bg-[var(--color-ivory-100)]";
 
-        // Compact text card — no visual (yes/no & multiple-choice options).
+        // Compact text card — used for yes/no and multiple-choice
+        // options that don't have a diagram. If the atelier uploaded a
+        // custom image via /admin (image_url -> opt.image) we promote
+        // this from text-only to an image-bearing tile so the upload
+        // actually reaches the customer.
         if (kind === "choice") {
           return (
             <button
               key={opt.value}
               type="button"
               onClick={() => onPick(opt.value)}
-              className={`group relative border transition-all duration-300 hover:border-[var(--color-burgundy-700)] p-6 min-h-[112px] flex flex-col justify-center text-center ${activeBorder}`}
+              className={`group relative border transition-all duration-300 hover:border-[var(--color-burgundy-700)] ${
+                opt.image ? "" : "p-6 min-h-[112px] flex flex-col justify-center"
+              } text-center ${activeBorder}`}
             >
               {active && (
-                <span className="absolute top-2.5 right-2.5 inline-flex items-center justify-center w-6 h-6 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] rounded-full">
+                <span className="absolute top-2.5 right-2.5 z-10 inline-flex items-center justify-center w-6 h-6 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] rounded-full">
                   <Check size={13} strokeWidth={2} />
                 </span>
               )}
-              <div className={`text-display text-[1.15rem] leading-tight ${active ? "text-[var(--color-burgundy-700)]" : "text-[var(--color-charcoal-900)]"}`}>
-                {opt.label}
-              </div>
-              {opt.note && (
-                <div className="text-[0.7rem] text-[var(--color-charcoal-500)] mt-1.5 leading-snug">{opt.note}</div>
+              {opt.image && (
+                <div className="relative w-full aspect-[4/5] overflow-hidden">
+                  <Image
+                    src={opt.image}
+                    alt={opt.label}
+                    fill
+                    sizes="(min-width: 1024px) 18vw, (min-width: 640px) 30vw, 45vw"
+                    loading={i < 4 ? "eager" : "lazy"}
+                    className="object-contain p-2.5 md:p-3.5"
+                  />
+                </div>
               )}
-              <div className="text-eyebrow text-[0.65rem] mt-2 text-[var(--color-burgundy-700)]">
-                {opt.surcharge && opt.surcharge > 0 ? `+ د.ب ${opt.surcharge}` : "Included"}
+              <div className={opt.image ? "px-4 pt-3 pb-4" : ""}>
+                <div className={`text-display text-[1.15rem] leading-tight ${active ? "text-[var(--color-burgundy-700)]" : "text-[var(--color-charcoal-900)]"}`}>
+                  {opt.label}
+                </div>
+                {opt.note && (
+                  <div className="text-[0.7rem] text-[var(--color-charcoal-500)] mt-1.5 leading-snug">{opt.note}</div>
+                )}
+                <div className="text-eyebrow text-[0.65rem] mt-2 text-[var(--color-burgundy-700)]">
+                  {opt.surcharge && opt.surcharge > 0 ? `+ د.ب ${opt.surcharge}` : "Included"}
+                </div>
               </div>
             </button>
           );
@@ -783,7 +803,12 @@ function OptionGrid({
             <div className="relative w-full aspect-[4/5] overflow-hidden">
               {kind === "diagram" && (
                 <Image
-                  src={`/customizer/${step.slug}/${opt.value}.png`}
+                  // Prefer the atelier's uploaded image (opt.image, fed
+                  // from mtm_options.image_url) when present, so anything
+                  // changed via /admin actually reflects on the customer
+                  // tile. Falls back to the built-in booklet diagram at
+                  // /public/customizer/<slug>/<value>.png otherwise.
+                  src={opt.image ?? `/customizer/${step.slug}/${opt.value}.png`}
                   alt={opt.label}
                   fill
                   sizes="(min-width: 1024px) 18vw, (min-width: 640px) 30vw, 45vw"
