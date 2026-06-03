@@ -23,6 +23,7 @@ import {
 } from "@/lib/liveConfig";
 import { mergeLiveAndStatic } from "@/lib/liveConfigMerge";
 import { findProduct } from "@/lib/libraries";
+import { fetchGarments } from "@/lib/garments";
 import { buildSpecPdf } from "@/lib/specSheet";
 import { AuthForm } from "@/components/AuthForm";
 import { useAuth } from "@/components/AuthProvider";
@@ -153,6 +154,26 @@ function CustomizeInner() {
     });
   }, []);
 
+  // Live garment gating: if /admin/garments has the requested slug
+  // toggled Hidden, refuse to render the customizer for that category
+  // and fall through to the Design Yours picker — same behaviour as
+  // arriving with no ?category= at all. Defaults to true while the
+  // mtm_garments fetch is in flight so the first paint isn't broken
+  // for visitors on Suit/Jacket/Shirt/Trouser.
+  const [activeGarmentSlugs, setActiveGarmentSlugs] = useState<Set<string>>(
+    () => new Set(["suit", "jacket", "shirt", "trouser"]),
+  );
+  useEffect(() => {
+    let cancelled = false;
+    fetchGarments({ activeOnly: true })
+      .then((rows) => {
+        if (cancelled) return;
+        setActiveGarmentSlugs(new Set(rows.map((r) => r.slug)));
+      })
+      .catch(() => { /* keep default */ });
+    return () => { cancelled = true; };
+  }, []);
+
   // One-time init: read ?category from the URL, then restore that category's saved state.
   // Entry rule: if the URL pre-selects a SKU (came from a PDP "Customise" CTA),
   // skip fabric pick — they already chose one. Otherwise start at "fabric".
@@ -167,7 +188,8 @@ function CustomizeInner() {
     // renders the Design Yours picker tiles below instead of the
     // customizer. We still set `category` to a safe default so the
     // existing hooks behind the picker keep their types happy.
-    const validUrlCategory = isCustomizeCategory(raw);
+    const validUrlCategory =
+      isCustomizeCategory(raw) && activeGarmentSlugs.has(raw);
     setHasUrlCategory(validUrlCategory);
     const cat: StepCategory = validUrlCategory ? raw : "suit";
     // Sebastian (the concierge) can pass ?tier=signature etc. We honour it
@@ -210,7 +232,10 @@ function CustomizeInner() {
     setReady(true);
     // Re-run on every URL query change (Next Link / router.push) so the
     // page reacts to picking a tile from the Design Yours landing.
-  }, [searchParams]);
+    // activeGarmentSlugs is also in deps so the page re-evaluates the
+    // gate once /admin/garments has been read (e.g. a Hidden garment
+    // arrived via a bookmarked URL).
+  }, [searchParams, activeGarmentSlugs]);
 
   // Fetch fabrics whenever we land on (or return to) the fabric phase
   // OR the garment category changes. The previous version short-circuited

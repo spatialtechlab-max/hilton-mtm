@@ -139,9 +139,12 @@ export default function AdminPage() {
   // Counts are derived per-garment from whatever atelier has configured
   // in /admin/garments, so adding "Overcoat" there reflects here without
   // a code change.
+  // Sidebar shows only Live garments (Hidden ones disappear from /admin
+  // the way they disappear from the Design Yours picker), so toggling a
+  // garment off in /admin/garments truly takes it offline everywhere.
   const filterTabs: { key: CategoryFilter; label: string; count: number }[] = [
     { key: "all", label: "All steps", count: stepCount },
-    ...garments.map((g) => ({
+    ...garments.filter((g) => g.active).map((g) => ({
       key: g.slug,
       label: g.label,
       count: activeSteps.filter((s) => s.applies_to.includes(g.slug)).length,
