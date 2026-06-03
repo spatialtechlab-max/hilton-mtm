@@ -195,10 +195,23 @@ function mapItem(item: ErpItem): LibraryItem {
   };
 }
 
+/** Does this ERP item have at least one on-form garment photo
+ *  (pic1 / pic2 / pic3) in its gallery? If only the cropped swatch
+ *  exists we hide the item from the library tiles — a customer
+ *  browsing /library/shirts wants to see shirts, not cloth. The
+ *  item still surfaces in the customizer fabric picker where the
+ *  swatch IS the right context. */
+function hasGarmentShot(item: ErpItem): boolean {
+  const gallery = item.images ?? [];
+  return gallery.some((src) => /_pic\d+_/.test(src));
+}
+
 /** Build LibrarySection[] for one ERP-backed slug from ERP. */
 export function sectionsFromErp(slug: ErpBackedSlug, items: ErpItem[]): LibrarySection[] {
   const wanted = ERP_CATEGORIES_FOR_SLUG[slug];
-  const filtered = items.filter((i) => wanted.includes(i.categoryName.toUpperCase()));
+  const filtered = items
+    .filter((i) => wanted.includes(i.categoryName.toUpperCase()))
+    .filter(hasGarmentShot);
   if (filtered.length === 0) return [];
 
   // Group by brand for a clean sub-section header. Decode entities first
@@ -224,20 +237,26 @@ export function sectionsFromErp(slug: ErpBackedSlug, items: ErpItem[]): LibraryS
 // after the initial build, so they need to be wired here for the
 // existing /library/[slug] page to surface real ERP items instead of
 // the static placeholders.
-const ERP_CATEGORIES_FOR_SLUG: Record<
-  "ties" | "belts" | "cloths" | "shirts" | "trousers" | "shoes",
+// Mapped from `Active_categories_hilton_material.xlsx` (the atelier's
+// authoritative list). Each library slug pulls every ERP categoryName
+// variant the atelier uses — including known typos (SHIIRTING, SUIES,
+// SUIUS) — so a misspelled category in the ERP never makes a cloth or
+// accessory go invisible on the storefront.
+export const ERP_CATEGORIES_FOR_SLUG: Record<
+  "ties" | "belts" | "cloths" | "shirts" | "trousers" | "shoes" | "tailoring",
   string[]
 > = {
-  ties:     ["TIE", "TIES", "BOW TIE", "RTW BOWTIE"],
-  belts:    ["BELT", "ZAMPIERE BELT"],
-  cloths:   ["SUITING", "JACKETING", "SUITINGS", "SUITS"],
-  shirts:   ["SHIRTING", "SHIIRTING", "SHIRTS"],
-  trousers: ["PANTS", "CHINO PANTS"],
-  shoes:    ["SHOES"],
+  ties:      ["TIE", "TIES", "BOW TIE", "RTW BOWTIE"],
+  belts:     ["BELT", "ZAMPIERE BELT"],
+  cloths:    ["SUITING", "SUITINGS", "SUITS", "SUIES", "SUIUS", "JACKETING", "BLAZER"],
+  shirts:    ["SHIRTING", "SHIIRTING", "SHIRTS"],
+  trousers:  ["PANTS", "CHINO PANTS"],
+  shoes:     ["SHOES"],
+  tailoring: ["SUITING", "SUITINGS", "SUITS", "JACKETING", "JACKET", "BLAZER", "OVERCOAT"],
 };
 
 export const ERP_BACKED_SLUGS = [
-  "ties", "belts", "cloths", "shirts", "trousers", "shoes",
+  "ties", "belts", "cloths", "shirts", "trousers", "shoes", "tailoring",
 ] as const;
 export type ErpBackedSlug = (typeof ERP_BACKED_SLUGS)[number];
 export const isErpBacked = (slug: string): slug is ErpBackedSlug =>

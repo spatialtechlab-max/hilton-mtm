@@ -8,7 +8,7 @@ import { CtaBanner } from "@/components/CtaBanner";
 import { TieIllustration } from "@/components/TieIllustration";
 import { PlaceholderBadge, isPlaceholder } from "@/components/PlaceholderBadge";
 import { libraries, librarySlugs, type LibraryItem } from "@/lib/libraries";
-import { fetchErpItems, sectionsFromErp, isErpBacked } from "@/lib/erp";
+import { fetchErpItems, sectionsFromErp, isErpBacked, ERP_CATEGORIES_FOR_SLUG } from "@/lib/erp";
 
 export function generateStaticParams() {
   return librarySlugs.map((slug) => ({ slug }));
@@ -39,15 +39,18 @@ export default async function LibraryPage({
 
   // ERP-backed libraries build their sections at request time from the
   // live ERP feed (ISR-cached for ~5 min). If the ERP returns nothing
-  // for the slug (e.g. PANTS / SHOES today), fall back to the static
-  // editorial sections so the page is never empty — the moment the
-  // atelier loads real items into the ERP, the live feed takes over.
-  let sections = baseLib.sections;
-  if (isErpBacked(slug)) {
-    const erpSections = sectionsFromErp(slug, await fetchErpItems());
-    if (erpSections.length > 0) sections = erpSections;
-  }
+  // for the slug we render an honest empty-state ("No ERP details
+  // found") rather than fall back to placeholder editorial — the
+  // atelier needs to upload items into the right ERP category for
+  // them to appear, and silently substituting fake data has been a
+  // recurring source of confusion. Non-ERP-backed slugs (the curated
+  // lookbook pages) keep their static sections.
+  const erpBacked = isErpBacked(slug);
+  const sections = erpBacked
+    ? sectionsFromErp(slug, await fetchErpItems())
+    : baseLib.sections;
   const lib = { ...baseLib, sections };
+  const noErpData = erpBacked && sections.length === 0;
 
   const totalItems = lib.sections.reduce((n, s) => n + s.items.length, 0);
 
@@ -131,25 +134,49 @@ export default async function LibraryPage({
       </section>
 
       {/* ─────────────── SUB-SECTION TABS ─────────────── */}
-      <section className="border-b border-black/10">
-        <div className="container-editorial flex items-center gap-1 overflow-x-auto py-3 no-scrollbar">
-          <a
-            href="#all"
-            className="text-eyebrow shrink-0 px-3 py-2 border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] bg-[var(--color-burgundy-50)]"
-          >
-            All
-          </a>
-          {lib.sections.map((section) => (
+      {!noErpData && (
+        <section className="border-b border-black/10">
+          <div className="container-editorial flex items-center gap-1 overflow-x-auto py-3 no-scrollbar">
             <a
-              key={section.slug}
-              href={`#${section.slug}`}
-              className="text-eyebrow shrink-0 px-3 py-2 border border-transparent text-[var(--color-charcoal-700)] hover:text-[var(--color-burgundy-700)] hover:border-black/15 transition-colors"
+              href="#all"
+              className="text-eyebrow shrink-0 px-3 py-2 border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] bg-[var(--color-burgundy-50)]"
             >
-              {section.title} <span className="opacity-50 ml-2">{section.items.length}</span>
+              All
             </a>
-          ))}
-        </div>
-      </section>
+            {lib.sections.map((section) => (
+              <a
+                key={section.slug}
+                href={`#${section.slug}`}
+                className="text-eyebrow shrink-0 px-3 py-2 border border-transparent text-[var(--color-charcoal-700)] hover:text-[var(--color-burgundy-700)] hover:border-black/15 transition-colors"
+              >
+                {section.title} <span className="opacity-50 ml-2">{section.items.length}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ─────────────── EMPTY STATE ─────────────── */}
+      {noErpData && (
+        <section className="py-24 md:py-32 border-t border-black/10">
+          <div className="container-editorial max-w-2xl">
+            <Reveal>
+              <span className="text-eyebrow text-[var(--color-burgundy-700)]">
+                No ERP details found
+              </span>
+              <h2 className="text-display text-[clamp(1.75rem,3vw,2.5rem)] mt-3 leading-tight">
+                This library is awaiting items from the atelier.
+              </h2>
+              <p className="mt-5 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
+                Nothing has been catalogued under {ERP_CATEGORIES_FOR_SLUG[slug as keyof typeof ERP_CATEGORIES_FOR_SLUG]?.join(" · ") ?? slug.toUpperCase()} in the ERP yet.
+                As soon as the atelier uploads items under one of those categories — with a
+                cropped swatch and at least one on-form garment photo — they&rsquo;ll appear
+                here automatically.
+              </p>
+            </Reveal>
+          </div>
+        </section>
+      )}
 
       {/* ─────────────── SECTIONS ─────────────── */}
       <div id="all">
