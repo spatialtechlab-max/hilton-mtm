@@ -25,6 +25,7 @@ export type CartItem = {
     category: string;          // "suit" | "jacket" | "shirt" | "trouser"
     tier?: string;             // e.g. "signature"
     fabric?: string;           // selected fabric name
+    fabricSku?: string;        // ERP SKU so the Edit deep-link can rehydrate the fabric pick
     selections?: Record<string, string>;
     surcharge?: number;        // total surcharge BHD
   };

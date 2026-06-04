@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
+import { ArrowLeft, ArrowRight, Minus, Plus, Pencil, Trash2, ShoppingBag } from "lucide-react";
 import { useCart, removeFromCart, updateQty, clearCart } from "@/lib/cart";
 import { useAuth } from "@/components/AuthProvider";
 import { ProfileForm } from "@/components/ProfileForm";
@@ -158,13 +158,23 @@ export default function CartPage() {
                         <span className="text-display text-[1.1rem] text-[var(--color-charcoal-900)]">
                           {fmt(it.priceNum * it.qty)}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => removeFromCart(it.id)}
-                          className="block ml-auto mt-2 text-[0.72rem] tracking-[0.18em] uppercase text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors inline-flex items-center gap-1"
-                        >
-                          <Trash2 size={11} strokeWidth={1.5} /> Remove
-                        </button>
+                        <div className="mt-2 flex items-center justify-end gap-4">
+                          {it.custom && (
+                            <Link
+                              href={it.href}
+                              className="text-[0.72rem] tracking-[0.18em] uppercase text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors inline-flex items-center gap-1"
+                            >
+                              <Pencil size={11} strokeWidth={1.5} /> Edit
+                            </Link>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeFromCart(it.id)}
+                            className="text-[0.72rem] tracking-[0.18em] uppercase text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors inline-flex items-center gap-1"
+                          >
+                            <Trash2 size={11} strokeWidth={1.5} /> Remove
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

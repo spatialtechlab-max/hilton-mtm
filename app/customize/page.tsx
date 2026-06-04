@@ -22,6 +22,7 @@ import {
   surchargeTotal, findLiveOption, parsePrice, formatBhd,
 } from "@/lib/liveConfig";
 import { mergeLiveAndStatic } from "@/lib/liveConfigMerge";
+import { fetchAllSettings, defaultFor } from "@/lib/settings";
 import { findProduct } from "@/lib/libraries";
 import { fetchGarments } from "@/lib/garments";
 import { buildSpecPdf } from "@/lib/specSheet";
@@ -107,6 +108,10 @@ function CustomizeInner() {
   const [fabrics, setFabrics]       = useState<Fabric[]>([]);
   const [fabricsLoading, setFabricsLoading] = useState(false);
   const [selectedFabric, setSelectedFabric] = useState<Fabric | null>(null);
+  // Atelier-editable copy (tier lead time + fittings labels). Loaded once
+  // on mount; if the row is absent the registry default kicks in via
+  // resolveTierCopy(...).
+  const [settings, setSettings] = useState<Record<string, string>>({});
   // Whether the visitor arrived with a category in the URL. If not, we
   // show the Design Yours category-picker landing tiles instead of
   // silently defaulting to suit.
@@ -141,6 +146,12 @@ function CustomizeInner() {
   const basePrice  = parsePrice(tierPriceFor(category, tier, { essentialOverride }));
   const surcharge  = useMemo(() => surchargeTotal(activeSteps, selections), [activeSteps, selections]);
   const grandTotal = basePrice + surcharge;
+
+  // Atelier-editable copy overrides. Fire-and-forget on mount; falls
+  // back to the registry defaults if Supabase is unreachable.
+  useEffect(() => {
+    fetchAllSettings().then(setSettings).catch(() => setSettings({}));
+  }, []);
 
   // Merge Supabase-backed admin config with the static defaults. Logic
   // lives in lib/liveConfigMerge.ts so it can be unit-tested; this
@@ -331,11 +342,15 @@ function CustomizeInner() {
       price: formatBhd(grandTotal),
       priceNum: grandTotal,
       image: selectedFabric.image,
-      href: `/customize?category=${category}`,
+      // Cart Edit deep-link: include the fabric SKU + tier so the
+      // customizer lands on the spec phase with the right fabric
+      // pre-selected (the skip-fabric effect picks this up).
+      href: `/customize?cat=${category}&sku=${selectedFabric.sku}${hasTiers ? `&tier=${tier}` : ""}`,
       custom: {
         category,
         tier: hasTiers ? tier : undefined,
         fabric: selectedFabric.name,
+        fabricSku: selectedFabric.sku,
         selections,
         surcharge,
       },
@@ -591,6 +606,7 @@ function CustomizeInner() {
                 onPick={setTier}
                 category={category}
                 essentialOverride={essentialOverride}
+                settings={settings}
               />
             </motion.section>
           )}
@@ -614,6 +630,7 @@ function CustomizeInner() {
                 unit={unit}
                 tier={tier}
                 essentialOverride={essentialOverride}
+                settings={settings}
                 basePrice={basePrice}
                 surcharge={surcharge}
                 grandTotal={grandTotal}
@@ -646,6 +663,7 @@ function CustomizeInner() {
                 basePrice={basePrice}
                 surcharge={surcharge}
                 grandTotal={grandTotal}
+                settings={settings}
                 onBack={back}
                 onAuthenticated={() => { setPhase("cart"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
               />
@@ -670,6 +688,7 @@ function CustomizeInner() {
                 basePrice={basePrice}
                 surcharge={surcharge}
                 grandTotal={grandTotal}
+                settings={settings}
                 onBack={back}
                 onKeepDesigning={resetAll}
               />
@@ -1281,18 +1300,21 @@ function FabricLightbox({
 /* ─────────────────────────── Tier picker ─────────────────────────── */
 
 function TierPicker({
-  tier, onPick, category, essentialOverride,
+  tier, onPick, category, essentialOverride, settings,
 }: {
   tier: string;
   onPick: (slug: string) => void;
   category: StepCategory;
   essentialOverride: number | null;
+  settings: Record<string, string>;
 }) {
   return (
     <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
       {tiers.map((t) => {
         const active = t.slug === tier;
         const priceLabel = tierPriceFor(category, t.slug, { essentialOverride });
+        const leadLabel = settings[`tier.lead.${t.slug}`] ?? t.lead;
+        const fittingsLabel = settings[`tier.fittings.${t.slug}`] ?? t.fittings;
         return (
           <button
             key={t.slug}
@@ -1320,7 +1342,7 @@ function TierPicker({
             </h3>
             <div className="text-display text-[1.85rem] mt-2 text-[var(--color-burgundy-700)]">{priceLabel}</div>
             <div className="mt-3 text-[0.85rem] text-[var(--color-charcoal-500)]">
-              {t.lead} · {t.fittings}
+              {leadLabel} · {fittingsLabel}
             </div>
             <ul className="mt-6 space-y-2 text-[0.9rem] text-[var(--color-charcoal-800)] leading-relaxed">
               {t.features.map((f) => (
@@ -1540,7 +1562,7 @@ function MeasurementCard({
 function SummaryPanel({
   steps, groups, hasTiers, category,
   selections, measurements, unit, tier,
-  essentialOverride,
+  essentialOverride, settings,
   basePrice, surcharge, grandTotal,
   onDownload, downloading, onReset,
   onAddToCart, onEditStep, onEditTier, onEditMeasurements,
@@ -1553,6 +1575,7 @@ function SummaryPanel({
   measurements: MeasurementValues;
   unit: MeasurementUnit;
   essentialOverride: number | null;
+  settings: Record<string, string>;
   tier: string;
   basePrice: number;
   surcharge: number;
@@ -1639,7 +1662,7 @@ function SummaryPanel({
               <div className="text-display text-[2.25rem] text-[var(--color-charcoal-900)] leading-none">{tierObj.name}</div>
               <div className="text-display text-[1.5rem] text-[var(--color-burgundy-700)] mt-1">{tierPriceFor(category, tier, { essentialOverride })}</div>
               <div className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">
-                {tierObj.lead} · {tierObj.fittings}
+                {settings[`tier.lead.${tier}`] ?? tierObj.lead} · {settings[`tier.fittings.${tier}`] ?? tierObj.fittings}
               </div>
             </div>
             <EditButton onClick={onEditTier} label="Edit tier" />
@@ -1749,7 +1772,7 @@ function EditButton({ onClick, label }: { onClick: () => void; label: string }) 
 /* ─────────────────────────── Sign-in (checkout gate) ─────────────────────────── */
 
 function AuthPanel({
-  tier, hasTiers, category, selections, allSteps, surcharge, grandTotal, onBack, onAuthenticated,
+  tier, hasTiers, category, selections, allSteps, surcharge, grandTotal, settings, onBack, onAuthenticated,
 }: {
   tier: string;
   hasTiers: boolean;
@@ -1759,6 +1782,7 @@ function AuthPanel({
   basePrice: number;
   surcharge: number;
   grandTotal: number;
+  settings: Record<string, string>;
   onBack: () => void;
   onAuthenticated: () => void;
 }) {
@@ -1795,7 +1819,7 @@ function AuthPanel({
           </div>
           {hasTiers && (
             <div className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">
-              {tierObj.lead} · {tierObj.fittings}
+              {settings[`tier.lead.${tier}`] ?? tierObj.lead} · {settings[`tier.fittings.${tier}`] ?? tierObj.fittings}
             </div>
           )}
 
@@ -1827,7 +1851,7 @@ function AuthPanel({
 /* ─────────────────────────── Cart ─────────────────────────── */
 
 function CartPanel({
-  tier, hasTiers, category, selections, allSteps, basePrice, surcharge, grandTotal, onBack, onKeepDesigning,
+  tier, hasTiers, category, selections, allSteps, basePrice, surcharge, grandTotal, settings, onBack, onKeepDesigning,
 }: {
   tier: string;
   hasTiers: boolean;
@@ -1837,6 +1861,7 @@ function CartPanel({
   basePrice: number;
   surcharge: number;
   grandTotal: number;
+  settings: Record<string, string>;
   onBack: () => void;
   onKeepDesigning: () => void;
 }) {
@@ -1881,7 +1906,7 @@ function CartPanel({
           </div>
           {hasTiers && (
             <div className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">
-              {tierObj.lead} · {tierObj.fittings}
+              {settings[`tier.lead.${tier}`] ?? tierObj.lead} · {settings[`tier.fittings.${tier}`] ?? tierObj.fittings}
             </div>
           )}
         </div>

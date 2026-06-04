@@ -10,7 +10,14 @@
 
 export type SettingDef = {
   key: string;
-  group: "PDP" | "Pricing — Suit" | "Pricing — Jacket" | "Pricing — Shirt" | "Pricing — Trouser" | "Shipping";
+  group:
+    | "PDP"
+    | "Pricing — Suit"
+    | "Pricing — Jacket"
+    | "Pricing — Shirt"
+    | "Pricing — Trouser"
+    | "Tier copy"
+    | "Shipping";
   label: string;
   description?: string;
   defaultValue: string;
@@ -63,6 +70,16 @@ export const SETTINGS: SettingDef[] = [
   { key: "tier.price.trouser.essential", group: "Pricing — Trouser", label: "Trouser · Essentials",  defaultValue: "BHD 220", kind: "currency" },
   { key: "tier.price.trouser.signature", group: "Pricing — Trouser", label: "Trouser · Signature",   defaultValue: "BHD 320", kind: "currency" },
   { key: "tier.price.trouser.bespoke",   group: "Pricing — Trouser", label: "Trouser · Full Bespoke", defaultValue: "BHD 480", kind: "currency" },
+
+  // Tier copy — lead time + fittings shown under each tier card
+  // (shared across all garments; the same values render for suit /
+  // jacket / shirt / trouser flows).
+  { key: "tier.lead.essential", group: "Tier copy", label: "Essentials · Lead time", defaultValue: "3 – 4 weeks", kind: "duration" },
+  { key: "tier.lead.signature", group: "Tier copy", label: "Signature · Lead time",  defaultValue: "4 – 5 weeks", kind: "duration" },
+  { key: "tier.lead.bespoke",   group: "Tier copy", label: "Full Bespoke · Lead time", defaultValue: "6 – 8 weeks", kind: "duration" },
+  { key: "tier.fittings.essential", group: "Tier copy", label: "Essentials · Fittings", defaultValue: "Single fitting" },
+  { key: "tier.fittings.signature", group: "Tier copy", label: "Signature · Fittings", defaultValue: "Two fittings" },
+  { key: "tier.fittings.bespoke",   group: "Tier copy", label: "Full Bespoke · Fittings", defaultValue: "Three fittings + atelier visit" },
 ];
 
 export function defaultFor(key: string): string {
