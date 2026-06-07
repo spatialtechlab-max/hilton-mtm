@@ -323,7 +323,7 @@ export default function AdminPage() {
                     {s.requires_slug && `  ·  shows if ${s.requires_slug}=${s.requires_value}`}
                   </span>
                   {s.kind === "diagram" && (
-                    <span className="basis-full text-[0.7rem] text-[var(--color-burgundy-700)]">
+                    <span className="basis-full text-[0.75rem] font-medium text-[var(--color-burgundy-700)]">
                       Diagram size · 800 × 1000 px · 4:5 portrait · PNG with transparent background
                     </span>
                   )}
