@@ -297,8 +297,20 @@ function CustomizeInner() {
   }, [ready, storageKey, selections, measurements, unit, phase, stepIdx, tier, selectedFabric]);
 
   function pickFabric(f: Fabric) {
+    // Switching cloth mid-flow restarts the spec sequence. Garment
+    // style choices (vents, lining weight, fittings count) depend on
+    // the cloth, so silently carrying old picks forward would risk a
+    // mismatched commission. Per client direction: a new fabric =
+    // a fresh start at step 0.
+    const isSwitch = selectedFabric !== null && selectedFabric.sku !== f.sku;
     setSelectedFabric(f);
     setSku(f.sku);
+    if (isSwitch) {
+      setSelections(defaultSelections());
+      setMeasurements(defaultMeasurements());
+      setStepIdx(0);
+      setTier("signature");
+    }
     // If a tier was pre-set in the URL (e.g. arriving from a library PDP
     // 'Customise this jacket' CTA which appends &tier=bespoke), skip the
     // tier picker — the customer is already in the full-bespoke flow and
