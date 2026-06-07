@@ -87,10 +87,18 @@ const decodeEntities = (s: string) =>
  * then decode any HTML entities and title-case it.
  */
 function prettyName(name: string, categoryName: string): string {
+  // Order matters: longer / more specific prefixes are tried first so
+  // "SUITINGS" wins before plain "SUIT". The regex allows zero
+  // whitespace, so "SUITVBC ..." is stripped to "VBC ..." which is
+  // how the storefront should read the cloth-mill code.
   const prefixes = [
-    categoryName, "FABRIC", "SILK TIE", "SUITS", "SUITING", "SUITINGS",
-    "JACKETING", "JACKET", "SHIRTING", "SHIIRTING", "SHIRTS",
-    "PANTS", "BELT", "TIE", "BLAZER",
+    categoryName,
+    "FABRIC", "SILK TIE",
+    "SUITINGS", "SUITING", "SUITS", "SUIT",
+    "JACKETING", "JACKET", "BLAZER", "RTWJKT", "JKT",
+    "SHIRTING", "SHIIRTING", "SHIRTS", "SHIRT",
+    "TROUSERS", "TROUSER", "PANTS", "PANT",
+    "BELT", "TIE",
   ];
   let stripped = name;
   for (const p of prefixes) {
