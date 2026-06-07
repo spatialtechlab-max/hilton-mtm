@@ -1230,6 +1230,18 @@ function FabricLightbox({
   );
   const safeIndex = Math.min(Math.max(index, 0), shots.length - 1);
   const current = shots[safeIndex];
+  // Build the PDP-style detail rows from the fabric record. Missing
+  // values surface explicitly (per the ERP audit pass) so the atelier
+  // sees gaps even from the customer-facing lightbox.
+  const detailRows: { label: string; value: string }[] = [
+    { label: "Brand",       value: fabric.brand },
+    { label: "Composition", value: fabric.composition },
+    { label: "Pattern",     value: fabric.pattern },
+    { label: "Color",       value: fabric.color },
+    { label: "Shade",       value: fabric.shade ?? "" },
+    { label: "Weight",      value: fabric.weight },
+    { label: "Origin",      value: fabric.origin },
+  ].filter((r) => r.value);
   return (
     <div
       role="dialog"
@@ -1239,7 +1251,7 @@ function FabricLightbox({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-5xl bg-[var(--color-ivory-100)] overflow-hidden flex flex-col"
+        className="relative w-full max-w-6xl bg-[var(--color-ivory-100)] overflow-hidden grid grid-cols-1 md:grid-cols-12 max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -1251,86 +1263,106 @@ function FabricLightbox({
           <X size={18} strokeWidth={1.5} />
         </button>
 
-        <div className="relative aspect-[4/5] md:aspect-[16/10] bg-[var(--color-ivory-200)]">
-          <img
-            src={current}
-            alt={`${fabric.brand} ${fabric.name}`}
-            className="absolute inset-0 w-full h-full object-contain"
-          />
+        {/* Image column — large hero on the left + thumbnail strip below. */}
+        <div className="md:col-span-7 bg-[var(--color-ivory-200)] flex flex-col">
+          <div className="relative aspect-[3/4] md:aspect-[4/5]">
+            <img
+              src={current}
+              alt={`${fabric.brand} ${fabric.name}`}
+              className="absolute inset-0 w-full h-full object-contain"
+            />
+            {shots.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onIndex((safeIndex - 1 + shots.length) % shots.length)}
+                  aria-label="Previous photo"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-11 h-11 bg-[var(--color-ivory-100)]/90 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] rounded-full transition-colors"
+                >
+                  <ArrowLeft size={18} strokeWidth={1.5} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onIndex((safeIndex + 1) % shots.length)}
+                  aria-label="Next photo"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-11 h-11 bg-[var(--color-ivory-100)]/90 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] rounded-full transition-colors"
+                >
+                  <ArrowRight size={18} strokeWidth={1.5} />
+                </button>
+              </>
+            )}
+          </div>
           {shots.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={() => onIndex((safeIndex - 1 + shots.length) % shots.length)}
-                aria-label="Previous photo"
-                className="absolute left-3 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-11 h-11 bg-[var(--color-ivory-100)]/90 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] rounded-full transition-colors"
-              >
-                <ArrowLeft size={18} strokeWidth={1.5} />
-              </button>
-              <button
-                type="button"
-                onClick={() => onIndex((safeIndex + 1) % shots.length)}
-                aria-label="Next photo"
-                className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-11 h-11 bg-[var(--color-ivory-100)]/90 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] rounded-full transition-colors"
-              >
-                <ArrowRight size={18} strokeWidth={1.5} />
-              </button>
-            </>
+            <div className="px-5 md:px-6 py-4 flex items-center gap-2 overflow-x-auto bg-[var(--color-ivory-100)] border-t border-black/10">
+              {shots.map((s, i) => {
+                const active = i === safeIndex;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => onIndex(i)}
+                    aria-label={`View photo ${i + 1}`}
+                    className={`relative shrink-0 w-16 h-16 overflow-hidden bg-[var(--color-ivory-200)] transition-all ${
+                      active
+                        ? "ring-2 ring-[var(--color-burgundy-700)] ring-offset-2 ring-offset-[var(--color-ivory-100)]"
+                        : "opacity-70 hover:opacity-100"
+                    }`}
+                  >
+                    <img
+                      src={s}
+                      alt=""
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
 
-        <div className="border-t border-black/10 p-5 md:p-6 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-5 items-center">
-          <div>
-            <span className="text-eyebrow text-[var(--color-burgundy-700)]">{fabric.brand}</span>
-            <h3 className="text-display text-[1.5rem] mt-1.5 leading-tight">{fabric.name}</h3>
-            {fabric.composition && (
-              <p className="text-[0.9rem] text-[var(--color-charcoal-500)] mt-1.5">{fabric.composition}</p>
-            )}
-            <p className="text-[0.85rem] text-[var(--color-charcoal-700)] mt-1.5">
-              {[fabric.pattern, fabric.color, fabric.weight, fabric.origin].filter(Boolean).join(" · ")}
-            </p>
+        {/* Info column — PDP-style: type eyebrow, name, composition,
+            price, primary CTA, then the Details spec table. */}
+        <div className="md:col-span-5 p-7 md:p-10 flex flex-col">
+          <span className="text-eyebrow text-[var(--color-burgundy-700)]">
+            {fabric.erpCategory
+              ? fabric.erpCategory.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
+              : "Cloth"}
+          </span>
+          <h3 className="text-display text-[clamp(1.75rem,3vw,2.5rem)] mt-3 leading-tight">{fabric.name}</h3>
+          {fabric.composition && (
+            <p className="mt-2 text-[0.9rem] text-[var(--color-charcoal-500)]">{fabric.composition}</p>
+          )}
+          <div className="text-display text-[1.75rem] text-[var(--color-burgundy-700)] mt-5">
+            {fabric.price}
           </div>
-          <div className="flex items-center justify-between md:justify-end gap-5">
-            <span className="text-display text-[1.5rem] text-[var(--color-burgundy-700)] whitespace-nowrap">
-              {fabric.price}
-            </span>
-            <button
-              type="button"
-              onClick={() => onPick(fabric)}
-              className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-6 py-3 hover:bg-[var(--color-burgundy-800)] transition-colors"
-            >
-              Choose this cloth <ArrowRight size={14} strokeWidth={1.5} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => onPick(fabric)}
+            className="mt-6 text-eyebrow inline-flex items-center justify-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-6 py-3.5 hover:bg-[var(--color-burgundy-800)] transition-colors"
+          >
+            <Sparkles size={14} strokeWidth={1.5} />
+            Choose this cloth
+            <ArrowRight size={14} strokeWidth={1.5} />
+          </button>
+          {detailRows.length > 0 && (
+            <div className="mt-8 pt-6 border-t border-black/10">
+              <span className="text-eyebrow text-[var(--color-burgundy-700)]">Details</span>
+              <dl className="mt-4 border-t border-black/10">
+                {detailRows.map((row) => {
+                  const missing = row.value === "Missing value";
+                  return (
+                    <div key={row.label} className="flex items-start justify-between gap-6 py-2.5 border-b border-black/10">
+                      <dt className="text-[0.7rem] tracking-[0.12em] uppercase text-[var(--color-charcoal-500)]">{row.label}</dt>
+                      <dd className={`text-[0.85rem] text-right ${missing ? "italic text-[var(--color-burgundy-700)]/70" : "text-[var(--color-charcoal-900)]"}`}>{row.value}</dd>
+                    </div>
+                  );
+                })}
+              </dl>
+            </div>
+          )}
         </div>
 
-        {shots.length > 1 && (
-          <div className="border-t border-black/10 px-5 md:px-6 py-4 flex items-center gap-2 overflow-x-auto">
-            {shots.map((s, i) => {
-              const active = i === safeIndex;
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => onIndex(i)}
-                  aria-label={`View photo ${i + 1}`}
-                  className={`relative shrink-0 w-16 h-16 overflow-hidden bg-[var(--color-ivory-200)] transition-all ${
-                    active
-                      ? "ring-2 ring-[var(--color-burgundy-700)] ring-offset-2 ring-offset-[var(--color-ivory-100)]"
-                      : "opacity-70 hover:opacity-100"
-                  }`}
-                >
-                  <img
-                    src={s}
-                    alt=""
-                    loading="lazy"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
     </div>
   );

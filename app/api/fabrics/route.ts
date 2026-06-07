@@ -53,8 +53,23 @@ const cleanSrc = (src: string | undefined) => {
   if (!/^https?:\/\//i.test(src)) return FALLBACK_SRC;
   return src;
 };
-const cleanGallery = (arr: string[] | undefined) =>
-  (arr ?? []).map(cleanSrc).filter((g) => g !== FALLBACK_SRC);
+/**
+ * Sort an ERP `images[]` array by the numeric suffix baked into each
+ * filename (`_pic1_`, `_pic2_`, `_pic3_`). The atelier's ERP convention
+ * is pic1 = on-form garment hero, pic2 = back, pic3 = detail — but the
+ * raw array is in upload order which varies per item, so the swatch
+ * sometimes ends up first. Sorting gives us a stable hero photo.
+ */
+const cleanGallery = (arr: string[] | undefined) => {
+  const cleaned = (arr ?? []).map(cleanSrc).filter((g) => g !== FALLBACK_SRC);
+  return cleaned.sort((a, b) => {
+    const n = (s: string) => {
+      const m = s.match(/_pic(\d+)_/);
+      return m ? Number(m[1]) : 999;
+    };
+    return n(a) - n(b);
+  });
+};
 
 // Each ERP cloth carries a `categoryName` set by the atelier when
 // adding the item. The Hilton ERP has been seeded with a long tail of
@@ -269,12 +284,17 @@ function toFabric(item: ErpItem) {
     origin: f(item.origin, titleCase),
     price: priceNum > 0 ? `BHD ${priceNum}` : MISSING,
     priceNum,
-    // `image` is the primary swatch the picker tile shows; `gallery`
-    // is the additional photos the atelier uploaded (usually a
-    // garment-on-form shot + close-up weave). The customizer will
-    // surface them in a modal when the customer wants more detail.
-    image: thumb,
-    gallery: gallery.length ? gallery : undefined,
+    // `image` is the on-form garment hero shown on the picker tile —
+    // we prefer the first sorted gallery photo (pic1) so the tile
+    // reads as "a suit in this cloth" instead of "a swatch of cloth",
+    // which felt cold per the client. When the ERP item has no
+    // on-form shot we fall back to the swatch thumbnail.
+    // `gallery` is the additional photos the atelier uploaded
+    // (back / detail) — surfaced in the zoom modal. We deliberately
+    // include the swatch as the LAST gallery entry so the customer
+    // can still inspect the cloth weave from the same modal.
+    image: gallery[0] ?? thumb,
+    gallery: gallery.length > 1 ? [...gallery.slice(1), thumb] : (gallery.length ? [thumb] : undefined),
     erpCategory: (item.categoryName || "").toUpperCase(),
     erpCategoryID: item.categoryID,
   };
