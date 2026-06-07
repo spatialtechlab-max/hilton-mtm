@@ -278,11 +278,19 @@ function CustomizeInner() {
   // the customizer opens straight on the spec steps (or the tier
   // picker for suits/jackets without a pre-chosen tier). The fabric
   // they were looking at on the PDP IS the cloth they want.
+  //
+  // The ref guard means this only fires once per mount — without it,
+  // clicking the in-flow "Change cloth" chip (which sets phase back
+  // to "fabric") would immediately bounce the customer right back to
+  // the spec step they came from, because sku + fabric still match.
+  const autoSkippedFabricRef = useRef(false);
   useEffect(() => {
     if (phase !== "fabric") return;
+    if (autoSkippedFabricRef.current) return;
     if (!sku || fabrics.length === 0) return;
     const match = fabrics.find((f) => f.sku === sku);
     if (!match) return;
+    autoSkippedFabricRef.current = true;
     setSelectedFabric(match);
     const urlParams = new URLSearchParams(window.location.search);
     const validTiers = ["essential", "signature", "bespoke"] as const;
