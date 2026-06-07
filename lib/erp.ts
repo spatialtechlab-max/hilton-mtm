@@ -23,6 +23,10 @@ export type ErpItem = {
   brandID: number;
   brandName: string;
   sellingPrice: number;
+  /** ERP's storefront-facing price. When set (non-zero) it overrides
+   *  sellingPrice — the client edits this field, expecting the website
+   *  to follow it. */
+  onlinePrice?: number;
   status: string; // "A" = active
   thumbnail: string;
   images: string[];
@@ -121,6 +125,24 @@ function clean(v: string | number | undefined | null): string | undefined {
   return s ? titleCase(decodeEntities(s)) : undefined;
 }
 
+/**
+ * The price the storefront should show. ERP carries two price fields:
+ *
+ *   - sellingPrice — the legacy / counter price
+ *   - onlinePrice  — the value the atelier edits to control the website
+ *
+ * The client reported their ERP price edits were not reflecting. Root
+ * cause: the mapper was reading sellingPrice, but the atelier had been
+ * editing onlinePrice (which is the field whose name implies it drives
+ * the storefront). Prefer onlinePrice when present and non-zero; fall
+ * back to sellingPrice otherwise so legacy items still show a number.
+ */
+function effectivePrice(item: ErpItem): number {
+  const online = Number(item.onlinePrice ?? 0);
+  if (Number.isFinite(online) && online > 0) return online;
+  return Number(item.sellingPrice ?? 0);
+}
+
 function mapItem(item: ErpItem): LibraryItem {
   const composition = clean(item.description); // "100% Silk", "70% Wool & 30% Polyester"
   const brand       = clean(item.brandName);
@@ -171,7 +193,7 @@ function mapItem(item: ErpItem): LibraryItem {
     name: prettyName(item.name, item.categoryName),
     type: titleCase(item.categoryName),
     cloth,
-    price: `BHD ${item.sellingPrice}`,
+    price: `BHD ${effectivePrice(item)}`,
     alt: [brand, pattern, color].filter(Boolean).join(" ").trim(),
     description: detail,
     media: { kind: "photo", src: hero },

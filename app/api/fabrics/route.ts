@@ -242,6 +242,10 @@ function stripPrefix(name: string, categoryName: string): string {
 function toFabric(item: ErpItem) {
   const thumb = cleanSrc(item.thumbnail);
   const gallery = cleanGallery(item.images);
+  // Mirror lib/erp.ts effectivePrice — onlinePrice is what the atelier
+  // edits to drive the storefront; sellingPrice is the legacy fallback.
+  const online = Number(item.onlinePrice ?? 0);
+  const priceNum = Number.isFinite(online) && online > 0 ? online : Number(item.sellingPrice ?? 0);
   return {
     sku: String(item.id),
     code: item.code ? decodeEntities(item.code) : "",
@@ -254,8 +258,8 @@ function toFabric(item: ErpItem) {
     weight: item.weight ? item.weight.replace(/\s+/g, " ").trim() : "",
     size: item.size ? decodeEntities(item.size) : "",
     origin: titleCase(decodeEntities(item.origin || "")),
-    price: `BHD ${item.sellingPrice}`,
-    priceNum: item.sellingPrice,
+    price: `BHD ${priceNum}`,
+    priceNum,
     // `image` is the primary swatch the picker tile shows; `gallery`
     // is the additional photos the atelier uploaded (usually a
     // garment-on-form shot + close-up weave). The customizer will
