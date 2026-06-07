@@ -185,10 +185,10 @@ export default async function LibraryPage({
                         other.heroImage.startsWith("/products/") ? "bg-[var(--color-ivory-200)]" : ""
                       }`}
                     >
-                      {isPlaceholder(other.heroImage) && <PlaceholderBadge />}
-                      <Image
-                        src={other.heroImage}
-                        alt={other.heroAlt}
+                      <MediaImage
+                        slot={`library.${s}.cover`}
+                        fallback={other.heroImage}
+                        fallbackAlt={other.heroAlt}
                         fill
                         sizes="(min-width: 1024px) 33vw, 50vw"
                         className={

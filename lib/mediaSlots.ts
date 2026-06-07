@@ -160,6 +160,27 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     recommendedSize: "1800 × 1125 px",
   },
   {
+    key: "library.suits.cover",
+    group: "Library",
+    label: "Suits library cover",
+    description: "Hero photo for /library/suits.",
+    fallback:
+      "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=1600&auto=format&fit=crop",
+    fallbackAlt: "A bespoke navy windowpane suit, hand-finished",
+    aspect: "3/4",
+    recommendedSize: "1200 × 1600 px",
+  },
+  {
+    key: "library.jackets.cover",
+    group: "Library",
+    label: "Jackets library cover",
+    description: "Hero photo for /library/jackets — standalone sport coats.",
+    fallback: "https://erp.hiltontailoringhouse.com/uploads/item_rawmaterial/1585_pic_cropped.jpg",
+    fallbackAlt: "A standalone bespoke jacket on the form",
+    aspect: "3/4",
+    recommendedSize: "1200 × 1600 px",
+  },
+  {
     key: "library.shirts.cover",
     group: "Library",
     label: "Shirts library cover",
