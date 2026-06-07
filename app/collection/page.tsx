@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { PageHero } from "@/components/PageHero";
 import { Reveal } from "@/components/Reveal";
 import { CtaBanner } from "@/components/CtaBanner";
-import { PlaceholderBadge, isPlaceholder } from "@/components/PlaceholderBadge";
+import { MediaImage } from "@/components/MediaImage";
+import { MEDIA_SLOTS } from "@/lib/mediaSlots";
+
+const COLLECTION_SLOTS = MEDIA_SLOTS.filter((s) => /^collection\.\d+$/.test(s.key));
 
 const categories = [
   "All",
@@ -38,90 +40,23 @@ type Item = {
   cat: typeof categories[number];
   cloth: string;
   price: string;
-  image: string;
+  /** Index into MEDIA_SLOTS "collection.{n}" — the image is admin-editable. */
+  slotIndex: number;
   scale?: 1 | 2;
 };
 
 const items: Item[] = [
-  {
-    name: "Walden Two-Piece",
-    cat: "Suits",
-    cloth: "Worsted wool · Huddersfield",
-    price: "From $2,400",
-    image: "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=1800&auto=format&fit=crop",
-    scale: 2,
-  },
-  {
-    name: "Marlow Sport Coat",
-    cat: "Jackets",
-    cloth: "Hopsack · Loro Piana",
-    price: "From $1,850",
-    image: "https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=1400&auto=format&fit=crop",
-  },
-  {
-    name: "The Oxford",
-    cat: "Shoes",
-    cloth: "Hand-welted calf · Northampton",
-    price: "From $1,150",
-    image: "https://images.unsplash.com/photo-1614253429340-98120bd6d753?q=80&w=1400&auto=format&fit=crop",
-  },
-  {
-    name: "Madison Silk Tie",
-    cat: "Ties & Silks",
-    cloth: "Como silk · 8-fold",
-    price: "From $185",
-    image: "https://images.unsplash.com/photo-1593032580308-d4bafafc4f28?q=80&w=1400&auto=format&fit=crop",
-  },
-  {
-    name: "Severn Topcoat",
-    cat: "Overcoats",
-    cloth: "Camel hair · Abraham Moon",
-    price: "From $3,200",
-    image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?q=80&w=1400&auto=format&fit=crop",
-  },
-  {
-    name: "Hawthorn Evening",
-    cat: "Eveningwear",
-    cloth: "Black barathea · Holland & Sherry",
-    price: "From $3,800",
-    image: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1400&auto=format&fit=crop",
-  },
-  {
-    name: "Albany Shirt",
-    cat: "Shirting",
-    cloth: "Sea-island cotton · Alumo",
-    price: "From $290",
-    image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=1400&auto=format&fit=crop",
-  },
-  {
-    name: "Beacon Three-Piece",
-    cat: "Suits",
-    cloth: "Flannel · Fox Brothers",
-    price: "From $2,950",
-    image: "https://images.unsplash.com/photo-1593032465175-481ac7f401a0?q=80&w=1400&auto=format&fit=crop",
-    scale: 2,
-  },
-  {
-    name: "Cloth Bunches",
-    cat: "Accessories",
-    cloth: "47 mills · 612 swatches",
-    price: "Sent on request",
-    image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=1400&auto=format&fit=crop",
-  },
-  {
-    name: "Linden Linen Jacket",
-    cat: "Jackets",
-    cloth: "Pure linen · Solbiati",
-    price: "From $1,650",
-    image: "https://images.unsplash.com/photo-1521334884684-d80222895322?q=80&w=1400&auto=format&fit=crop",
-  },
-  {
-    name: "Carlyle Pea Coat",
-    cat: "Overcoats",
-    cloth: "Melton · Abraham Moon",
-    price: "From $2,800",
-    image: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1400&auto=format&fit=crop",
-  },
+  { name: "Walden Two-Piece",   cat: "Suits",        cloth: "Worsted wool · Huddersfield",     price: "From $2,400", slotIndex: 0, scale: 2 },
+  { name: "Marlow Sport Coat",  cat: "Jackets",      cloth: "Hopsack · Loro Piana",            price: "From $1,850", slotIndex: 1 },
+  { name: "The Oxford",         cat: "Shoes",        cloth: "Hand-welted calf · Northampton",  price: "From $1,150", slotIndex: 2 },
+  { name: "Madison Silk Tie",   cat: "Ties & Silks", cloth: "Como silk · 8-fold",              price: "From $185",   slotIndex: 3 },
+  { name: "Severn Topcoat",     cat: "Overcoats",    cloth: "Camel hair · Abraham Moon",       price: "From $3,200", slotIndex: 4 },
+  { name: "Hawthorn Evening",   cat: "Eveningwear",  cloth: "Black barathea · Holland & Sherry", price: "From $3,800", slotIndex: 5 },
+  { name: "Albany Shirt",       cat: "Shirting",     cloth: "Sea-island cotton · Alumo",       price: "From $290",   slotIndex: 6 },
+  { name: "Beacon Three-Piece", cat: "Suits",        cloth: "Flannel · Fox Brothers",          price: "From $2,950", slotIndex: 7, scale: 2 },
+  { name: "Cloth Bunches",      cat: "Accessories",  cloth: "47 mills · 612 swatches",         price: "Sent on request", slotIndex: 8 },
+  { name: "Linden Linen Jacket", cat: "Jackets",     cloth: "Pure linen · Solbiati",           price: "From $1,650", slotIndex: 9 },
+  { name: "Carlyle Pea Coat",   cat: "Overcoats",    cloth: "Melton · Abraham Moon",           price: "From $2,800", slotIndex: 10 },
 ];
 
 export default function CollectionPage() {
@@ -134,6 +69,7 @@ export default function CollectionPage() {
         eyebrow="Spring / Summer · N° 01"
         title="The Collection."
         intro="Suits, shirting, footwear, ties and the small things that finish the wardrobe. Every piece is a starting point. A conversation about your own."
+        slot="collection.hero"
         image={{
           src: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=1600&auto=format&fit=crop",
           alt: "A finished bespoke jacket on a wooden form",
@@ -172,14 +108,15 @@ export default function CollectionPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-10">
               {visible.map((item, i) => {
                 const href = CATEGORY_HREF[item.cat] ?? "/library/tailoring";
+                const slot = COLLECTION_SLOTS[item.slotIndex];
                 return (
                   <Reveal key={item.name} delay={(i % 4) * 0.05}>
                     <Link href={href} className="group block">
                       <div className="relative aspect-[3/4] overflow-hidden bg-[var(--color-ivory-200)] hover-grow">
-                        {isPlaceholder(item.image) && <PlaceholderBadge />}
-                        <Image
-                          src={item.image}
-                          alt={item.name}
+                        <MediaImage
+                          slot={slot?.key ?? ""}
+                          fallback={slot?.fallback ?? "/products/no-image.svg"}
+                          fallbackAlt={slot?.fallbackAlt ?? item.name}
                           fill
                           sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
                           className="object-cover"

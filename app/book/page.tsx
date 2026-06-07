@@ -1,10 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { Reveal, SplitReveal } from "@/components/Reveal";
-import { PlaceholderBadge } from "@/components/PlaceholderBadge";
+import { MediaImage } from "@/components/MediaImage";
+import { MEDIA_SLOTS } from "@/lib/mediaSlots";
+
+const BOOK_HERO = MEDIA_SLOTS.find((s) => s.key === "book.hero")!;
 
 const occasions = [
   "First commission",
@@ -164,10 +166,10 @@ export default function BookPage() {
           <aside className="lg:col-span-4 lg:col-start-9 order-1 lg:order-2 lg:sticky lg:top-32">
             <Reveal>
               <div className="relative aspect-[4/5] overflow-hidden">
-                <PlaceholderBadge />
-                <Image
-                  src="https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=1400&auto=format&fit=crop"
-                  alt="A fitting at the atelier"
+                <MediaImage
+                  slot={BOOK_HERO.key}
+                  fallback={BOOK_HERO.fallback}
+                  fallbackAlt={BOOK_HERO.fallbackAlt}
                   fill
                   sizes="(min-width: 1024px) 33vw, 100vw"
                   className="object-cover"

@@ -1,17 +1,22 @@
-import Image from "next/image";
 import { Reveal, SplitReveal } from "./Reveal";
+import { MediaImage } from "./MediaImage";
+import { MEDIA_SLOTS } from "@/lib/mediaSlots";
 
 // Six editorial photographs of the swatch books that live at the atelier.
 // They double as proof of pedigree — the mills printed on the bindings are
 // the same houses listed in the homepage `<Partners />` row.
-const books = [
-  { src: "/atelier/vbc-book.jpg",           alt: "Vitale Barberis Canonico swatch book and cloth folios",   cap: "Vitale Barberis Canonico" },
-  { src: "/atelier/zegna-mediterranea.jpg", alt: "Ermenegildo Zegna 'Mediterranea' folio with horn buttons", cap: "Zegna · Mediterranea" },
-  { src: "/atelier/trofeo-book.jpg",        alt: "Trofeo Summer swatch book opened across the bench",       cap: "Trofeo · Summer" },
-  { src: "/atelier/carnet-jackets.jpg",     alt: "Carnet jacketing swatches fanned with horn buttons",      cap: "Carnet · Jackets" },
-  { src: "/atelier/alumo-shirting.jpg",     alt: "Alumo shirting swatches and the year's shirting cards",   cap: "Alumo · Shirting" },
-  { src: "/atelier/pocket-squares.jpg",     alt: "Silk pocket squares on the showroom rack",                cap: "From the silk room" },
-];
+const captions: Record<number, string> = {
+  1: "Vitale Barberis Canonico",
+  2: "Zegna · Mediterranea",
+  3: "Trofeo · Summer",
+  4: "Carnet · Jackets",
+  5: "Alumo · Shirting",
+  6: "From the silk room",
+};
+const books = [1, 2, 3, 4, 5, 6].map((i) => ({
+  slot: MEDIA_SLOTS.find((s) => s.key === `heritage.mill.${i}`)!,
+  cap: captions[i],
+}));
 
 export function MillBookGallery() {
   return (
@@ -40,12 +45,13 @@ export function MillBookGallery() {
             Uniform 3:4 aspect for a calmer, tighter editorial grid. */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
           {books.map((b, i) => (
-            <Reveal key={b.src} delay={i * 0.06}>
+            <Reveal key={b.slot.key} delay={i * 0.06}>
               <figure className="group">
                 <div className="relative aspect-[3/4] overflow-hidden bg-[var(--color-ivory-100)] hover-grow">
-                  <Image
-                    src={b.src}
-                    alt={b.alt}
+                  <MediaImage
+                    slot={b.slot.key}
+                    fallback={b.slot.fallback}
+                    fallbackAlt={b.slot.fallbackAlt}
                     fill
                     sizes="(min-width: 1024px) 16vw, (min-width: 768px) 32vw, 50vw"
                     className="object-cover"
