@@ -143,7 +143,7 @@ function CustomizeInner() {
   // Full Bespoke keep their configured baseline (admin-editable later).
   const product           = useMemo(() => (sku ? findProduct(sku) : null), [sku]);
   const essentialOverride = selectedFabric?.priceNum ?? null;
-  const basePrice  = parsePrice(tierPriceFor(category, tier, { essentialOverride }));
+  const basePrice  = parsePrice(tierPriceFor(category, tier, { essentialOverride, settings }));
   const surcharge  = useMemo(() => surchargeTotal(activeSteps, selections), [activeSteps, selections]);
   const grandTotal = basePrice + surcharge;
 
@@ -1398,7 +1398,7 @@ function TierPicker({
     <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
       {tiers.map((t) => {
         const active = t.slug === tier;
-        const priceLabel = tierPriceFor(category, t.slug, { essentialOverride });
+        const priceLabel = tierPriceFor(category, t.slug, { essentialOverride, settings });
         const leadLabel = settings[`tier.lead.${t.slug}`] ?? t.lead;
         const fittingsLabel = settings[`tier.fittings.${t.slug}`] ?? t.fittings;
         return (
@@ -1746,7 +1746,7 @@ function SummaryPanel({
             <div>
               <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-1">Commission</div>
               <div className="text-display text-[2.25rem] text-[var(--color-charcoal-900)] leading-none">{tierObj.name}</div>
-              <div className="text-display text-[1.5rem] text-[var(--color-burgundy-700)] mt-1">{tierPriceFor(category, tier, { essentialOverride })}</div>
+              <div className="text-display text-[1.5rem] text-[var(--color-burgundy-700)] mt-1">{tierPriceFor(category, tier, { essentialOverride, settings })}</div>
               <div className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">
                 {settings[`tier.lead.${tier}`] ?? tierObj.lead} · {settings[`tier.fittings.${tier}`] ?? tierObj.fittings}
               </div>

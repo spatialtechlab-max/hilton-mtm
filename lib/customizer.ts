@@ -734,20 +734,33 @@ function formatBhd(v: string | number): string {
 }
 
 /**
- * Optional override hook so the Essentials tier can mirror the front-end
- * (PDP / library) price of the selected fabric instead of the static
- * baseline. Signature and Full Bespoke keep their configured values
- * (admin can edit those later via mtm_settings).
+ * Resolution chain for the tier price shown on the customizer:
+ *
+ *   Essentials slug:
+ *     1. opts.essentialOverride (the fabric price from the PDP) — wins
+ *        whenever a fabric is picked.
+ *     2. settings[`tier.price.<cat>.essential`] — atelier override from
+ *        /admin/settings.
+ *     3. TIER_PRICE_BY_CATEGORY[cat].essential — the code default.
+ *
+ *   Signature / Full Bespoke:
+ *     1. settings[`tier.price.<cat>.<slug>`] — admin override.
+ *     2. TIER_PRICE_BY_CATEGORY[cat][slug] — code default.
  */
 export function tierPriceFor(
   cat: StepCategory,
   tierSlug: string,
-  opts?: { essentialOverride?: string | number | null },
+  opts?: {
+    essentialOverride?: string | number | null;
+    settings?: Record<string, string>;
+  },
 ): string {
   const slug = (tierSlug as TierLevel) in TIER_RANK ? (tierSlug as TierLevel) : "signature";
   if (slug === "essential" && opts?.essentialOverride != null && opts.essentialOverride !== "") {
     return formatBhd(opts.essentialOverride);
   }
+  const override = opts?.settings?.[`tier.price.${cat}.${slug}`];
+  if (override && override.trim() !== "") return formatBhd(override);
   return TIER_PRICE_BY_CATEGORY[cat][slug];
 }
 
