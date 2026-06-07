@@ -499,6 +499,33 @@ function CustomizeInner() {
           </header>
         )}
 
+        {/* Cloth chip — visible on every non-fabric phase so the customer
+            can jump back to the fabric pick without clicking Back through
+            every spec step. Switching to a different fabric resets the
+            spec sequence (handled in pickFabric). */}
+        {!showFullHero && selectedFabric && (
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            <div className="inline-flex items-center gap-2 border border-black/10 bg-[var(--color-ivory-200)] px-3 py-1.5">
+              <span className="text-[0.6rem] tracking-[0.18em] uppercase text-[var(--color-charcoal-500)]">Cloth</span>
+              <span className="text-[0.82rem] text-[var(--color-charcoal-900)]">
+                {[selectedFabric.brand, selectedFabric.name].filter(Boolean).join(" · ")}
+              </span>
+              {selectedFabric.price && (
+                <span className="text-[0.78rem] text-[var(--color-burgundy-700)] tabular-nums">
+                  {selectedFabric.price}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setPhase("fabric")}
+              className="text-[0.62rem] tracking-[0.18em] uppercase inline-flex items-center gap-1.5 border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] px-3 py-1.5 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] transition-colors"
+            >
+              <Pencil size={11} strokeWidth={1.5} /> Change cloth
+            </button>
+          </div>
+        )}
+
         {/* ── Progress dock + top controls ───────────────────────────── */}
         {ready && DESIGN_PHASES.includes(phase) && (
           <>
