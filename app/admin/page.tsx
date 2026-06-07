@@ -322,6 +322,11 @@ export default function AdminPage() {
                     {s.applies_to.join(" · ")}
                     {s.requires_slug && `  ·  shows if ${s.requires_slug}=${s.requires_value}`}
                   </span>
+                  {s.kind === "diagram" && (
+                    <span className="basis-full text-[0.7rem] text-[var(--color-burgundy-700)]">
+                      Diagram size · 800 × 1000 px · 4:5 portrait · PNG with transparent background
+                    </span>
+                  )}
                 </div>
                 <div className="divide-y divide-black/5">
                   {(optionsByStep[s.slug] ?? []).map((o) => (
