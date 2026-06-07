@@ -1233,14 +1233,21 @@ function FabricLightbox({
   // Build the PDP-style detail rows from the fabric record. Missing
   // values surface explicitly (per the ERP audit pass) so the atelier
   // sees gaps even from the customer-facing lightbox.
+  const categoryLabel = fabric.erpCategory
+    ? fabric.erpCategory.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
+    : "";
   const detailRows: { label: string; value: string }[] = [
+    { label: "Style",       value: categoryLabel },
     { label: "Brand",       value: fabric.brand },
     { label: "Composition", value: fabric.composition },
     { label: "Pattern",     value: fabric.pattern },
     { label: "Color",       value: fabric.color },
     { label: "Shade",       value: fabric.shade ?? "" },
     { label: "Weight",      value: fabric.weight },
+    { label: "Size",        value: fabric.size ?? "" },
     { label: "Origin",      value: fabric.origin },
+    { label: "Style code",  value: fabric.code ?? "" },
+    { label: "SKU",         value: fabric.sku },
   ].filter((r) => r.value);
   return (
     <div
@@ -1265,7 +1272,7 @@ function FabricLightbox({
 
         {/* Image column — large hero on the left + thumbnail strip below. */}
         <div className="md:col-span-7 bg-[var(--color-ivory-200)] flex flex-col">
-          <div className="relative aspect-[3/4] md:aspect-[4/5]">
+          <div className="relative aspect-[4/5] md:aspect-[3/4]">
             <img
               src={current}
               alt={`${fabric.brand} ${fabric.name}`}
@@ -1292,33 +1299,38 @@ function FabricLightbox({
               </>
             )}
           </div>
-          {shots.length > 1 && (
-            <div className="px-5 md:px-6 py-4 flex items-center gap-2 overflow-x-auto bg-[var(--color-ivory-100)] border-t border-black/10">
-              {shots.map((s, i) => {
-                const active = i === safeIndex;
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => onIndex(i)}
-                    aria-label={`View photo ${i + 1}`}
-                    className={`relative shrink-0 w-16 h-16 overflow-hidden bg-[var(--color-ivory-200)] transition-all ${
-                      active
-                        ? "ring-2 ring-[var(--color-burgundy-700)] ring-offset-2 ring-offset-[var(--color-ivory-100)]"
-                        : "opacity-70 hover:opacity-100"
-                    }`}
-                  >
-                    <img
-                      src={s}
-                      alt=""
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          {/* Thumbnail strip — always rendered when there's any image so
+              the customer never wonders if more shots exist. The strip
+              is sticky to the bottom of the image column so it stays
+              visible even when the modal content scrolls. */}
+          <div className="px-4 md:px-5 py-3 flex items-center gap-2 overflow-x-auto bg-[var(--color-ivory-100)] border-t border-black/10">
+            {shots.map((s, i) => {
+              const active = i === safeIndex;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onIndex(i)}
+                  aria-label={`View photo ${i + 1} of ${shots.length}`}
+                  className={`relative shrink-0 w-16 h-20 overflow-hidden bg-[var(--color-ivory-200)] transition-all ${
+                    active
+                      ? "ring-2 ring-[var(--color-burgundy-700)] ring-offset-2 ring-offset-[var(--color-ivory-100)]"
+                      : "opacity-70 hover:opacity-100"
+                  }`}
+                >
+                  <img
+                    src={s}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </button>
+              );
+            })}
+            <span className="ml-auto text-[0.65rem] tracking-[0.15em] uppercase text-[var(--color-charcoal-500)] tabular-nums whitespace-nowrap">
+              {safeIndex + 1} / {shots.length}
+            </span>
+          </div>
         </div>
 
         {/* Info column — PDP-style: type eyebrow, name, composition,
