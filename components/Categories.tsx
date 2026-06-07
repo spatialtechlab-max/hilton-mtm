@@ -77,14 +77,6 @@ export function Categories() {
               <SplitReveal text="A complete wardrobe, made by hand." />
             </h2>
           </div>
-          <Reveal delay={0.2}>
-            <Link
-              href="/collection"
-              className="text-eyebrow link-underline text-[var(--color-charcoal-900)]"
-            >
-              Browse all categories →
-            </Link>
-          </Reveal>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
