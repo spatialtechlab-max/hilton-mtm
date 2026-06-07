@@ -125,12 +125,23 @@ function cleanSrc(src: string | undefined): string {
   return src;
 }
 
+/** Sentinel shown on the storefront when an ERP field is empty.
+ *  Per client direction we no longer hide / fall back — every blank
+ *  surfaces so the atelier can see exactly which records to fix. */
+const MISSING = "Missing value";
+
 /** Normalise an ERP free-text value: decode entities, title-case,
- *  trim, and treat blanks as undefined. */
-function clean(v: string | number | undefined | null): string | undefined {
-  if (v === undefined || v === null) return undefined;
+ *  trim. Empty / null / whitespace-only inputs return the explicit
+ *  "Missing value" sentinel so the storefront calls out ERP gaps. */
+function clean(v: string | number | undefined | null): string {
+  if (v === undefined || v === null) return MISSING;
   const s = String(v).trim();
-  return s ? titleCase(decodeEntities(s)) : undefined;
+  if (!s) return MISSING;
+  return titleCase(decodeEntities(s));
+}
+
+function isMissing(s: string | undefined): boolean {
+  return !s || s === MISSING;
 }
 
 /**
@@ -162,12 +173,16 @@ function mapItem(item: ErpItem): LibraryItem {
   const size        = clean(item.size);
   const code        = clean(item.code);
 
-  // The "cloth" line shown under the product name — composition is the most
-  // useful summary (everyone wants to know "is this 100% silk?").
-  const cloth = composition ?? ([brand, pattern].filter(Boolean).join(" · ") || undefined);
+  // No synthesised fallbacks — if the ERP composition is blank, the
+  // storefront shows the MISSING sentinel so the atelier can see
+  // exactly which records to backfill.
+  const cloth = composition;
 
-  // Short editorial detail string used as the alt + description summary.
-  const detail = [brand, pattern, origin].filter(Boolean).join(" · ");
+  // Short editorial detail line composed only of the fields that
+  // actually have values; missing fields don't pollute the summary
+  // but the atelier still sees "Missing value" on the dedicated
+  // PDP detail rows.
+  const detail = [brand, pattern, origin].filter((v) => !isMissing(v)).join(" · ");
 
   const thumb = cleanSrc(item.thumbnail);
   const cleanGallery = (item.images ?? []).map(cleanSrc).filter((g) => g !== FALLBACK_SRC);
@@ -196,13 +211,14 @@ function mapItem(item: ErpItem): LibraryItem {
   // /api/fabrics which keeps `thumbnail` as `image`.
   const hero = sortedGallery[0] ?? thumb;
 
+  const priceNum = effectivePrice(item);
   return {
     sku: String(item.id),
     name: prettyName(item.name, item.categoryName),
     type: titleCase(item.categoryName),
     cloth,
-    price: `BHD ${effectivePrice(item)}`,
-    alt: [brand, pattern, color].filter(Boolean).join(" ").trim(),
+    price: priceNum > 0 ? `BHD ${priceNum}` : MISSING,
+    alt: [brand, pattern, color].filter((v) => !isMissing(v)).join(" ").trim(),
     description: detail,
     media: { kind: "photo", src: hero },
     // Gallery on the PDP uses only the on-form / detail shots the

@@ -219,12 +219,15 @@ export default async function ProductPage({
               <div className="mt-9 pt-7 border-t border-black/10">
                 <span className="text-eyebrow text-[var(--color-burgundy-700)]">Details</span>
                 <dl className="mt-5 border-t border-black/10">
-                  {specs.map((row) => (
-                    <div key={row.label} className="flex items-start justify-between gap-6 py-3 border-b border-black/10">
-                      <dt className="text-[0.72rem] tracking-[0.12em] uppercase text-[var(--color-charcoal-500)]">{row.label}</dt>
-                      <dd className="text-[0.88rem] text-[var(--color-charcoal-900)] text-right">{row.value}</dd>
-                    </div>
-                  ))}
+                  {specs.map((row) => {
+                    const missing = row.value === "Missing value";
+                    return (
+                      <div key={row.label} className="flex items-start justify-between gap-6 py-3 border-b border-black/10">
+                        <dt className="text-[0.72rem] tracking-[0.12em] uppercase text-[var(--color-charcoal-500)]">{row.label}</dt>
+                        <dd className={`text-[0.88rem] text-right ${missing ? "italic text-[var(--color-burgundy-700)]/70" : "text-[var(--color-charcoal-900)]"}`}>{row.value}</dd>
+                      </div>
+                    );
+                  })}
                 </dl>
               </div>
             </div>

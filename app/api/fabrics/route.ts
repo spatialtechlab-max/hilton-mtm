@@ -246,19 +246,28 @@ function toFabric(item: ErpItem) {
   // edits to drive the storefront; sellingPrice is the legacy fallback.
   const online = Number(item.onlinePrice ?? 0);
   const priceNum = Number.isFinite(online) && online > 0 ? online : Number(item.sellingPrice ?? 0);
+  // Per client direction: blank ERP fields surface as "Missing value"
+  // so the atelier can see what to backfill, instead of silently
+  // collapsing to "" / 0.
+  const MISSING = "Missing value";
+  const f = (v: string | number | undefined | null, transform: (s: string) => string = (s) => s): string => {
+    if (v === undefined || v === null) return MISSING;
+    const s = String(v).trim();
+    return s ? transform(decodeEntities(s)) : MISSING;
+  };
   return {
     sku: String(item.id),
-    code: item.code ? decodeEntities(item.code) : "",
+    code: f(item.code),
     name: titleCase(decodeEntities(stripPrefix(item.name, item.categoryName))),
-    brand: titleCase(decodeEntities(item.brandName || "")),
-    composition: item.description ? titleCase(decodeEntities(item.description)) : "",
-    pattern: titleCase(decodeEntities(item.design || "")),
-    color: titleCase(decodeEntities(item.color || "")),
-    shade: item.shade ? decodeEntities(item.shade) : "",
-    weight: item.weight ? item.weight.replace(/\s+/g, " ").trim() : "",
-    size: item.size ? decodeEntities(item.size) : "",
-    origin: titleCase(decodeEntities(item.origin || "")),
-    price: `BHD ${priceNum}`,
+    brand: f(item.brandName, titleCase),
+    composition: f(item.description, titleCase),
+    pattern: f(item.design, titleCase),
+    color: f(item.color, titleCase),
+    shade: f(item.shade),
+    weight: f(item.weight, (s) => s.replace(/\s+/g, " ").trim()),
+    size: f(item.size),
+    origin: f(item.origin, titleCase),
+    price: priceNum > 0 ? `BHD ${priceNum}` : MISSING,
     priceNum,
     // `image` is the primary swatch the picker tile shows; `gallery`
     // is the additional photos the atelier uploaded (usually a
