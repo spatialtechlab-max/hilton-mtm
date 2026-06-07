@@ -97,7 +97,7 @@ export default function AdminMediaPage() {
         Object.entries(grouped).map(([group, slots]) => (
           <section key={group} className="mb-12">
             <h2 className="text-display text-[1.4rem] mb-4 text-[var(--color-charcoal-900)]">{group}</h2>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {slots.map((slot) => (
                 <MediaSlotRow
                   key={slot.key}
@@ -162,32 +162,32 @@ function MediaSlotRow({
   }
 
   return (
-    <li className="border border-black/10 bg-[var(--color-ivory-100)] flex flex-col">
-      <div className="relative aspect-[16/10] overflow-hidden bg-[var(--color-ivory-200)]">
+    <li className="border border-black/10 bg-[var(--color-ivory-100)] flex gap-3 p-3">
+      <div className="relative shrink-0 w-28 h-28 overflow-hidden bg-[var(--color-ivory-200)]">
         <Image
           src={currentUrl}
           alt={currentAlt}
           fill
-          sizes="(min-width: 768px) 45vw, 95vw"
+          sizes="112px"
           className="object-cover"
         />
         {isOverridden && (
-          <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] text-eyebrow px-2.5 py-1">
-            <Check size={11} strokeWidth={1.8} /> Custom
+          <span className="absolute top-1 left-1 inline-flex items-center gap-1 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] text-[0.55rem] tracking-[0.15em] uppercase px-1.5 py-0.5">
+            <Check size={9} strokeWidth={1.8} /> Custom
           </span>
         )}
       </div>
-      <div className="p-5 flex flex-col gap-3">
-        <div>
-          <p className="text-display text-[1.05rem] text-[var(--color-charcoal-900)]">{slot.label}</p>
-          <p className="text-[0.78rem] text-[var(--color-charcoal-500)] mt-1 leading-relaxed">{slot.description}</p>
-          <p className="text-[0.7rem] text-[var(--color-charcoal-400)] mt-1 tabular-nums">{slot.key}</p>
+      <div className="flex-1 min-w-0 flex flex-col gap-2">
+        <div className="min-w-0">
+          <p className="text-display text-[0.95rem] text-[var(--color-charcoal-900)] leading-tight">{slot.label}</p>
+          <p className="text-[0.72rem] text-[var(--color-charcoal-500)] mt-1 leading-snug line-clamp-2">{slot.description}</p>
+          <p className="text-[0.65rem] text-[var(--color-charcoal-400)] mt-1 tabular-nums truncate">{slot.key}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 mt-1">
+        <div className="flex flex-wrap items-center gap-2 mt-auto">
           <label
-            className={`text-eyebrow inline-flex items-center gap-2 border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] px-4 py-2 cursor-pointer hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] transition-colors ${busy ? "opacity-50 pointer-events-none" : ""}`}
+            className={`text-[0.65rem] tracking-[0.15em] uppercase inline-flex items-center gap-1.5 border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] px-2.5 py-1.5 cursor-pointer hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] transition-colors ${busy ? "opacity-50 pointer-events-none" : ""}`}
           >
-            <Upload size={13} strokeWidth={1.5} />
+            <Upload size={11} strokeWidth={1.5} />
             {busy ? "Uploading…" : isOverridden ? "Replace" : "Upload"}
             <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleUpload} className="hidden" />
           </label>
@@ -196,9 +196,10 @@ function MediaSlotRow({
               type="button"
               onClick={revert}
               disabled={busy}
-              className="text-eyebrow inline-flex items-center gap-2 border border-black/15 px-4 py-2 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors disabled:opacity-50"
+              aria-label="Revert to default"
+              className="text-[0.65rem] tracking-[0.15em] uppercase inline-flex items-center gap-1.5 border border-black/15 px-2.5 py-1.5 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors disabled:opacity-50"
             >
-              <RotateCcw size={13} strokeWidth={1.5} /> Revert to default
+              <RotateCcw size={11} strokeWidth={1.5} /> Revert
             </button>
           )}
         </div>
