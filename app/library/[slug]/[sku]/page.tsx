@@ -275,7 +275,7 @@ export default async function ProductPage({
             <p className="text-[0.9rem] text-[var(--color-charcoal-700)] leading-relaxed">
               See how a bespoke commission comes together — from cloth, to cut, to your final fitting.
             </p>
-            <Link href="/process" className="mt-3 inline-flex items-center gap-2 text-eyebrow text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)] transition-colors">
+            <Link href="/made-to-measure" className="mt-3 inline-flex items-center gap-2 text-eyebrow text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)] transition-colors">
               Learn how it works <ArrowRight size={14} strokeWidth={1.5} />
             </Link>
           </div>

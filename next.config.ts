@@ -12,6 +12,14 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["framer-motion", "lucide-react"],
   },
+  // /process was the original slug; the nav labels it "Made to Measure"
+  // and the URL is now /made-to-measure to match. Keep the legacy path
+  // redirecting so any bookmark / shared link still resolves.
+  async redirects() {
+    return [
+      { source: "/process", destination: "/made-to-measure", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

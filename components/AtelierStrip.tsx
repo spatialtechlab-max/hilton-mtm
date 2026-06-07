@@ -29,7 +29,7 @@ export function AtelierStrip() {
           </div>
           <Reveal delay={0.2}>
             <Link
-              href="/process"
+              href="/made-to-measure"
               className="text-eyebrow inline-flex items-center gap-2 text-[var(--color-charcoal-900)] link-underline"
             >
               Read the process <ArrowRight size={14} strokeWidth={1.5} />

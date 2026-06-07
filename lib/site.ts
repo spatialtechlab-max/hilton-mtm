@@ -27,7 +27,7 @@ export const nav = [
   // category libraries cover the same purpose. Uncomment to bring it back.
   // { href: "/collection", label: "The Collection" },
   { href: "/customize", label: "Design Yours" },
-  { href: "/process", label: "Made to Measure" },
+  { href: "/made-to-measure", label: "Made to Measure" },
   { href: "/heritage", label: "Heritage" },
   { href: "/contact", label: "Contact" },
 ];

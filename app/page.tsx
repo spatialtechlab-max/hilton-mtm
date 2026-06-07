@@ -147,7 +147,7 @@ export default function HomePage() {
             </Reveal>
             <Reveal delay={0.4}>
               <div className="mt-10">
-                <Button href="/process" variant="outline">Read the Process</Button>
+                <Button href="/made-to-measure" variant="outline">Read the Process</Button>
               </div>
             </Reveal>
           </div>
