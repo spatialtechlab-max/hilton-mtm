@@ -6,6 +6,7 @@ import { ArrowUpRight } from "lucide-react";
 import { Reveal, SplitReveal } from "./Reveal";
 import { MediaImage } from "./MediaImage";
 import { fetchGarments, type Garment } from "@/lib/garments";
+import { MEDIA_SLOTS } from "@/lib/mediaSlots";
 
 /**
  * Landing tiles for /customize when the visitor hasn't picked a garment
@@ -65,17 +66,26 @@ function tileFor(g: Garment, featured: boolean): Tile {
   // The garments that map onto a real library page read their tile
   // photo from that library's cover slot — so editing the cover in
   // /admin/media updates BOTH the library hero and the Design Yours
-  // tile in one place. g.tile_image (set via /admin/garments) and the
-  // hardcoded asset remain as fallbacks for seasonal garments that
-  // don't have a library page (e.g. chinos, overcoat).
+  // tile in one place. When no admin override exists yet, the tile
+  // must fall back to the SAME image the library page uses, not the
+  // legacy /atelier/* swatch — otherwise the picker and the library
+  // hero render two different photos for the same garment.
   const hasLibrary = g.slug in LIBRARY_FOR_GARMENT;
+  const slotKey = hasLibrary ? `library.${librarySlug}.cover` : "";
+  const slotFallback = slotKey
+    ? MEDIA_SLOTS.find((s) => s.key === slotKey)?.fallback
+    : undefined;
   return {
     category: g.tile_eyebrow || (featured ? "Bespoke commission" : "Made to measure"),
     title: `Design a ${g.label.toLowerCase()}`,
     href: `/library/${librarySlug}`,
-    image: g.tile_image || assets.image,
+    // Priority: per-garment override from /admin/garments → the
+    // registry fallback for the matching library cover → the legacy
+    // hardcoded asset (last resort, only hits for chinos / overcoat
+    // when no per-garment image is set).
+    image: g.tile_image || slotFallback || assets.image,
     alt: assets.alt,
-    slot: hasLibrary ? `library.${librarySlug}.cover` : undefined,
+    slot: hasLibrary ? slotKey : undefined,
     fit: "cover",
   };
 }
