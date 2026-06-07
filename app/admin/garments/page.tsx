@@ -1,16 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, Eye, EyeOff, ArrowUpDown, Upload } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Eye, EyeOff, ArrowUpDown } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import {
   fetchGarments, upsertGarment, deleteGarment, toSlug,
   type Garment,
 } from "@/lib/garments";
-import { uploadEditorialImage } from "@/lib/media";
 
 /**
  * Garment management. The atelier rotates commissions seasonally
@@ -82,19 +80,6 @@ export default function AdminGarmentsPage() {
     setBusy(null);
     if (e) { setError(e); return; }
     setGarments((arr) => arr.map((g) => (g.slug === slug ? { ...g, ...partial } : g)));
-  }
-
-  async function uploadTile(slug: string, file: File) {
-    setBusy(slug);
-    setError(null);
-    try {
-      const url = await uploadEditorialImage(file);
-      await patch(slug, { tile_image: url });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed.");
-    } finally {
-      setBusy(null);
-    }
   }
 
   async function remove(slug: string) {
@@ -202,43 +187,7 @@ export default function AdminGarmentsPage() {
         <ul className="border-y border-black/10 divide-y divide-black/10">
           {garments.map((g) => (
             <li key={g.slug} className="grid grid-cols-12 gap-3 items-center py-4 px-2">
-              {/* Tile image — upload / replace / clear. Falls back to the
-                  hardcoded asset in DesignYoursPicker when empty. */}
-              <div className="col-span-12 sm:col-span-2 flex items-center gap-2">
-                <div className="relative w-16 h-16 shrink-0 overflow-hidden bg-[var(--color-ivory-200)] border border-black/10">
-                  {g.tile_image ? (
-                    <Image src={g.tile_image} alt={g.label} fill sizes="64px" className="object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[0.6rem] tracking-[0.15em] uppercase text-[var(--color-charcoal-400)]">
-                      Default
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label
-                    className={`text-[0.62rem] tracking-[0.15em] uppercase inline-flex items-center gap-1 border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] px-2 py-1 cursor-pointer hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] transition-colors ${busy === g.slug ? "opacity-50 pointer-events-none" : ""}`}
-                  >
-                    <Upload size={10} strokeWidth={1.5} />
-                    {busy === g.slug ? "Uploading…" : g.tile_image ? "Replace" : "Upload"}
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadTile(g.slug, f); e.target.value = ""; }}
-                      className="hidden"
-                    />
-                  </label>
-                  {g.tile_image && (
-                    <button
-                      type="button"
-                      onClick={() => patch(g.slug, { tile_image: "" })}
-                      className="text-[0.6rem] tracking-[0.15em] uppercase text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors text-left"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="col-span-12 sm:col-span-3">
+              <div className="col-span-12 sm:col-span-4">
                 <input
                   type="text"
                   value={g.label}

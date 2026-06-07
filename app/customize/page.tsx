@@ -894,18 +894,10 @@ function OptionGrid({
           >
             <div className="relative w-full aspect-[4/5] overflow-hidden">
               {kind === "diagram" && (
-                <Image
-                  // Prefer the atelier's uploaded image (opt.image, fed
-                  // from mtm_options.image_url) when present, so anything
-                  // changed via /admin actually reflects on the customer
-                  // tile. Falls back to the built-in booklet diagram at
-                  // /public/customizer/<slug>/<value>.png otherwise.
+                <OptionDiagram
                   src={opt.image ?? `/customizer/${step.slug}/${opt.value}.png`}
                   alt={opt.label}
-                  fill
-                  sizes="(min-width: 1024px) 18vw, (min-width: 640px) 30vw, 45vw"
-                  loading={i < 4 ? "eager" : "lazy"}
-                  className="object-contain p-2.5 md:p-3.5"
+                  eager={i < 4}
                 />
               )}
               {kind === "swatch" && (
@@ -1765,6 +1757,29 @@ function SummaryPanel({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Customizer option diagram with a graceful fallback. When an admin
+ * adds a new option in /admin without uploading its illustration, the
+ * default /customizer/<slug>/<value>.png file doesn't exist and Image
+ * would just render an alt-text-only broken tile. Swap in the
+ * no-image placeholder on error so the customer never sees that.
+ */
+function OptionDiagram({ src, alt, eager }: { src: string; alt: string; eager: boolean }) {
+  const [resolved, setResolved] = useState(src);
+  useEffect(() => { setResolved(src); }, [src]);
+  return (
+    <Image
+      src={resolved}
+      alt={alt}
+      fill
+      sizes="(min-width: 1024px) 18vw, (min-width: 640px) 30vw, 45vw"
+      loading={eager ? "eager" : "lazy"}
+      className="object-contain p-2.5 md:p-3.5"
+      onError={() => setResolved("/products/no-image.svg")}
+    />
   );
 }
 
