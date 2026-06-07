@@ -93,6 +93,7 @@ export default function ProcessPage() {
         eyebrow="The Method"
         title="Made to Measure."
         intro="Two ways to get your perfect fit. Sit down with us in person, or design your clothing from the comfort of your home. The process is built around you — your lifestyle, your needs."
+        slot="process.hero"
         image={{
           src: "https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=1400&auto=format&fit=crop",
           alt: "A basted jacket on the cutting table",

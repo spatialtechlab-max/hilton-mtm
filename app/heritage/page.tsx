@@ -1,9 +1,11 @@
-import Image from "next/image";
 import { PageHero } from "@/components/PageHero";
 import { Reveal, SplitReveal } from "@/components/Reveal";
 import { CtaBanner } from "@/components/CtaBanner";
 import { MillBookGallery } from "@/components/MillBookGallery";
-import { PlaceholderBadge } from "@/components/PlaceholderBadge";
+import { MediaImage } from "@/components/MediaImage";
+import { MEDIA_SLOTS } from "@/lib/mediaSlots";
+
+const HERITAGE_ATELIER = MEDIA_SLOTS.find((s) => s.key === "heritage.atelier")!;
 
 const timeline = [
   {
@@ -45,6 +47,7 @@ export default function HeritagePage() {
         eyebrow="Since 1970"
         title="Heritage."
         intro="Three generations of tailors. One workshop, born in the Manama Souq. A passion for the craft that began with a single pair of hands and has only grown."
+        slot="heritage.hero"
         image={{
           src: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1600&auto=format&fit=crop",
           alt: "An archive photograph of the original atelier",
@@ -88,10 +91,10 @@ export default function HeritagePage() {
       {/* Atelier image full bleed */}
       <section>
         <div className="relative h-[60vh] min-h-[420px] w-full">
-          <PlaceholderBadge />
-          <Image
-            src="https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=2400&auto=format&fit=crop"
-            alt="The Hilton Tailoring House atelier floor in Manama"
+          <MediaImage
+            slot={HERITAGE_ATELIER.key}
+            fallback={HERITAGE_ATELIER.fallback}
+            fallbackAlt={HERITAGE_ATELIER.fallbackAlt}
             fill
             sizes="100vw"
             className="object-cover"

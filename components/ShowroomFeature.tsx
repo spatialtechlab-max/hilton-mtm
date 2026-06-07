@@ -1,7 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Reveal, SplitReveal } from "./Reveal";
+import { MediaImage } from "./MediaImage";
+import { MEDIA_SLOTS } from "@/lib/mediaSlots";
+
+const HOME_SHOWROOM = MEDIA_SLOTS.find((s) => s.key === "home.showroom")!;
 
 // A single editorial feature panel — the showroom shot of a double-breasted
 // commission on the form. Sits between the process tease and the final CTA.
@@ -12,9 +15,10 @@ export function ShowroomFeature() {
         <div className="lg:col-span-7">
           <Reveal>
             <div className="relative aspect-[4/5] lg:aspect-[5/4] overflow-hidden">
-              <Image
-                src="/atelier/showroom-double-breasted.jpg"
-                alt="A bespoke double-breasted suit on the form at the Hilton atelier"
+              <MediaImage
+                slot={HOME_SHOWROOM.key}
+                fallback={HOME_SHOWROOM.fallback}
+                fallbackAlt={HOME_SHOWROOM.fallbackAlt}
                 fill
                 sizes="(min-width: 1024px) 58vw, 100vw"
                 className="object-cover"

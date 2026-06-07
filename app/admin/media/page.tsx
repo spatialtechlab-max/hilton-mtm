@@ -181,6 +181,9 @@ function MediaSlotRow({
         <div className="min-w-0">
           <p className="text-display text-[0.95rem] text-[var(--color-charcoal-900)] leading-tight">{slot.label}</p>
           <p className="text-[0.72rem] text-[var(--color-charcoal-500)] mt-1 leading-snug line-clamp-2">{slot.description}</p>
+          <p className="text-[0.7rem] text-[var(--color-burgundy-700)] mt-1.5 font-medium tabular-nums">
+            Recommended: {slot.recommendedSize} · aspect {slot.aspect}
+          </p>
           <p className="text-[0.65rem] text-[var(--color-charcoal-400)] mt-1 tabular-nums truncate">{slot.key}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-auto">
