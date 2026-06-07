@@ -156,8 +156,8 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     fallback:
       "https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=1800&auto=format&fit=crop",
     fallbackAlt: "A bespoke navy windowpane suit, hand-finished",
-    aspect: "3/4",
-    recommendedSize: "1200 × 1600 px",
+    aspect: "3/2",
+    recommendedSize: "1800 × 1200 px",
   },
   {
     key: "library.suits.cover",
@@ -167,8 +167,8 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     fallback:
       "https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=1800&auto=format&fit=crop",
     fallbackAlt: "A bespoke navy windowpane suit, hand-finished",
-    aspect: "3/4",
-    recommendedSize: "1200 × 1600 px",
+    aspect: "3/2",
+    recommendedSize: "1800 × 1200 px",
   },
   {
     key: "library.jackets.cover",
@@ -177,8 +177,8 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     description: "Hero photo for /library/jackets — standalone sport coats.",
     fallback: "https://erp.hiltontailoringhouse.com/uploads/item_rawmaterial/1585_pic_cropped.jpg",
     fallbackAlt: "A standalone bespoke jacket on the form",
-    aspect: "3/4",
-    recommendedSize: "1200 × 1600 px",
+    aspect: "3/2",
+    recommendedSize: "1800 × 1200 px",
   },
   {
     key: "library.shirts.cover",
@@ -188,8 +188,8 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     fallback:
       "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=1800&auto=format&fit=crop",
     fallbackAlt: "A crisp white made-to-measure dress shirt",
-    aspect: "3/4",
-    recommendedSize: "1200 × 1600 px",
+    aspect: "3/2",
+    recommendedSize: "1800 × 1200 px",
   },
   {
     key: "library.trousers.cover",
@@ -199,8 +199,8 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     fallback:
       "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?q=80&w=1800&auto=format&fit=crop",
     fallbackAlt: "Tailored wool trousers",
-    aspect: "3/4",
-    recommendedSize: "1200 × 1600 px",
+    aspect: "3/2",
+    recommendedSize: "1800 × 1200 px",
   },
   {
     key: "library.shoes.cover",
@@ -209,8 +209,8 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     description: "Hero photo for /library/shoes.",
     fallback: "/products/shoes/5308-marrone.png",
     fallbackAlt: "Double-monk in vintage marrone, polished calf and suede combination",
-    aspect: "3/4",
-    recommendedSize: "1200 × 1600 px",
+    aspect: "3/2",
+    recommendedSize: "1800 × 1200 px",
   },
   {
     key: "library.ties.cover",
@@ -219,8 +219,8 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     description: "Hero photo for /library/ties.",
     fallback: "/products/ties/HBTS082.webp",
     fallbackAlt: "Navy paisley silk tie in 8-fold Como silk",
-    aspect: "3/4",
-    recommendedSize: "1200 × 1600 px",
+    aspect: "3/2",
+    recommendedSize: "1800 × 1200 px",
   },
   {
     key: "library.belts.cover",
@@ -229,8 +229,8 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     description: "Hero photo for /library/belts.",
     fallback: "https://erp.hiltontailoringhouse.com/uploads/item_rawmaterial/679_pic_cropped.jpg",
     fallbackAlt: "A leather dress belt",
-    aspect: "3/4",
-    recommendedSize: "1200 × 1600 px",
+    aspect: "3/2",
+    recommendedSize: "1800 × 1200 px",
   },
   {
     key: "library.cloths.cover",
@@ -239,20 +239,20 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     description: "Hero photo for /library/cloths.",
     fallback: "https://erp.hiltontailoringhouse.com/uploads/item_rawmaterial/1542_pic_cropped.jpg",
     fallbackAlt: "A roll of suiting fabric",
-    aspect: "3/4",
-    recommendedSize: "1200 × 1600 px",
+    aspect: "3/2",
+    recommendedSize: "1800 × 1200 px",
   },
   {
     key: "heritage.hero",
     group: "Editorial",
     label: "Heritage page — hero photo",
     description:
-      "The portrait image beside 'Heritage.' at the top of /heritage.",
+      "The landscape image beside 'Heritage.' at the top of /heritage.",
     fallback:
       "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1600&auto=format&fit=crop",
     fallbackAlt: "An archive photograph of the original atelier",
-    aspect: "3/4",
-    recommendedSize: "1200 × 1600 px",
+    aspect: "3/2",
+    recommendedSize: "1800 × 1200 px",
   },
   {
     key: "heritage.atelier",
@@ -269,19 +269,19 @@ export const MEDIA_SLOTS: MediaSlot[] = [
   {
     key: "process.hero",
     group: "Editorial",
-    label: "Process page — hero photo",
+    label: "Made to Measure page — hero photo",
     description:
-      "The portrait image beside 'Made to Measure.' at the top of /process. Use a portrait shot (taller than wide) so it doesn't get cropped.",
+      "The landscape image beside 'Made to Measure.' at the top of /made-to-measure. Use a wide shot (wider than tall) so it doesn't get cropped.",
     fallback:
       "https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=1400&auto=format&fit=crop",
     fallbackAlt: "A basted jacket on the cutting table",
-    aspect: "3/4",
-    recommendedSize: "1200 × 1600 px",
+    aspect: "3/2",
+    recommendedSize: "1800 × 1200 px",
   },
   {
     key: "process.instore",
     group: "Editorial",
-    label: "Process page — In-Store Experience photo",
+    label: "Made to Measure page — In-Store Experience photo",
     description:
       "The portrait image beside 'The In-Store Experience.' on /process.",
     fallback:
@@ -293,7 +293,7 @@ export const MEDIA_SLOTS: MediaSlot[] = [
   {
     key: "process.online",
     group: "Editorial",
-    label: "Process page — Online Experience photo",
+    label: "Made to Measure page — Online Experience photo",
     description:
       "The portrait image beside 'The Online Experience.' on /process.",
     fallback:
@@ -406,8 +406,8 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     fallback:
       "https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=1400&auto=format&fit=crop",
     fallbackAlt: "The Hilton Tailoring House atelier",
-    aspect: "3/4",
-    recommendedSize: "1200 × 1600 px",
+    aspect: "3/2",
+    recommendedSize: "1800 × 1200 px",
   },
 
 ];

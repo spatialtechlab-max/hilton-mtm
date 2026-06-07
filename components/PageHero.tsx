@@ -38,7 +38,7 @@ export function PageHero({
         </div>
         <div>
           <Reveal delay={0.35}>
-            <div className="relative aspect-[3/4] overflow-hidden hover-grow grain">
+            <div className="relative aspect-[5/4] lg:aspect-[3/2] overflow-hidden hover-grow grain">
               {slot ? (
                 <MediaImage
                   slot={slot}

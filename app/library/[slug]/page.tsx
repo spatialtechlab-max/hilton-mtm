@@ -95,7 +95,7 @@ export default async function LibraryPage({
             <div>
               <Reveal delay={0.3}>
                 <div
-                  className={`relative aspect-[3/4] overflow-hidden hover-grow ${
+                  className={`relative aspect-[5/4] lg:aspect-[3/2] overflow-hidden hover-grow ${
                     lib.heroImage.startsWith("/products/") ? "bg-[var(--color-ivory-200)]" : "grain"
                   }`}
                 >
