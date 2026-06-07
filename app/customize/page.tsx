@@ -1258,7 +1258,7 @@ function FabricLightbox({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-6xl bg-[var(--color-ivory-100)] overflow-hidden grid grid-cols-1 md:grid-cols-12 max-h-[92vh] overflow-y-auto"
+        className="relative w-full max-w-6xl bg-[var(--color-ivory-100)] overflow-hidden grid grid-cols-1 md:grid-cols-12 max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -1270,9 +1270,11 @@ function FabricLightbox({
           <X size={18} strokeWidth={1.5} />
         </button>
 
-        {/* Image column — large hero on the left + thumbnail strip below. */}
-        <div className="md:col-span-7 bg-[var(--color-ivory-200)] flex flex-col">
-          <div className="relative aspect-[4/5] md:aspect-[3/4]">
+        {/* Image column — sized to the viewport so the thumbnail strip
+            never falls below the fold. Image area flexes to fill the
+            remaining height after the strip claims its space. */}
+        <div className="md:col-span-7 bg-[var(--color-ivory-200)] flex flex-col md:h-[88vh] md:max-h-[88vh]">
+          <div className="relative aspect-[4/5] md:aspect-auto md:flex-1 md:min-h-0">
             <img
               src={current}
               alt={`${fabric.brand} ${fabric.name}`}
@@ -1299,11 +1301,10 @@ function FabricLightbox({
               </>
             )}
           </div>
-          {/* Thumbnail strip — always rendered when there's any image so
-              the customer never wonders if more shots exist. The strip
-              is sticky to the bottom of the image column so it stays
-              visible even when the modal content scrolls. */}
-          <div className="px-4 md:px-5 py-3 flex items-center gap-2 overflow-x-auto bg-[var(--color-ivory-100)] border-t border-black/10">
+          {/* Thumbnail strip — pinned to the bottom of the image column
+              and inside the viewport-sized parent above, so it's always
+              visible without scrolling. */}
+          <div className="md:shrink-0 px-4 md:px-5 py-3 flex items-center gap-2 overflow-x-auto bg-[var(--color-ivory-100)] border-t border-black/10">
             {shots.map((s, i) => {
               const active = i === safeIndex;
               return (
@@ -1334,8 +1335,10 @@ function FabricLightbox({
         </div>
 
         {/* Info column — PDP-style: type eyebrow, name, composition,
-            price, primary CTA, then the Details spec table. */}
-        <div className="md:col-span-5 p-7 md:p-10 flex flex-col">
+            price, primary CTA, then the Details spec table. Scrolls
+            independently if the spec list grows past the viewport so
+            the image column on the left stays pinned in place. */}
+        <div className="md:col-span-5 p-7 md:p-10 flex flex-col md:h-[88vh] md:max-h-[88vh] md:overflow-y-auto">
           <span className="text-eyebrow text-[var(--color-burgundy-700)]">
             {fabric.erpCategory
               ? fabric.erpCategory.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
