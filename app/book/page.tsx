@@ -165,7 +165,7 @@ export default function BookPage() {
 
           <aside className="lg:col-span-4 lg:col-start-9 order-1 lg:order-2 lg:sticky lg:top-32">
             <Reveal>
-              <div className="relative aspect-[4/5] overflow-hidden">
+              <div className="relative aspect-[5/4] lg:aspect-[3/2] overflow-hidden">
                 <MediaImage
                   slot={BOOK_HERO.key}
                   fallback={BOOK_HERO.fallback}
