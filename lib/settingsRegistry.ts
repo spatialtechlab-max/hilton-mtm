@@ -51,25 +51,25 @@ export const SETTINGS: SettingDef[] = [
     kind: "currency",
   },
 
-  // Tier pricing — Suit
-  { key: "tier.price.suit.essential", group: "Pricing — Suit", label: "Suit · Essentials",  defaultValue: "BHD 800",   kind: "currency" },
-  { key: "tier.price.suit.signature", group: "Pricing — Suit", label: "Suit · Signature",   defaultValue: "BHD 1,400", kind: "currency" },
-  { key: "tier.price.suit.bespoke",   group: "Pricing — Suit", label: "Suit · Full Bespoke", defaultValue: "BHD 2,200", kind: "currency" },
+  // Tier pricing — Suit. Essentials is *always* the cloth price from
+  // the ERP, so it has no row here. Signature and Full Bespoke values
+  // are the UPGRADE ABOVE Essentials: customer pays (fabric price +
+  // this value). Example: fabric is BHD 350, Signature row is 100 →
+  // customer sees Signature = BHD 450 on the tier picker.
+  { key: "tier.price.suit.signature", group: "Pricing — Suit", label: "Suit · Signature upgrade",   description: "Added to the fabric price to make the Signature commission total.", defaultValue: "BHD 600",   kind: "currency" },
+  { key: "tier.price.suit.bespoke",   group: "Pricing — Suit", label: "Suit · Full Bespoke upgrade", description: "Added to the fabric price to make the Full Bespoke commission total.", defaultValue: "BHD 1,400", kind: "currency" },
 
   // Tier pricing — Jacket
-  { key: "tier.price.jacket.essential", group: "Pricing — Jacket", label: "Jacket · Essentials",  defaultValue: "BHD 600",   kind: "currency" },
-  { key: "tier.price.jacket.signature", group: "Pricing — Jacket", label: "Jacket · Signature",   defaultValue: "BHD 1,000", kind: "currency" },
-  { key: "tier.price.jacket.bespoke",   group: "Pricing — Jacket", label: "Jacket · Full Bespoke", defaultValue: "BHD 1,800", kind: "currency" },
+  { key: "tier.price.jacket.signature", group: "Pricing — Jacket", label: "Jacket · Signature upgrade",   description: "Added to the fabric price to make the Signature commission total.", defaultValue: "BHD 400", kind: "currency" },
+  { key: "tier.price.jacket.bespoke",   group: "Pricing — Jacket", label: "Jacket · Full Bespoke upgrade", description: "Added to the fabric price to make the Full Bespoke commission total.", defaultValue: "BHD 1,200", kind: "currency" },
 
   // Tier pricing — Shirt
-  { key: "tier.price.shirt.essential", group: "Pricing — Shirt", label: "Shirt · Essentials",  defaultValue: "BHD 120", kind: "currency" },
-  { key: "tier.price.shirt.signature", group: "Pricing — Shirt", label: "Shirt · Signature",   defaultValue: "BHD 180", kind: "currency" },
-  { key: "tier.price.shirt.bespoke",   group: "Pricing — Shirt", label: "Shirt · Full Bespoke", defaultValue: "BHD 280", kind: "currency" },
+  { key: "tier.price.shirt.signature", group: "Pricing — Shirt", label: "Shirt · Signature upgrade",   description: "Added to the fabric price to make the Signature commission total.", defaultValue: "BHD 60",  kind: "currency" },
+  { key: "tier.price.shirt.bespoke",   group: "Pricing — Shirt", label: "Shirt · Full Bespoke upgrade", description: "Added to the fabric price to make the Full Bespoke commission total.", defaultValue: "BHD 160", kind: "currency" },
 
   // Tier pricing — Trouser
-  { key: "tier.price.trouser.essential", group: "Pricing — Trouser", label: "Trouser · Essentials",  defaultValue: "BHD 220", kind: "currency" },
-  { key: "tier.price.trouser.signature", group: "Pricing — Trouser", label: "Trouser · Signature",   defaultValue: "BHD 320", kind: "currency" },
-  { key: "tier.price.trouser.bespoke",   group: "Pricing — Trouser", label: "Trouser · Full Bespoke", defaultValue: "BHD 480", kind: "currency" },
+  { key: "tier.price.trouser.signature", group: "Pricing — Trouser", label: "Trouser · Signature upgrade",   description: "Added to the fabric price to make the Signature commission total.", defaultValue: "BHD 100", kind: "currency" },
+  { key: "tier.price.trouser.bespoke",   group: "Pricing — Trouser", label: "Trouser · Full Bespoke upgrade", description: "Added to the fabric price to make the Full Bespoke commission total.", defaultValue: "BHD 260", kind: "currency" },
 
   // Tier copy — lead time + fittings shown under each tier card
   // (shared across all garments; the same values render for suit /

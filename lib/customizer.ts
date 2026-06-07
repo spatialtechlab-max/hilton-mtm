@@ -733,19 +733,28 @@ function formatBhd(v: string | number): string {
   return Number.isFinite(n) ? `BHD ${n.toLocaleString()}` : trimmed;
 }
 
+/** Parse a "BHD 350" / "350" / "350.00" string into a number. */
+function priceToNumber(v: string | number | null | undefined): number {
+  if (v === null || v === undefined) return 0;
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  const m = String(v).replace(/,/g, "").match(/[-+]?\d*\.?\d+/);
+  return m ? Number(m[0]) : 0;
+}
+
 /**
  * Resolution chain for the tier price shown on the customizer:
  *
- *   Essentials slug:
- *     1. opts.essentialOverride (the fabric price from the PDP) — wins
- *        whenever a fabric is picked.
- *     2. settings[`tier.price.<cat>.essential`] — atelier override from
- *        /admin/settings.
- *     3. TIER_PRICE_BY_CATEGORY[cat].essential — the code default.
+ *   Essentials = the fabric price (essentialOverride). Never has its
+ *   own admin override — per client direction the Essentials commission
+ *   IS the cloth, nothing on top.
  *
- *   Signature / Full Bespoke:
- *     1. settings[`tier.price.<cat>.<slug>`] — admin override.
- *     2. TIER_PRICE_BY_CATEGORY[cat][slug] — code default.
+ *   Signature / Full Bespoke = Essentials + the admin's upgrade amount.
+ *   The settings rows in /admin/settings hold the *delta* above the
+ *   cloth price, not the absolute commission price. So if the customer
+ *   picked a BHD 350 fabric and admin set Signature = 100, the tile
+ *   reads BHD 450. If no fabric is picked (rare, only basePrice math
+ *   before fabric phase) we fall back to the static defaults so the
+ *   numbers don't read "BHD 100" out of context.
  */
 export function tierPriceFor(
   cat: StepCategory,
@@ -756,11 +765,16 @@ export function tierPriceFor(
   },
 ): string {
   const slug = (tierSlug as TierLevel) in TIER_RANK ? (tierSlug as TierLevel) : "signature";
-  if (slug === "essential" && opts?.essentialOverride != null && opts.essentialOverride !== "") {
-    return formatBhd(opts.essentialOverride);
+  const essentialNum = priceToNumber(opts?.essentialOverride ?? null);
+  if (slug === "essential") {
+    if (essentialNum > 0) return formatBhd(essentialNum);
+    return TIER_PRICE_BY_CATEGORY[cat].essential;
   }
-  const override = opts?.settings?.[`tier.price.${cat}.${slug}`];
-  if (override && override.trim() !== "") return formatBhd(override);
+  const upgrade = opts?.settings?.[`tier.price.${cat}.${slug}`];
+  const upgradeNum = priceToNumber(upgrade);
+  if (essentialNum > 0 && upgradeNum > 0) return formatBhd(essentialNum + upgradeNum);
+  if (essentialNum > 0) return formatBhd(essentialNum);
+  if (upgradeNum > 0) return formatBhd(upgradeNum);
   return TIER_PRICE_BY_CATEGORY[cat][slug];
 }
 
