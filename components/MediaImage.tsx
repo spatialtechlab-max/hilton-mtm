@@ -24,6 +24,7 @@ export function MediaImage({
   const [alt, setAlt] = useState<string>(fallbackAlt);
 
   useEffect(() => {
+    if (!slot) return; // no slot → static fallback only, skip the lookup.
     let cancelled = false;
     fetchMediaSlot(slot)
       .then((row) => {

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Reveal, SplitReveal } from "./Reveal";
+import { MediaImage } from "./MediaImage";
 import { fetchGarments, type Garment } from "@/lib/garments";
 
 /**
@@ -24,6 +24,10 @@ type Tile = {
   href: string;
   image: string;
   alt: string;
+  /** When set, the tile reads its photo from this /admin/media slot
+   *  (e.g. library.shirts.cover) so the picker stays in sync with the
+   *  matching library hero. The `image` field acts as the fallback. */
+  slot?: string;
   /** "cover" for editorial photographs, "contain" for transparent pngs */
   fit?: "cover" | "contain";
 };
@@ -58,15 +62,20 @@ const LIBRARY_FOR_GARMENT: Record<string, string> = {
 function tileFor(g: Garment, featured: boolean): Tile {
   const assets = TILE_ASSETS[g.slug] ?? GENERIC_TILE;
   const librarySlug = LIBRARY_FOR_GARMENT[g.slug] ?? g.slug;
+  // The garments that map onto a real library page read their tile
+  // photo from that library's cover slot — so editing the cover in
+  // /admin/media updates BOTH the library hero and the Design Yours
+  // tile in one place. g.tile_image (set via /admin/garments) and the
+  // hardcoded asset remain as fallbacks for seasonal garments that
+  // don't have a library page (e.g. chinos, overcoat).
+  const hasLibrary = g.slug in LIBRARY_FOR_GARMENT;
   return {
     category: g.tile_eyebrow || (featured ? "Bespoke commission" : "Made to measure"),
     title: `Design a ${g.label.toLowerCase()}`,
-    // Land on the library so the customer browses the cloth catalogue
-    // first (identical UX to Made to Measure), picks a piece, then hits
-    // the 'Customise this …' CTA on the PDP.
     href: `/library/${librarySlug}`,
     image: g.tile_image || assets.image,
     alt: assets.alt,
+    slot: hasLibrary ? `library.${librarySlug}.cover` : undefined,
     fit: "cover",
   };
 }
@@ -199,13 +208,27 @@ function CustomizeTile({ tile, large = false }: { tile: Tile; large?: boolean })
         large ? "aspect-[4/5] lg:aspect-auto lg:h-full" : "aspect-[16/10]"
       }`}
     >
-      <Image
-        src={tile.image}
-        alt={tile.alt}
-        fill
-        sizes="(min-width: 1024px) 50vw, 100vw"
-        className={imgClass}
-      />
+      {tile.slot ? (
+        <MediaImage
+          slot={tile.slot}
+          fallback={tile.image}
+          fallbackAlt={tile.alt}
+          fill
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          className={imgClass}
+        />
+      ) : (
+        // Garments without a matching library page (e.g. chinos, overcoat)
+        // still render the per-garment tile_image / hardcoded fallback.
+        <MediaImage
+          slot=""
+          fallback={tile.image}
+          fallbackAlt={tile.alt}
+          fill
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          className={imgClass}
+        />
+      )}
       {fit === "cover" && (
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
       )}
