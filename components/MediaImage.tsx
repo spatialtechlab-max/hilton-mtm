@@ -1,15 +1,15 @@
-"use client";
-
 import Image, { type ImageProps } from "next/image";
-import { useEffect, useState } from "react";
-import { fetchMediaSlot } from "@/lib/media";
+import { fetchMediaSlotServer } from "@/lib/mediaServer";
 
 /**
- * Renders a hero / cover image whose source can be overridden by the
- * atelier via /admin/media. Falls back to the static `fallback`
- * (whatever the page used before) until the override loads. Designed
- * to be a drop-in replacement for <Image> everywhere a `slot` exists
- * in MEDIA_SLOTS.
+ * Server-rendered hero / cover image. Reads the atelier override for
+ * `slot` from mtm_media at request time (with 60s ISR) so the HTML
+ * ships with the correct URL — no flash of the static fallback while
+ * the client hydrates.
+ *
+ * For pages that MUST be client components (admin previews, the
+ * customizer landing picker, the booking form) import the equivalent
+ * <MediaImageClient> instead.
  */
 type MediaImageProps = Omit<ImageProps, "src" | "alt"> & {
   slot: string;
@@ -17,24 +17,17 @@ type MediaImageProps = Omit<ImageProps, "src" | "alt"> & {
   fallbackAlt: string;
 };
 
-export function MediaImage({
+export async function MediaImage({
   slot, fallback, fallbackAlt, ...rest
 }: MediaImageProps) {
-  const [src, setSrc] = useState<string>(fallback);
-  const [alt, setAlt] = useState<string>(fallbackAlt);
-
-  useEffect(() => {
-    if (!slot) return; // no slot → static fallback only, skip the lookup.
-    let cancelled = false;
-    fetchMediaSlot(slot)
-      .then((row) => {
-        if (cancelled || !row?.url) return;
-        setSrc(row.url);
-        if (row.alt) setAlt(row.alt);
-      })
-      .catch(() => { /* keep fallback */ });
-    return () => { cancelled = true; };
-  }, [slot]);
-
+  let src = fallback;
+  let alt = fallbackAlt;
+  if (slot) {
+    const row = await fetchMediaSlotServer(slot);
+    if (row?.url) {
+      src = row.url;
+      if (row.alt) alt = row.alt;
+    }
+  }
   return <Image src={src} alt={alt} {...rest} />;
 }

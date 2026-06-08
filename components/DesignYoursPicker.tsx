@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Reveal, SplitReveal } from "./Reveal";
-import { MediaImage } from "./MediaImage";
+import { MediaImageClient } from "./MediaImageClient";
 import { fetchGarments, type Garment } from "@/lib/garments";
 import { MEDIA_SLOTS } from "@/lib/mediaSlots";
 
@@ -219,7 +219,7 @@ function CustomizeTile({ tile, large = false }: { tile: Tile; large?: boolean })
       }`}
     >
       {tile.slot ? (
-        <MediaImage
+        <MediaImageClient
           slot={tile.slot}
           fallback={tile.image}
           fallbackAlt={tile.alt}
@@ -230,7 +230,7 @@ function CustomizeTile({ tile, large = false }: { tile: Tile; large?: boolean })
       ) : (
         // Garments without a matching library page (e.g. chinos, overcoat)
         // still render the per-garment tile_image / hardcoded fallback.
-        <MediaImage
+        <MediaImageClient
           slot=""
           fallback={tile.image}
           fallbackAlt={tile.alt}

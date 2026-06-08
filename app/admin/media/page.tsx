@@ -18,7 +18,7 @@ import { alphaKeyToPng } from "@/lib/imageKey";
  * homepage hero, library covers, heritage banner. Each slot in
  * MEDIA_SLOTS gets a row; admin can upload a replacement (lands in the
  * mtm-media/editorial bucket), revert to the default, or live-preview
- * the current image. The render-side <MediaImage slot=…> picks up the
+ * the current image. The render-side <MediaImageClient slot=…> picks up the
  * change automatically.
  */
 export default function AdminMediaPage() {

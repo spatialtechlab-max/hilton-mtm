@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { Reveal, SplitReveal } from "@/components/Reveal";
-import { MediaImage } from "@/components/MediaImage";
+import { MediaImageClient } from "@/components/MediaImageClient";
 import { MEDIA_SLOTS } from "@/lib/mediaSlots";
 
 const BOOK_HERO = MEDIA_SLOTS.find((s) => s.key === "book.hero")!;
@@ -166,7 +166,7 @@ export default function BookPage() {
           <aside className="lg:col-span-4 lg:col-start-9 order-1 lg:order-2 lg:sticky lg:top-32">
             <Reveal>
               <div className="relative aspect-[5/4] lg:aspect-[3/2] overflow-hidden">
-                <MediaImage
+                <MediaImageClient
                   slot={BOOK_HERO.key}
                   fallback={BOOK_HERO.fallback}
                   fallbackAlt={BOOK_HERO.fallbackAlt}
