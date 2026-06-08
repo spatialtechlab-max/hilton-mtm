@@ -141,10 +141,24 @@ function FilterRow({
 /** Same card the server component used to render — moved here so the
  *  client-side filtered grid keeps the visual rhythm. */
 function ProductCard({ item, slug }: { item: LibraryItem; slug: string }) {
+  // ERP product photos are studio shots with a white background. We
+  // drop that background by:
+  //   1. switching to object-contain + padding so the garment isn't
+  //      cropped to the tile edge,
+  //   2. setting the tile bg to the page's cream (ivory-100) so the
+  //      blend has the right colour behind it,
+  //   3. applying mix-blend-mode: multiply on the img so every white
+  //      pixel multiplies with the cream behind it and disappears,
+  //      while the garment itself stays unchanged.
   const isProductPhoto =
     item.media.kind === "photo" && item.media.src.startsWith("/products/");
-  const imgClass = isProductPhoto ? "object-contain p-5 md:p-6" : "object-cover";
-  const tileBg = "bg-[var(--color-ivory-200)]";
+  const isErpPhoto =
+    item.media.kind === "photo" && item.media.src.includes("erp.hiltontailoringhouse.com");
+  const wantsContain = isProductPhoto || isErpPhoto;
+  const imgClass = wantsContain ? "object-contain p-5 md:p-6" : "object-cover";
+  const tileBg = wantsContain
+    ? "bg-[var(--color-ivory-100)]"
+    : "bg-[var(--color-ivory-200)]";
 
   return (
     <Link href={`/library/${slug}/${item.sku}`} className="group block">
@@ -157,6 +171,7 @@ function ProductCard({ item, slug }: { item: LibraryItem; slug: string }) {
             fill
             sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
             className={imgClass}
+            style={isErpPhoto ? { mixBlendMode: "multiply" } : undefined}
           />
         ) : (
           <TieIllustration

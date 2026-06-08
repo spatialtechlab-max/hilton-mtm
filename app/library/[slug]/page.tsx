@@ -244,13 +244,20 @@ function ProductCard({ item, slug }: { item: LibraryItem; slug: string }) {
   // a steady rhythm (the way Suitsupply / Indochino lay out their grids).
   // Transparent product cutouts (shoes from hiltonmtm) sit in a display case
   // with padding; editorial Unsplash/ERP shots fill the frame edge-to-edge.
+  // ERP product photos are studio shots on a white background. We drop
+  // the white via mix-blend-mode multiply against the page-coloured
+  // ivory-100 tile bg, and switch to object-contain so the garment
+  // isn't cropped to the tile edge.
   const isProductPhoto =
     item.media.kind === "photo" && item.media.src.startsWith("/products/");
-  const imgClass = isProductPhoto
+  const isErpPhoto =
+    item.media.kind === "photo" && item.media.src.includes("erp.hiltontailoringhouse.com");
+  const wantsContain = isProductPhoto || isErpPhoto;
+  const imgClass = wantsContain
     ? "object-contain p-5 md:p-6"
     : "object-cover";
-  const tileBg = isProductPhoto
-    ? "bg-[var(--color-ivory-200)]"
+  const tileBg = wantsContain
+    ? "bg-[var(--color-ivory-100)]"
     : "bg-[var(--color-ivory-200)]";
 
   return (
@@ -266,6 +273,7 @@ function ProductCard({ item, slug }: { item: LibraryItem; slug: string }) {
             fill
             sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
             className={imgClass}
+            style={isErpPhoto ? { mixBlendMode: "multiply" } : undefined}
           />
         ) : (
           <TieIllustration

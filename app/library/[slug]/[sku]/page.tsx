@@ -291,9 +291,12 @@ export default async function ProductPage({
             <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-x-5 gap-y-10">
               {related.map((it) => {
                 const relContain = it.media.kind === "photo" && it.media.src.startsWith("/products/");
+                const relIsErp = it.media.kind === "photo" && it.media.src.includes("erp.hiltontailoringhouse.com");
+                const wantsContain = relContain || relIsErp;
+                const tileBg = wantsContain ? "bg-[var(--color-ivory-100)]" : "bg-[var(--color-ivory-200)]";
                 return (
                   <Link key={it.sku} href={`/library/${library.slug}/${it.sku}`} className="group block">
-                    <div className={`relative aspect-[4/5] overflow-hidden bg-[var(--color-ivory-200)] hover-grow`}>
+                    <div className={`relative aspect-[4/5] overflow-hidden ${tileBg} hover-grow`}>
                       {it.media.kind === "photo" && isPlaceholder(it.media.src) && <PlaceholderBadge />}
                       {it.media.kind === "photo" && (
                         <Image
@@ -301,7 +304,8 @@ export default async function ProductPage({
                           alt={it.alt}
                           fill
                           sizes="(min-width: 1024px) 25vw, 50vw"
-                          className={relContain ? "object-contain p-4 md:p-6" : "object-cover"}
+                          className={wantsContain ? "object-contain p-4 md:p-6" : "object-cover"}
+                          style={relIsErp ? { mixBlendMode: "multiply" } : undefined}
                         />
                       )}
                     </div>
