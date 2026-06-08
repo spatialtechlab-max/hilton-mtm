@@ -114,6 +114,7 @@ export default function CartPage() {
                       fill
                       sizes="128px"
                       className={it.contain ? "object-contain p-3" : "object-cover"}
+                      unoptimized={it.image.includes("erp.hiltontailoringhouse.com")}
                     />
                   </Link>
 

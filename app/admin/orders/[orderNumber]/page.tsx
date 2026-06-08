@@ -120,7 +120,7 @@ export default function AdminOrderDetailPage() {
                 <li key={it.id} className="py-5 flex gap-5">
                   {it.image && (
                     <div className="relative shrink-0 w-20 h-20 bg-[var(--color-ivory-200)] overflow-hidden">
-                      <Image src={it.image} alt={it.name} fill sizes="80px" className="object-cover" />
+                      <Image src={it.image} alt={it.name} fill sizes="80px" className="object-cover" unoptimized={it.image.includes("erp.hiltontailoringhouse.com")} />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
