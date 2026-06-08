@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "erp.hiltontailoringhouse.com" },
       { protocol: "https", hostname: "gendynufrwpriiaasibk.supabase.co" },
     ],
+    // ERP product photos are already tight JPEGs (~24 KB). The default
+    // q=75 re-compression was visibly pixelating them, so renderers
+    // explicitly request quality={95} via the prop. Next 15 only honours
+    // qualities listed here.
+    qualities: [75, 95],
   },
   experimental: {
     optimizePackageImports: ["framer-motion", "lucide-react"],
