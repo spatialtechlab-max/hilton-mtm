@@ -119,7 +119,7 @@ export default function ProcessPage() {
             </div>
             <div className="lg:col-span-6 lg:col-start-7">
               <Reveal delay={0.2}>
-                <div className="relative aspect-[4/5] overflow-hidden hover-grow">
+                <div className="relative aspect-[5/4] lg:aspect-[3/2] overflow-hidden hover-grow">
                   <MediaImage
                     slot={PROCESS_INSTORE.key}
                     fallback={PROCESS_INSTORE.fallback}
@@ -177,7 +177,7 @@ export default function ProcessPage() {
             </div>
             <div className="lg:col-span-5 lg:order-1">
               <Reveal delay={0.2}>
-                <div className="relative aspect-[4/5] overflow-hidden hover-grow">
+                <div className="relative aspect-[5/4] lg:aspect-[3/2] overflow-hidden hover-grow">
                   <MediaImage
                     slot={PROCESS_ONLINE.key}
                     fallback={PROCESS_ONLINE.fallback}

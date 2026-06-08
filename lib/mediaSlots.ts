@@ -225,24 +225,24 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     group: "Editorial",
     label: "Made to Measure page — In-Store Experience photo",
     description:
-      "The portrait image beside 'The In-Store Experience.' on /process.",
+      "The landscape image beside 'The In-Store Experience.' on /made-to-measure.",
     fallback:
       "https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=1600&auto=format&fit=crop",
     fallbackAlt: "The master tailor at work",
-    aspect: "4/5",
-    recommendedSize: "1600 × 2000 px",
+    aspect: "3/2",
+    recommendedSize: "1800 × 1200 px",
   },
   {
     key: "process.online",
     group: "Editorial",
     label: "Made to Measure page — Online Experience photo",
     description:
-      "The portrait image beside 'The Online Experience.' on /process.",
+      "The landscape image beside 'The Online Experience.' on /made-to-measure.",
     fallback:
       "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?q=80&w=1600&auto=format&fit=crop",
     fallbackAlt: "A bespoke jacket detail",
-    aspect: "4/5",
-    recommendedSize: "1600 × 2000 px",
+    aspect: "3/2",
+    recommendedSize: "1800 × 1200 px",
   },
 
   // ── Homepage atelier strip ──
