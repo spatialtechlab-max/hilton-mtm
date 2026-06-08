@@ -22,20 +22,7 @@ export async function fetchAllMediaSlots(): Promise<Record<string, MediaOverride
   return map;
 }
 
-// Legacy carry-over: the homepage Categories tiles, library hero and
-// Design Yours picker were unified onto library.<slug>.cover. Atelier
-// uploads to the old home.category.* keys carry over until they
-// re-upload to the new key.
-const LEGACY_FALLBACK_SLOTS: Record<string, string> = {
-  "library.suits.cover":    "home.category.suits",
-  "library.jackets.cover":  "home.category.jackets",
-  "library.shirts.cover":   "home.category.shirts",
-  "library.trousers.cover": "home.category.trousers",
-  "library.shoes.cover":    "home.category.shoes",
-  "library.ties.cover":     "home.category.ties",
-};
-
-async function fetchOneSlot(slot: string): Promise<MediaOverride | null> {
+export async function fetchMediaSlot(slot: string): Promise<MediaOverride | null> {
   const { data, error } = await supabase
     .from("mtm_media")
     .select("*")
@@ -43,15 +30,6 @@ async function fetchOneSlot(slot: string): Promise<MediaOverride | null> {
     .maybeSingle();
   if (error || !data) return null;
   return data as MediaOverride;
-}
-
-export async function fetchMediaSlot(slot: string): Promise<MediaOverride | null> {
-  const direct = await fetchOneSlot(slot);
-  if (direct?.url) return direct;
-  const legacy = LEGACY_FALLBACK_SLOTS[slot];
-  if (!legacy) return null;
-  const carried = await fetchOneSlot(legacy);
-  return carried?.url ? carried : null;
 }
 
 export async function upsertMediaSlot(
