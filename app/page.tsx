@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Reveal, SplitReveal } from "@/components/Reveal";
-import { Marquee } from "@/components/Marquee";
 import { Button } from "@/components/Button";
 import { CtaBanner } from "@/components/CtaBanner";
 import { Categories } from "@/components/Categories";
@@ -120,14 +119,6 @@ export default function HomePage() {
 
       {/* ─────────────────────────── ATELIER PHOTO STRIP ─────────────────────── */}
       <AtelierStrip />
-
-      {/* ─────────────────────────── MARQUEE ─────────────────────────── */}
-      <section className="py-16 border-y border-black/10 bg-[var(--color-ivory-100)] text-[var(--color-burgundy-700)]">
-        <Marquee
-          items={["Made to Measure", "Hand Cut", "Natural Canvas", "Single Maker", "Three Hundred Hours"]}
-          separator="✦"
-        />
-      </section>
 
       {/* ─────────────────────────── PROCESS TEASE ─────────────────────────── */}
       <section className="py-16 md:py-24">
