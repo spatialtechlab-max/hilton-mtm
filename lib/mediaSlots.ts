@@ -74,69 +74,11 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     aspect: "3/4",
     recommendedSize: "1200 × 1600 px",
   },
-  {
-    key: "home.category.suits",
-    group: "Home",
-    label: "Homepage Category — Suits",
-    description: "Large featured tile in the homepage Categories block.",
-    fallback:
-      "https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=1800&auto=format&fit=crop",
-    fallbackAlt: "A bespoke navy suit on the form",
-    aspect: "4/5",
-    recommendedSize: "1600 × 2000 px",
-  },
-  {
-    key: "home.category.jackets",
-    group: "Home",
-    label: "Homepage Category — Jackets",
-    description: "Standalone jackets / sport coats tile on the homepage.",
-    fallback: "https://erp.hiltontailoringhouse.com/uploads/item_rawmaterial/1585_pic_cropped.jpg",
-    fallbackAlt: "A standalone Delfino sport coat",
-    aspect: "16/10",
-    recommendedSize: "1800 × 1125 px",
-  },
-  {
-    key: "home.category.shirts",
-    group: "Home",
-    label: "Homepage Category — Shirts",
-    description: "Top-right tile in the homepage Categories block.",
-    fallback:
-      "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=1600&auto=format&fit=crop",
-    fallbackAlt: "A crisp made-to-measure dress shirt",
-    aspect: "16/10",
-    recommendedSize: "1800 × 1125 px",
-  },
-  {
-    key: "home.category.trousers",
-    group: "Home",
-    label: "Homepage Category — Trousers",
-    description: "Tile in the homepage Categories block.",
-    fallback:
-      "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?q=80&w=1600&auto=format&fit=crop",
-    fallbackAlt: "Tailored wool trousers",
-    aspect: "16/10",
-    recommendedSize: "1800 × 1125 px",
-  },
-  {
-    key: "home.category.shoes",
-    group: "Home",
-    label: "Homepage Category — Handmade Shoes",
-    description: "Bottom tile in the homepage Categories block.",
-    fallback: "/products/shoes/5308-marrone.png",
-    fallbackAlt: "Vintage marrone double-monk",
-    aspect: "16/10",
-    recommendedSize: "1800 × 1125 px",
-  },
-  {
-    key: "home.category.ties",
-    group: "Home",
-    label: "Homepage Category — Ties & Silks",
-    description: "Bottom tile in the homepage Categories block.",
-    fallback: "/products/ties/HBTS082.webp",
-    fallbackAlt: "Navy paisley silk tie",
-    aspect: "16/10",
-    recommendedSize: "1800 × 1125 px",
-  },
+  // Note: the homepage Categories tiles, the library hero, and the
+  // Design Yours picker all share a single library.<slug>.cover slot
+  // per garment now — defined further down. The retired
+  // home.category.* keys are no longer rendered anywhere; admin only
+  // sees one Library cover row per garment.
   {
     key: "home.showroom",
     group: "Home",
@@ -163,7 +105,7 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     key: "library.suits.cover",
     group: "Library",
     label: "Suits library cover",
-    description: "Hero photo for /library/suits.",
+    description: "Used in three places: the homepage Categories tile, the /library/suits hero, and the Design Yours picker tile on /customize. Upload once and it shows everywhere.",
     fallback:
       "https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=1800&auto=format&fit=crop",
     fallbackAlt: "A bespoke navy windowpane suit, hand-finished",
@@ -174,7 +116,7 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     key: "library.jackets.cover",
     group: "Library",
     label: "Jackets library cover",
-    description: "Hero photo for /library/jackets — standalone sport coats.",
+    description: "Used in three places: the homepage Categories tile, the /library/jackets hero, and the Design Yours picker tile on /customize. Upload once and it shows everywhere.",
     fallback: "https://erp.hiltontailoringhouse.com/uploads/item_rawmaterial/1585_pic_cropped.jpg",
     fallbackAlt: "A standalone bespoke jacket on the form",
     aspect: "3/2",
@@ -184,7 +126,7 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     key: "library.shirts.cover",
     group: "Library",
     label: "Shirts library cover",
-    description: "Hero photo for /library/shirts.",
+    description: "Used in three places: the homepage Categories tile, the /library/shirts hero, and the Design Yours picker tile on /customize. Upload once and it shows everywhere.",
     fallback:
       "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=1800&auto=format&fit=crop",
     fallbackAlt: "A crisp white made-to-measure dress shirt",
@@ -195,7 +137,7 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     key: "library.trousers.cover",
     group: "Library",
     label: "Trousers library cover",
-    description: "Hero photo for /library/trousers.",
+    description: "Used in three places: the homepage Categories tile, the /library/trousers hero, and the Design Yours picker tile on /customize. Upload once and it shows everywhere.",
     fallback:
       "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?q=80&w=1800&auto=format&fit=crop",
     fallbackAlt: "Tailored wool trousers",
@@ -206,7 +148,7 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     key: "library.shoes.cover",
     group: "Library",
     label: "Shoes library cover",
-    description: "Hero photo for /library/shoes.",
+    description: "Used in three places: the homepage Categories tile, the /library/shoes hero, and the Design Yours picker tile on /customize. Upload once and it shows everywhere.",
     fallback: "/products/shoes/5308-marrone.png",
     fallbackAlt: "Double-monk in vintage marrone, polished calf and suede combination",
     aspect: "3/2",
@@ -216,7 +158,7 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     key: "library.ties.cover",
     group: "Library",
     label: "Ties library cover",
-    description: "Hero photo for /library/ties.",
+    description: "Used in three places: the homepage Categories tile, the /library/ties hero, and the Design Yours picker tile on /customize. Upload once and it shows everywhere.",
     fallback: "/products/ties/HBTS082.webp",
     fallbackAlt: "Navy paisley silk tie in 8-fold Como silk",
     aspect: "3/2",

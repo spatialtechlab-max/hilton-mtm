@@ -15,8 +15,13 @@ type Tile = {
 
 const slotMap = Object.fromEntries(MEDIA_SLOTS.map((s) => [s.key, s]));
 
+// Per client direction: the homepage Categories tile + the matching
+// library hero + the Design Yours picker tile all read from the SAME
+// library.<slug>.cover slot, so the atelier uploads one image and it
+// shows up in all three places. No more parallel home.category.* slots
+// to keep in sync.
 const featured: Tile = {
-  slot: "home.category.suits",
+  slot: "library.suits.cover",
   category: "Tailoring",
   title: "Suits",
   href: "/library/suits",
@@ -25,14 +30,14 @@ const featured: Tile = {
 
 const rightTop: Tile[] = [
   {
-    slot: "home.category.jackets",
+    slot: "library.jackets.cover",
     category: "Standalone",
     title: "Jackets",
     href: "/library/jackets",
     fit: "cover",
   },
   {
-    slot: "home.category.shirts",
+    slot: "library.shirts.cover",
     category: "Shirting",
     title: "Shirts",
     href: "/library/shirts",
@@ -42,21 +47,21 @@ const rightTop: Tile[] = [
 
 const bottom: Tile[] = [
   {
-    slot: "home.category.trousers",
+    slot: "library.trousers.cover",
     category: "Tailored",
     title: "Trousers",
     href: "/library/trousers",
     fit: "cover",
   },
   {
-    slot: "home.category.shoes",
+    slot: "library.shoes.cover",
     category: "Footwear",
     title: "Handmade Shoes",
     href: "/library/shoes",
     fit: "contain",
   },
   {
-    slot: "home.category.ties",
+    slot: "library.ties.cover",
     category: "Accessories",
     title: "Ties & Silks",
     href: "/library/ties",
