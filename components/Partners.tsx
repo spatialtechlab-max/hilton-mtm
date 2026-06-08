@@ -62,12 +62,19 @@ export function Partners() {
 
       {/* Marquee — continuous horizontal scroll. Two duplicate tracks
           translate -50% over one cycle so the loop is seamless. Pauses
-          on hover so customers can study a specific mark. */}
+          on hover so customers can study a specific mark.
+
+          The track explicitly carries the same ivory background as the
+          section so mixBlendMode: multiply on the logos has something
+          cream to blend against — without it, the transform-induced
+          stacking context isolates the imgs from the page bg and
+          white-card logos (Loro Piana, Reda, Scabal) render their card
+          on top of the cream. */}
       <div
         className="relative overflow-hidden"
         style={{ maskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)" }}
       >
-        <div className="partners-marquee flex w-max items-center gap-x-16 md:gap-x-24 py-4">
+        <div className="partners-marquee flex w-max items-center gap-x-16 md:gap-x-24 py-4 bg-[var(--color-ivory-100)]">
           {[...mills, ...mills].map((m, i) => (
             <div
               key={`${m.name}-${i}`}
@@ -84,10 +91,6 @@ export function Partners() {
                 style={{
                   maxHeight: m.h,
                   width: "auto",
-                  // Multiply keeps the originals readable while dropping any
-                  // pure-white card background into the ivory page. PNGs
-                  // with real alpha (Zegna, Loro Piana, Reda, Scabal,
-                  // Dormeuil) are unaffected by it.
                   mixBlendMode: "multiply",
                 }}
                 className="object-contain"
