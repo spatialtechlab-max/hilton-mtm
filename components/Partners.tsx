@@ -58,39 +58,59 @@ export function Partners() {
           </div>
         </div>
 
-        {/* Logos use a plain <img> on purpose: Next.js Image optimisation was
-            re-encoding PNGs into JPEG and baking the transparency checker
-            into the cloth-Dormeuil mark. Native <img> preserves the alpha. */}
-        <ul className="grid grid-cols-2 sm:grid-cols-4 gap-y-14 gap-x-10 md:gap-x-16 items-center">
-          {mills.map((m, i) => (
-            <Reveal key={m.name} delay={i * 0.05} as="li">
-              <div
-                className="relative w-full grid place-items-center"
-                style={{ height: m.h + 12 }}
-                title={m.since ? `${m.name} · since ${m.since}` : m.name}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={m.src}
-                  alt={m.name}
-                  loading="lazy"
-                  decoding="async"
-                  style={{
-                    maxHeight: m.h,
-                    width: "auto",
-                    // Multiply keeps the originals readable while dropping any
-                    // pure-white card background into the ivory page. PNGs
-                    // with real alpha (Zegna, Loro Piana, Reda, Scabal,
-                    // Dormeuil) are unaffected by it.
-                    mixBlendMode: "multiply",
-                  }}
-                  className="object-contain"
-                />
-              </div>
-            </Reveal>
-          ))}
-        </ul>
       </div>
+
+      {/* Marquee — continuous horizontal scroll. Two duplicate tracks
+          translate -50% over one cycle so the loop is seamless. Pauses
+          on hover so customers can study a specific mark. */}
+      <div
+        className="relative overflow-hidden"
+        style={{ maskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)" }}
+      >
+        <div className="partners-marquee flex w-max items-center gap-x-16 md:gap-x-24 py-4">
+          {[...mills, ...mills].map((m, i) => (
+            <div
+              key={`${m.name}-${i}`}
+              className="relative shrink-0 grid place-items-center"
+              style={{ height: 120 }}
+              title={m.since ? `${m.name} · since ${m.since}` : m.name}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={m.src}
+                alt={m.name}
+                loading="lazy"
+                decoding="async"
+                style={{
+                  maxHeight: m.h,
+                  width: "auto",
+                  // Multiply keeps the originals readable while dropping any
+                  // pure-white card background into the ivory page. PNGs
+                  // with real alpha (Zegna, Loro Piana, Reda, Scabal,
+                  // Dormeuil) are unaffected by it.
+                  mixBlendMode: "multiply",
+                }}
+                className="object-contain"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <style>{`
+        .partners-marquee {
+          animation: partners-scroll 45s linear infinite;
+          will-change: transform;
+        }
+        .partners-marquee:hover { animation-play-state: paused; }
+        @keyframes partners-scroll {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .partners-marquee { animation: none; }
+        }
+      `}</style>
     </section>
   );
 }

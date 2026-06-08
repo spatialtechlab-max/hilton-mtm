@@ -59,7 +59,7 @@ export default function ComingSoonPage() {
             className="text-display mt-[clamp(1rem,2.5vw,1.5rem)] leading-[0.95] text-[var(--color-charcoal-900)] max-w-[16ch] mx-auto"
             style={{ fontSize: "clamp(2rem, 7vw, 6rem)" }}
           >
-            Hilton Made to Measure.
+            Opening soon.
           </h1>
 
           <p
