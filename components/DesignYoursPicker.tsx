@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Reveal, SplitReveal } from "./Reveal";
-import { MediaImageClient } from "./MediaImageClient";
 import { fetchGarments, type Garment } from "@/lib/garments";
+import { fetchAllMediaSlots } from "@/lib/media";
 import { MEDIA_SLOTS } from "@/lib/mediaSlots";
 
 /**
@@ -92,27 +93,57 @@ function tileFor(g: Garment, featured: boolean): Tile {
 
 export function DesignYoursPicker() {
   const [garments, setGarments] = useState<Garment[] | null>(null);
+  // Pre-resolved override URLs keyed by slot. We wait for these AND
+  // garments before painting any tile — otherwise the registry
+  // fallback would flash for a fraction of a second before the real
+  // upload swapped in.
+  const [overrides, setOverrides] = useState<Record<string, { url: string; alt: string }> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetchGarments({ activeOnly: true })
-      .then((g) => { if (!cancelled) setGarments(g); })
-      .catch(() => { if (!cancelled) setGarments([]); });
+    Promise.all([
+      fetchGarments({ activeOnly: true }),
+      fetchAllMediaSlots().catch(() => ({})),
+    ])
+      .then(([g, m]) => {
+        if (cancelled) return;
+        setGarments(g);
+        const map: Record<string, { url: string; alt: string }> = {};
+        for (const [slot, row] of Object.entries(m as Record<string, { url?: string; alt?: string }>)) {
+          if (row?.url) map[slot] = { url: row.url, alt: row.alt ?? "" };
+        }
+        setOverrides(map);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setGarments([]);
+        setOverrides({});
+      });
     return () => { cancelled = true; };
   }, []);
 
-  // First load: render nothing until garments arrive — keeps SSR + client
-  // markup stable and avoids a flash of stale hardcoded tiles.
-  if (!garments) {
+  // First load: render nothing until BOTH garments and the override
+  // map have arrived. Prevents the fraction-of-second flash where the
+  // registry fallback was painted before the real upload loaded.
+  if (!garments || !overrides) {
     return <section className="pt-32 md:pt-40 pb-20 md:pb-28 min-h-[50vh]" />;
   }
+
+  const resolveTile = (g: Garment, featured: boolean): Tile => {
+    const t = tileFor(g, featured);
+    if (t.slot && overrides[t.slot]) {
+      const ov = overrides[t.slot];
+      return { ...t, image: ov.url, alt: ov.alt || t.alt };
+    }
+    return t;
+  };
 
   // First active garment becomes the featured large tile; next two go in
   // the right column; everything else stacks below alongside the Sebastian
   // helper card.
-  const featured = garments[0] ? tileFor(garments[0], true) : null;
-  const rightTop = garments.slice(1, 3).map((g) => tileFor(g, false));
-  const bottom = garments.slice(3).map((g) => tileFor(g, false));
+  const featured = garments[0] ? resolveTile(garments[0], true) : null;
+  const rightTop = garments.slice(1, 3).map((g) => resolveTile(g, false));
+  const bottom = garments.slice(3).map((g) => resolveTile(g, false));
 
   return (
     <section className="pt-32 md:pt-40 pb-20 md:pb-28">
@@ -218,27 +249,16 @@ function CustomizeTile({ tile, large = false }: { tile: Tile; large?: boolean })
         large ? "aspect-[4/5] lg:aspect-auto lg:h-full" : "aspect-[16/10]"
       }`}
     >
-      {tile.slot ? (
-        <MediaImageClient
-          slot={tile.slot}
-          fallback={tile.image}
-          fallbackAlt={tile.alt}
-          fill
-          sizes="(min-width: 1024px) 50vw, 100vw"
-          className={imgClass}
-        />
-      ) : (
-        // Garments without a matching library page (e.g. chinos, overcoat)
-        // still render the per-garment tile_image / hardcoded fallback.
-        <MediaImageClient
-          slot=""
-          fallback={tile.image}
-          fallbackAlt={tile.alt}
-          fill
-          sizes="(min-width: 1024px) 50vw, 100vw"
-          className={imgClass}
-        />
-      )}
+      {/* tile.image was already resolved against the override map in
+          the parent before render — so this <Image> never paints the
+          registry fallback first and then swaps. No flash. */}
+      <Image
+        src={tile.image}
+        alt={tile.alt}
+        fill
+        sizes="(min-width: 1024px) 50vw, 100vw"
+        className={imgClass}
+      />
       {fit === "cover" && (
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
       )}
