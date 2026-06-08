@@ -170,7 +170,7 @@ function ProductCard({ item, slug }: { item: LibraryItem; slug: string }) {
             sizes="(min-width: 1024px) 20vw, (min-width: 640px) 33vw, 50vw"
             className={imgClass}
             style={isErpPhoto ? { mixBlendMode: "multiply" } : undefined}
-            quality={isErpPhoto ? 95 : undefined}
+            unoptimized={isErpPhoto}
           />
         ) : (
           <TieIllustration

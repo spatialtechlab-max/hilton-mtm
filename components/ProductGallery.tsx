@@ -9,12 +9,12 @@ import { PlaceholderBadge, isPlaceholder } from "./PlaceholderBadge";
  * `contain` is for transparent product photos (shoes/ties) that sit in a
  * cream display case; otherwise the image fills the frame (object-cover).
  */
-// ERP product photos are already tightly cropped JPEGs (~24KB each).
-// Next.js's default re-compression at quality 75 was visibly pixelating
-// them — bump to 95 so the optimised version preserves the original
-// crispness. Static /products/ PNGs (shoes / ties) and editorial Unsplash
-// shots don't need the bump; their default quality is fine.
-const HIGH_QUALITY_FOR_ERP = 95;
+// ERP product photos: ship the original JPEG straight from the ERP,
+// no Next/Image re-encoding. Quality 95 still looked soft to the
+// client because the underlying source is a tight crop; any further
+// processing degrades it further. unoptimized={true} bypasses the
+// /_next/image pipeline entirely so the customer's browser receives
+// the exact bytes the ERP serves.
 
 export function ProductGallery({
   images, alt, contain,
@@ -39,7 +39,7 @@ export function ProductGallery({
             sizes="(min-width: 1024px) 48vw, 100vw"
             className={contain ? "object-contain p-8 md:p-12" : "object-cover"}
             priority
-            quality={isErp(main) ? HIGH_QUALITY_FOR_ERP : undefined}
+            unoptimized={isErp(main)}
           />
         )}
       </div>
@@ -66,7 +66,7 @@ export function ProductGallery({
                   fill
                   sizes="20vw"
                   className={contain ? "object-contain p-2" : "object-cover"}
-                  quality={isErp(src) ? HIGH_QUALITY_FOR_ERP : undefined}
+                  unoptimized={isErp(src)}
                 />
               </button>
             );

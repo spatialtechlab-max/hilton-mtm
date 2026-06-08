@@ -305,7 +305,7 @@ export default async function ProductPage({
                           sizes="(min-width: 1024px) 25vw, 50vw"
                           className={relContain ? "object-contain p-4 md:p-6" : "object-cover"}
                           style={relIsErp ? { mixBlendMode: "multiply" } : undefined}
-                          quality={relIsErp ? 95 : undefined}
+                          unoptimized={relIsErp}
                         />
                       )}
                     </div>
