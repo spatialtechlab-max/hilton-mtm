@@ -1,14 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, Eye, EyeOff, ArrowUpDown } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Eye, EyeOff, ArrowUpDown, Upload, RotateCcw } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import {
   fetchGarments, upsertGarment, deleteGarment, toSlug,
   type Garment,
 } from "@/lib/garments";
+import {
+  fetchAllMediaSlots, upsertMediaSlot, deleteMediaSlot, uploadEditorialImage,
+  type MediaOverride,
+} from "@/lib/media";
 
 /**
  * Garment management. The atelier rotates commissions seasonally
@@ -26,6 +31,10 @@ export default function AdminGarmentsPage() {
   const [admin, setAdmin] = useState<boolean | null>(null);
 
   const [garments, setGarments] = useState<Garment[]>([]);
+  // Cover photo per garment, keyed by library.<slug>.cover slot. Same
+  // slot the homepage Categories tile and library hero already read,
+  // so an upload here shows on all three surfaces.
+  const [covers, setCovers] = useState<Record<string, MediaOverride>>({});
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -44,12 +53,48 @@ export default function AdminGarmentsPage() {
     setLoadingData(true);
     setError(null);
     try {
-      const g = await fetchGarments();
+      const [g, m] = await Promise.all([
+        fetchGarments(),
+        fetchAllMediaSlots().catch(() => ({} as Record<string, MediaOverride>)),
+      ]);
       setGarments(g);
+      setCovers(m);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load garments.");
     } finally {
       setLoadingData(false);
+    }
+  }
+
+  async function uploadCover(slug: string, file: File) {
+    setBusy(slug);
+    setError(null);
+    try {
+      const url = await uploadEditorialImage(file);
+      const slot = `library.${slug}.cover`;
+      const alt = garments.find((g) => g.slug === slug)?.label ?? slug;
+      const { error: e } = await upsertMediaSlot(slot, url, alt);
+      if (e) throw new Error(e);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function clearCover(slug: string) {
+    setBusy(slug);
+    setError(null);
+    try {
+      const slot = `library.${slug}.cover`;
+      const { error: e } = await deleteMediaSlot(slot);
+      if (e) throw new Error(e);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Clear failed.");
+    } finally {
+      setBusy(null);
     }
   }
   useEffect(() => { if (admin) load(); }, [admin]);
@@ -185,9 +230,50 @@ export default function AdminGarmentsPage() {
         </p>
       ) : (
         <ul className="border-y border-black/10 divide-y divide-black/10">
-          {garments.map((g) => (
+          {garments.map((g) => {
+            const cover = covers[`library.${g.slug}.cover`];
+            return (
             <li key={g.slug} className="grid grid-cols-12 gap-3 items-center py-4 px-2">
-              <div className="col-span-12 sm:col-span-4">
+              {/* Cover thumbnail + upload — writes to the unified
+                  library.<slug>.cover slot so the same image shows on
+                  the Categories tile, the library hero, and the Design
+                  Yours picker. */}
+              <div className="col-span-12 sm:col-span-2 flex items-center gap-2">
+                <div className="relative w-16 h-16 shrink-0 overflow-hidden bg-[var(--color-ivory-200)] border border-black/10">
+                  {cover?.url ? (
+                    <Image src={cover.url} alt={g.label} fill sizes="64px" className="object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[0.55rem] tracking-[0.15em] uppercase text-[var(--color-charcoal-400)] text-center px-1">
+                      No cover
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label
+                    className={`text-[0.6rem] tracking-[0.15em] uppercase inline-flex items-center gap-1 border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] px-2 py-1 cursor-pointer hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] transition-colors ${busy === g.slug ? "opacity-50 pointer-events-none" : ""}`}
+                  >
+                    <Upload size={10} strokeWidth={1.5} />
+                    {busy === g.slug ? "Uploading…" : cover?.url ? "Replace" : "Upload"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadCover(g.slug, f); e.target.value = ""; }}
+                      className="hidden"
+                    />
+                  </label>
+                  {cover?.url && (
+                    <button
+                      type="button"
+                      onClick={() => clearCover(g.slug)}
+                      aria-label="Clear cover image"
+                      className="text-[0.58rem] tracking-[0.15em] uppercase inline-flex items-center gap-1 text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors"
+                    >
+                      <RotateCcw size={9} strokeWidth={1.5} /> Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="col-span-12 sm:col-span-3">
                 <input
                   type="text"
                   value={g.label}
@@ -214,16 +300,16 @@ export default function AdminGarmentsPage() {
                   className="w-12 bg-transparent border-b border-transparent hover:border-black/20 focus:border-[var(--color-burgundy-700)] focus:outline-none tabular-nums text-right"
                 />
               </div>
-              <div className="col-span-6 sm:col-span-2">
-                <label className="inline-flex items-center gap-2 text-[0.82rem] text-[var(--color-charcoal-700)]">
+              <div className="col-span-6 sm:col-span-1">
+                <label className="inline-flex items-center gap-2 text-[0.78rem] text-[var(--color-charcoal-700)]">
                   <input
                     type="checkbox"
                     checked={g.has_tiers}
                     onChange={(e) => patch(g.slug, { has_tiers: e.target.checked })}
-                  /> Has tiers
+                  /> Tiers
                 </label>
               </div>
-              <div className="col-span-6 sm:col-span-2 flex items-center justify-end gap-3">
+              <div className="col-span-6 sm:col-span-3 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => patch(g.slug, { active: !g.active })}
@@ -242,7 +328,8 @@ export default function AdminGarmentsPage() {
                 </button>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 

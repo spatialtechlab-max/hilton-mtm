@@ -11,6 +11,42 @@ import { libraries, librarySlugs, type LibraryItem } from "@/lib/libraries";
 import { fetchErpItems, sectionsFromErp, isErpBacked, ERP_CATEGORIES_FOR_SLUG } from "@/lib/erp";
 import { MediaImage } from "@/components/MediaImage";
 import { LibraryFilteredGrid } from "@/components/LibraryFilteredGrid";
+import { createClient } from "@supabase/supabase-js";
+
+/**
+ * Library slugs that map onto a Hilton-stocked garment. Visibility on
+ * the storefront is gated by the matching garment's active flag in
+ * mtm_garments — so the atelier can hide e.g. /library/shirts from
+ * /admin/garments when shirting cloth runs out, without touching code.
+ * Library slugs NOT in this map (cloths, shoes, ties, belts, tailoring)
+ * are accessory / editorial libraries and aren't gated.
+ */
+const GARMENT_FOR_LIBRARY_SLUG: Record<string, string> = {
+  suits: "suit",
+  jackets: "jacket",
+  shirts: "shirt",
+  trousers: "trouser",
+};
+
+async function libraryIsActive(slug: string): Promise<boolean> {
+  const garmentSlug = GARMENT_FOR_LIBRARY_SLUG[slug];
+  if (!garmentSlug) return true; // accessory library — always visible
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return true; // env missing → don't block
+  try {
+    const sb = createClient(url, key);
+    const { data, error } = await sb
+      .from("mtm_garments")
+      .select("active")
+      .eq("slug", garmentSlug)
+      .maybeSingle();
+    if (error || !data) return true; // table unreachable / row missing → don't block
+    return Boolean((data as { active: boolean }).active);
+  } catch {
+    return true;
+  }
+}
 
 export function generateStaticParams() {
   return librarySlugs.map((slug) => ({ slug }));
@@ -38,6 +74,11 @@ export default async function LibraryPage({
   const { slug } = await params;
   const baseLib = libraries[slug];
   if (!baseLib) notFound();
+  // Atelier-managed gate. If the atelier has hidden the matching
+  // garment in /admin/garments (or never enabled it for a new ERP
+  // category), the library page 404s — the customer never sees a
+  // page for products the atelier hasn't approved for sale.
+  if (!(await libraryIsActive(slug))) notFound();
 
   // ERP-backed libraries build their sections at request time from the
   // live ERP feed (ISR-cached for ~5 min). If the ERP returns nothing

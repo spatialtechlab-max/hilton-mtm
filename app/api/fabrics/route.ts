@@ -300,13 +300,48 @@ function toFabric(item: ErpItem) {
   };
 }
 
+/**
+ * Atelier-managed gate. The mtm_garments table holds the canonical
+ * list of garments that should appear on the storefront. ERP items
+ * for categories whose matching garment is Hidden (or missing entirely)
+ * are filtered out here so a new ERP category can never auto-surface
+ * without the atelier explicitly enabling it in /admin/garments.
+ */
+async function fetchActiveGarmentSlugs(): Promise<Set<string> | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  try {
+    const sb = createClient(url, key);
+    const { data, error } = await sb.from("mtm_garments").select("slug,active");
+    if (error || !data) return null;
+    return new Set((data as { slug: string; active: boolean }[]).filter((g) => g.active).map((g) => g.slug));
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const category = (searchParams.get("category") || "suit").toLowerCase();
   const includeDisabled = searchParams.get("includeDisabled") === "1";
   const wanted = ERP_CATEGORIES_FOR_GARMENT[category] ?? [];
 
-  const [items, disabled] = await Promise.all([fetchErpItems(), fetchDisabledSkus()]);
+  const [items, disabled, activeGarments] = await Promise.all([
+    fetchErpItems(),
+    fetchDisabledSkus(),
+    fetchActiveGarmentSlugs(),
+  ]);
+
+  // Gate by mtm_garments: if the atelier has hidden this garment in
+  // /admin/garments, return no fabrics — the storefront should behave
+  // as if no cloth is stocked for it. activeGarments === null means
+  // the table is unreachable / not yet seeded; in that case we fall
+  // through to the previous unfiltered behaviour so we don't ship a
+  // broken empty picker.
+  if (activeGarments && !activeGarments.has(category)) {
+    return NextResponse.json({ fabrics: [], category, gated: true });
+  }
 
   const fabrics = items
     .filter((i) => wanted.includes(i.categoryName.toUpperCase()))

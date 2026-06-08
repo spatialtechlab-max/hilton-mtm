@@ -87,10 +87,10 @@ export default function ComingSoonPage() {
               <dt className="text-eyebrow text-[var(--color-charcoal-500)]">Call</dt>
               <dd className="mt-2 text-[clamp(0.9rem,1.1vw,1rem)] text-[var(--color-charcoal-900)]">
                 <a
-                  href="tel:+97317555000"
+                  href="tel:+97317245689"
                   className="hover:text-[var(--color-burgundy-700)] transition-colors"
                 >
-                  +973 17 555 000
+                  +973 1724 5689
                 </a>
               </dd>
             </div>
