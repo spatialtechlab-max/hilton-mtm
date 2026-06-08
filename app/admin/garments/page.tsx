@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, Eye, EyeOff, ArrowUpDown, Upload, RotateCcw } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Eye, EyeOff, ArrowUpDown, Upload, RotateCcw, RefreshCw, Check } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import {
@@ -14,6 +14,7 @@ import {
   fetchAllMediaSlots, upsertMediaSlot, deleteMediaSlot, uploadEditorialImage,
   type MediaOverride,
 } from "@/lib/media";
+import { supabase } from "@/lib/supabase";
 
 /**
  * Garment management. The atelier rotates commissions seasonally
@@ -43,6 +44,34 @@ export default function AdminGarmentsPage() {
   const [draftLabel, setDraftLabel] = useState("");
   const [draftSeason, setDraftSeason] = useState("");
   const [draftTiers, setDraftTiers] = useState(false);
+
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ added: number; message: string } | null>(null);
+
+  async function syncFromErp(opts: { silent?: boolean } = {}) {
+    setSyncing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? "";
+      const res = await fetch("/api/admin/sync-erp-garments", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error ?? "Sync failed.");
+      const added = (body.added ?? []).length;
+      if (added > 0) {
+        const labels = body.added.map((a: { label: string }) => a.label).join(", ");
+        setSyncResult({ added, message: `Found ${added} new ERP categor${added === 1 ? "y" : "ies"}: ${labels}. Added as Hidden so you can review.` });
+      } else if (!opts.silent) {
+        setSyncResult({ added: 0, message: "No new garment categories in the ERP." });
+      }
+    } catch (e) {
+      if (!opts.silent) setError(e instanceof Error ? e.message : "ERP sync failed.");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   useEffect(() => {
     if (!user) { setAdmin(false); return; }
@@ -97,7 +126,12 @@ export default function AdminGarmentsPage() {
       setBusy(null);
     }
   }
-  useEffect(() => { if (admin) load(); }, [admin]);
+  useEffect(() => {
+    if (!admin) return;
+    // Sync new ERP categories first, then load the table. Silent on
+    // page-load — we surface a banner only if something was added.
+    syncFromErp({ silent: true }).then(() => load());
+  }, [admin]);
 
   async function add() {
     const label = draftLabel.trim();
@@ -154,6 +188,15 @@ export default function AdminGarmentsPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => { setSyncResult(null); syncFromErp().then(() => load()); }}
+              disabled={syncing}
+              className="text-eyebrow inline-flex items-center gap-2 border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] px-4 py-2.5 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] transition-colors disabled:opacity-50"
+            >
+              <RefreshCw size={13} strokeWidth={1.5} className={syncing ? "animate-spin" : ""} />
+              {syncing ? "Syncing…" : "Sync from ERP"}
+            </button>
             <Link href="/admin" className="text-eyebrow inline-flex items-center gap-2 border border-black/15 px-4 py-2.5 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors">
               Customizer options
             </Link>
@@ -168,6 +211,12 @@ export default function AdminGarmentsPage() {
             </Link>
           </div>
         </div>
+        {syncResult && (
+          <p className="mt-5 inline-flex items-center gap-2 text-[0.82rem] text-[var(--color-burgundy-700)] bg-[var(--color-burgundy-50)] border border-[var(--color-burgundy-700)]/20 px-3 py-2">
+            <Check size={14} strokeWidth={1.5} />
+            {syncResult.message}
+          </p>
+        )}
       </header>
 
       {/* Add row */}
