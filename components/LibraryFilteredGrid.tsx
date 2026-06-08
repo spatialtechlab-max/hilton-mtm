@@ -141,22 +141,20 @@ function FilterRow({
 /** Same card the server component used to render — moved here so the
  *  client-side filtered grid keeps the visual rhythm. */
 function ProductCard({ item, slug }: { item: LibraryItem; slug: string }) {
-  // ERP product photos are studio shots with a white background. We
-  // drop that background by:
-  //   1. switching to object-contain + padding so the garment isn't
-  //      cropped to the tile edge,
-  //   2. setting the tile bg to the page's cream (ivory-100) so the
-  //      blend has the right colour behind it,
-  //   3. applying mix-blend-mode: multiply on the img so every white
-  //      pixel multiplies with the cream behind it and disappears,
-  //      while the garment itself stays unchanged.
+  // ERP product photos are studio shots on a white background. Keep
+  // object-cover so the garment fills the tile (object-contain made
+  // them look tiny with a halo of empty space), and apply
+  // mix-blend-mode: multiply against the ivory tile so any white
+  // pixels that survive the crop blend into the page colour.
+  //
+  // Transparent /products/ PNGs still use object-contain + padding —
+  // they were designed to sit inside a display case.
   const isProductPhoto =
     item.media.kind === "photo" && item.media.src.startsWith("/products/");
   const isErpPhoto =
     item.media.kind === "photo" && item.media.src.includes("erp.hiltontailoringhouse.com");
-  const wantsContain = isProductPhoto || isErpPhoto;
-  const imgClass = wantsContain ? "object-contain p-5 md:p-6" : "object-cover";
-  const tileBg = wantsContain
+  const imgClass = isProductPhoto ? "object-contain p-5 md:p-6" : "object-cover";
+  const tileBg = isErpPhoto || isProductPhoto
     ? "bg-[var(--color-ivory-100)]"
     : "bg-[var(--color-ivory-200)]";
 

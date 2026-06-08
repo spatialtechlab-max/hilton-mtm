@@ -292,8 +292,7 @@ export default async function ProductPage({
               {related.map((it) => {
                 const relContain = it.media.kind === "photo" && it.media.src.startsWith("/products/");
                 const relIsErp = it.media.kind === "photo" && it.media.src.includes("erp.hiltontailoringhouse.com");
-                const wantsContain = relContain || relIsErp;
-                const tileBg = wantsContain ? "bg-[var(--color-ivory-100)]" : "bg-[var(--color-ivory-200)]";
+                const tileBg = relIsErp || relContain ? "bg-[var(--color-ivory-100)]" : "bg-[var(--color-ivory-200)]";
                 return (
                   <Link key={it.sku} href={`/library/${library.slug}/${it.sku}`} className="group block">
                     <div className={`relative aspect-[4/5] overflow-hidden ${tileBg} hover-grow`}>
@@ -304,7 +303,7 @@ export default async function ProductPage({
                           alt={it.alt}
                           fill
                           sizes="(min-width: 1024px) 25vw, 50vw"
-                          className={wantsContain ? "object-contain p-4 md:p-6" : "object-cover"}
+                          className={relContain ? "object-contain p-4 md:p-6" : "object-cover"}
                           style={relIsErp ? { mixBlendMode: "multiply" } : undefined}
                         />
                       )}
