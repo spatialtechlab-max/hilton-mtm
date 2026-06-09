@@ -62,6 +62,11 @@ export type Order = {
   subtotal: number;
   currency: string;
   notes: string;
+  // Courier dispatch — set when ops marks the order as shipped.
+  courier_name?: string | null;
+  tracking_number?: string | null;
+  tracking_url?: string | null;
+  dispatched_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -219,6 +224,32 @@ export async function updateOrderStatus(
     .from("mtm_orders")
     .update({ status })
     .eq("id", orderId);
+  return { error: error?.message ?? null };
+}
+
+/**
+ * Save courier dispatch details on an order. Also stamps dispatched_at
+ * the first time real data appears so the timeline shows the day the
+ * parcel left the atelier. The server route /api/admin/orders/dispatch
+ * fires the customer email after this returns.
+ */
+export async function updateOrderDispatch(
+  orderId: string,
+  fields: {
+    courier_name: string;
+    tracking_number: string;
+    tracking_url: string;
+  },
+): Promise<{ error: string | null }> {
+  const patch: Record<string, string | null> = {
+    courier_name: fields.courier_name.trim() || null,
+    tracking_number: fields.tracking_number.trim() || null,
+    tracking_url: fields.tracking_url.trim() || null,
+  };
+  if (patch.courier_name || patch.tracking_number) {
+    patch.dispatched_at = new Date().toISOString();
+  }
+  const { error } = await supabase.from("mtm_orders").update(patch).eq("id", orderId);
   return { error: error?.message ?? null };
 }
 

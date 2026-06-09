@@ -10,6 +10,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { ProfileForm } from "@/components/ProfileForm";
 import { AuthForm } from "@/components/AuthForm";
 import { createOrderFromCart, fetchProfile, isProfileComplete, type Profile } from "@/lib/orders";
+import { supabase } from "@/lib/supabase";
 
 const fmt = (n: number) =>
   `BHD ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
@@ -53,6 +54,19 @@ export default function CartPage() {
       setPhase("cart");
       return;
     }
+    // Confirmation email — fire-and-forget. The order is already
+    // saved; we don't want a transient email-service hiccup to
+    // strand the customer on the cart page.
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        fetch("/api/notify/order-confirmation", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: order.id }),
+        }).catch(() => { /* non-blocking */ });
+      }
+    } catch { /* non-blocking */ }
     clearCart();
     router.push(`/account/orders/${order.order_number}`);
   }

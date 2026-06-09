@@ -122,6 +122,40 @@ export default function OrderDetailPage() {
                 )}
               </section>
 
+              {/* Courier dispatch — only shown once the atelier has
+                  saved tracking details. */}
+              {order.courier_name && order.tracking_number && (
+                <section className="mt-10 border border-[var(--color-burgundy-700)]/20 bg-[var(--color-burgundy-50)] p-6">
+                  <h2 className="text-eyebrow text-[var(--color-burgundy-700)]">On its way</h2>
+                  <p className="mt-2 text-[0.95rem] text-[var(--color-charcoal-800)]">
+                    Your commission has been dispatched via{" "}
+                    <strong className="font-normal text-[var(--color-charcoal-900)]">{order.courier_name}</strong>.
+                  </p>
+                  <dl className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+                    <div>
+                      <dt className="text-eyebrow text-[var(--color-charcoal-500)]">Tracking number</dt>
+                      <dd className="text-[0.95rem] text-[var(--color-charcoal-900)] mt-1 tabular-nums break-words">
+                        {order.tracking_url ? (
+                          <a href={order.tracking_url} target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--color-burgundy-700)] transition-colors">
+                            {order.tracking_number}
+                          </a>
+                        ) : (
+                          order.tracking_number
+                        )}
+                      </dd>
+                    </div>
+                    {order.dispatched_at && (
+                      <div>
+                        <dt className="text-eyebrow text-[var(--color-charcoal-500)]">Dispatched</dt>
+                        <dd className="text-[0.95rem] text-[var(--color-charcoal-900)] mt-1">
+                          {new Date(order.dispatched_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+                </section>
+              )}
+
               {/* Items */}
               <section className="mt-12">
                 <h2 className="text-eyebrow text-[var(--color-charcoal-500)] mb-5 inline-flex items-center gap-2">
