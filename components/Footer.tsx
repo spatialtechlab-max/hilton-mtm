@@ -111,6 +111,17 @@ export function Footer() {
 
         <div className="mt-24 pt-8 border-t border-black/10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-[0.78rem] text-[var(--color-charcoal-500)]">
           <span>© {new Date().getFullYear()} {site.name}. All rights reserved.</span>
+          <span className="text-eyebrow text-[0.7rem] text-[var(--color-charcoal-700)]">
+            Powered by{" "}
+            <a
+              href="https://antimatterlabs.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)] transition-colors"
+            >
+              Anti-Matter Labs
+            </a>
+          </span>
           <div className="flex gap-6">
             <Link href="/contact" className="hover:text-[var(--color-burgundy-700)] transition-colors">Privacy</Link>
             <Link href="/contact" className="hover:text-[var(--color-burgundy-700)] transition-colors">Terms</Link>
