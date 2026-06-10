@@ -326,6 +326,38 @@ export default function CartPage() {
                   </div>
                 </div>
               ))}
+
+              {/* Body-measurement photos — four labeled slots (Front /
+                  Back / Left side / Right side). All optional, applies to
+                  every order type. Lives here in the main content column
+                  (rather than the narrow sidebar) so the four slots can
+                  sit side-by-side on desktop with proper breathing room. */}
+              {user && (
+                <section className="mt-10 pt-10 border-t border-black/10">
+                  <div className="flex items-baseline justify-between gap-3 mb-2">
+                    <h2 className="text-eyebrow text-[var(--color-charcoal-500)] inline-flex items-center gap-2">
+                      <Camera size={14} strokeWidth={1.5} /> Body photographs
+                    </h2>
+                    <span className="text-eyebrow text-[0.62rem] text-[var(--color-charcoal-500)]">Optional</span>
+                  </div>
+                  <p className="text-[0.85rem] text-[var(--color-charcoal-700)] leading-relaxed mb-5 max-w-2xl">
+                    Help the cutter understand your build. Each slot accepts one photo — front,
+                    back, and a side view from each direction. Visible only to the atelier; we never
+                    share these.
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {ORDER_VIEWS.map((view) => (
+                      <PhotoSlot
+                        key={view}
+                        label={ORDER_VIEW_LABEL[view]}
+                        preview={photoPreviews[view]}
+                        onPick={(file) => pickPhoto(view, file)}
+                        onClear={() => clearPhoto(view)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
             </div>
 
             {/* Summary */}
@@ -445,38 +477,6 @@ export default function CartPage() {
                     >
                       Save & use this address
                     </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Body-measurement photos — optional, four labeled slots
-                  (Front / Back / Left / Right). The cutter uses these to
-                  understand body structure beyond the numeric measurements
-                  on file. Applies to every order type, not just custom
-                  commissions, because even a stock-item buyer may benefit
-                  from the atelier having body context for future fittings. */}
-              {user && (
-                <div className="mb-6 pb-6 border-b border-black/10">
-                  <div className="flex items-baseline justify-between gap-3 mb-1">
-                    <h3 className="text-eyebrow text-[var(--color-charcoal-500)] inline-flex items-center gap-2">
-                      <Camera size={12} strokeWidth={1.5} /> Body photographs
-                    </h3>
-                    <span className="text-eyebrow text-[0.58rem] text-[var(--color-charcoal-500)]">Optional</span>
-                  </div>
-                  <p className="text-[0.72rem] text-[var(--color-charcoal-500)] leading-relaxed mb-3">
-                    Help the cutter understand your build. Each slot accepts one photo —
-                    front, back, and a side view from each direction. Visible only to the atelier.
-                  </p>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {ORDER_VIEWS.map((view) => (
-                      <PhotoSlot
-                        key={view}
-                        label={ORDER_VIEW_LABEL[view]}
-                        preview={photoPreviews[view]}
-                        onPick={(file) => pickPhoto(view, file)}
-                        onClear={() => clearPhoto(view)}
-                      />
-                    ))}
                   </div>
                 </div>
               )}
