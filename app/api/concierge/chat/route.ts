@@ -12,6 +12,15 @@ import { getInventory, summarizeInventory, findFabric, type Inventory } from "@/
 
 type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
 
+/** Tappable quick-pick options the widget shows under a clarifying message.
+ *  Sebastian returns these instead of a recommendation when the brief is
+ *  underspecified — the visitor taps an option to send it as their next
+ *  message without typing. Keeps the conversation short and concrete. */
+export type Clarification = {
+  question: string;
+  options: string[];
+};
+
 export type Recommendation = {
   category: "suit" | "jacket" | "shirt" | "trouser";
   tier?: "essential" | "signature" | "bespoke";
@@ -73,9 +82,11 @@ The "category" field is also a strict pick:
 If the visitor says "shirt" or "shirt preferred", you MUST return category "shirt". Do not upgrade to "suit". If the visitor says "party wear", return occasion "party", not "wedding".
 
 YOUR JOB
-1. If the brief is ambiguous in any single dimension (occasion, climate, formality, colour), ask ONE short clarifying question — never two.
+1. If the brief is ambiguous in any single dimension (occasion, climate, formality, colour), ask ONE short clarifying question — never two — AND return a clarify block with 2 to 4 tappable options so the visitor can answer with a tap.
 2. When you have enough, recommend one garment + tier with a one-line rationale naming a real mill or cloth weight from the LIVE INVENTORY section below.
-3. ALWAYS append a fenced JSON block AFTER your prose, in this exact shape:
+3. ALWAYS append exactly ONE fenced JSON block AFTER your prose. The block is either a recommendation OR a clarification — never both, never neither.
+
+When you have enough info, output the recommendation shape:
 
 \`\`\`json
 {
@@ -88,6 +99,23 @@ YOUR JOB
   "rationale": "One sentence reason naming the actual mill/cloth weight you picked."
 }
 \`\`\`
+
+When you need ONE more piece of info, output the clarification shape instead:
+
+\`\`\`json
+{
+  "clarify": {
+    "question": "Short, direct version of the question you just asked in prose.",
+    "options": ["Two to four short tappable answers, no full sentences", "Around 2 to 5 words each"]
+  }
+}
+\`\`\`
+
+CLARIFY RULES
+- 2, 3, or 4 options. Never 1, never more than 4.
+- Each option must be a complete answer the visitor could literally tap to send — e.g. "Navy", "Office daily", "Black tie". Not a question.
+- Never ask the same dimension twice. If you already asked about colour and now know it, move on.
+- Prefer concrete chips (named colours, named occasions, named climates) over abstractions.
 
 LIVE INVENTORY RULES
 - The "fabric_sku" MUST come from the LIVE INVENTORY block below — copy the digits exactly as they appear after "SKU ".
@@ -183,17 +211,38 @@ export async function POST(req: Request) {
     const data = await res.json();
     const raw: string = data?.choices?.[0]?.message?.content ?? "";
 
-    // Extract the optional ```json {...} ``` block as a structured recommendation.
+    // Extract the optional ```json {...} ``` block. It carries either a
+    // structured recommendation (when the model is ready to commit) or a
+    // clarification (when one more piece of info is needed). We tell the
+    // two apart by which fields are present.
     let recommendation: Recommendation | null = null;
+    let clarify: Clarification | null = null;
     const match = raw.match(/```json\s*([\s\S]*?)\s*```/);
     if (match) {
       try {
         const parsed = JSON.parse(match[1]);
-        if (parsed && typeof parsed === "object" && typeof parsed.category === "string") {
-          recommendation = parsed as Recommendation;
+        if (parsed && typeof parsed === "object") {
+          if (typeof parsed.category === "string") {
+            recommendation = parsed as Recommendation;
+          } else if (
+            parsed.clarify &&
+            typeof parsed.clarify === "object" &&
+            typeof parsed.clarify.question === "string" &&
+            Array.isArray(parsed.clarify.options)
+          ) {
+            // Trust the model's options but normalise / cap defensively.
+            const options = parsed.clarify.options
+              .filter((s: unknown): s is string => typeof s === "string")
+              .map((s: string) => s.trim())
+              .filter((s: string) => s.length > 0)
+              .slice(0, 4);
+            if (options.length >= 2) {
+              clarify = { question: parsed.clarify.question.trim(), options };
+            }
+          }
         }
       } catch {
-        /* Bot returned malformed JSON — drop the recommendation, keep the prose. */
+        /* Bot returned malformed JSON — drop the structured block, keep the prose. */
       }
     }
 
@@ -217,7 +266,7 @@ export async function POST(req: Request) {
     }
 
     const reply = raw.replace(/```json[\s\S]*?```/g, "").trim();
-    return NextResponse.json({ reply: reply || FALLBACK_REPLY, recommendation });
+    return NextResponse.json({ reply: reply || FALLBACK_REPLY, recommendation, clarify });
   } catch (err) {
     console.error("[concierge] fetch threw", err);
     return NextResponse.json({ reply: FALLBACK_REPLY }, { status: 200 });

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Send, X, RotateCcw, Sparkles, ArrowRight } from "lucide-react";
-import type { Recommendation } from "@/app/api/concierge/chat/route";
+import type { Recommendation, Clarification } from "@/app/api/concierge/chat/route";
 
 /**
  * Sebastian — the floating Concierge widget.
@@ -18,7 +18,7 @@ import type { Recommendation } from "@/app/api/concierge/chat/route";
 
 type Msg =
   | { role: "user"; content: string; id: string }
-  | { role: "assistant"; content: string; id: string; rec?: Recommendation | null };
+  | { role: "assistant"; content: string; id: string; rec?: Recommendation | null; clarify?: Clarification | null };
 
 const GREETING: Msg = {
   id: "greeting",
@@ -99,10 +99,20 @@ export function Concierge() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: payload }),
       });
-      const data = (await res.json()) as { reply: string; recommendation?: Recommendation | null };
+      const data = (await res.json()) as {
+        reply: string;
+        recommendation?: Recommendation | null;
+        clarify?: Clarification | null;
+      };
       setMessages((m) => [
         ...m,
-        { id: uid(), role: "assistant", content: data.reply, rec: data.recommendation ?? null },
+        {
+          id: uid(),
+          role: "assistant",
+          content: data.reply,
+          rec: data.recommendation ?? null,
+          clarify: data.clarify ?? null,
+        },
       ]);
     } catch {
       setMessages((m) => [
@@ -193,14 +203,16 @@ export function Concierge() {
               ref={scrollerRef}
               className="flex-1 overflow-y-auto px-5 py-5 space-y-4"
             >
-              {messages.map((m) => (
+              {messages.map((m, i) => (
                 <MessageBubble
                   key={m.id}
                   msg={m}
                   onTakeMeThere={takeMeThere}
+                  onChip={(text) => void send(text)}
+                  isLast={i === messages.length - 1}
                 />
               ))}
-              {thinking && <ThinkingDots />}
+              {thinking && <ThinkingPhrase />}
               {/* Intent chips only on the very first turn so they don't clutter
                   the running transcript later. */}
               {messages.length === 1 && !thinking && (
@@ -304,9 +316,13 @@ export function Concierge() {
 function MessageBubble({
   msg,
   onTakeMeThere,
+  onChip,
+  isLast,
 }: {
   msg: Msg;
   onTakeMeThere: (r: Recommendation) => void;
+  onChip: (text: string) => void;
+  isLast: boolean;
 }) {
   if (msg.role === "user") {
     return (
@@ -317,11 +333,28 @@ function MessageBubble({
       </div>
     );
   }
+  // Clarify chips are only tappable on the LAST assistant turn — once the
+  // visitor has moved on, the older question's options would be stale.
+  const showChips = isLast && msg.clarify && msg.clarify.options.length >= 2;
   return (
     <div className="space-y-3">
       <div className="max-w-[88%] px-4 py-2.5 bg-[var(--color-ivory-200)] text-[var(--color-charcoal-900)] text-[0.92rem] leading-relaxed whitespace-pre-wrap">
         {msg.content}
       </div>
+      {showChips && (
+        <div className="flex flex-wrap gap-2 pt-1">
+          {msg.clarify!.options.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => onChip(opt)}
+              className="text-eyebrow text-[0.63rem] px-3 py-2 border border-black/10 text-[var(--color-charcoal-800)] hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
       {msg.rec && <RecommendationCard rec={msg.rec} onPick={onTakeMeThere} />}
     </div>
   );
@@ -430,18 +463,43 @@ function RecommendationCard({
   );
 }
 
-function ThinkingDots() {
+// Pre-written in-character phrases that cycle while the model is thinking.
+// Cheap, deterministic, never look generic — feels like a real concierge
+// crossing the showroom floor rather than a robotic loader. Three dots
+// trail the phrase so the visitor still reads it as "still working".
+const THINKING_PHRASES = [
+  "Sebastian is looking at the rack",
+  "Checking the cloth library",
+  "Considering the mill weight",
+  "Pulling a few swatches for you",
+  "Reading the brief once more",
+  "Walking the floor",
+  "Sebastian is letting his eye settle",
+  "Comparing two cloths",
+  "Cross-checking the cuts",
+  "Imagining the silhouette",
+];
+
+function ThinkingPhrase() {
+  const [idx, setIdx] = useState(() => Math.floor(Math.random() * THINKING_PHRASES.length));
+  useEffect(() => {
+    const t = setInterval(() => setIdx((i) => (i + 1) % THINKING_PHRASES.length), 1800);
+    return () => clearInterval(t);
+  }, []);
   return (
-    <div className="flex items-center gap-1.5 px-4 py-2 w-fit bg-[var(--color-ivory-200)]">
-      {[0, 1, 2].map((i) => (
+    <div className="px-4 py-2.5 w-fit max-w-[88%] bg-[var(--color-ivory-200)] text-[var(--color-charcoal-700)] text-[0.88rem] leading-relaxed italic">
+      <AnimatePresence mode="wait">
         <motion.span
-          key={i}
-          initial={{ opacity: 0.3, y: 0 }}
-          animate={{ opacity: [0.3, 1, 0.3], y: [0, -2, 0] }}
-          transition={{ duration: 1, repeat: Infinity, delay: i * 0.18 }}
-          className="block w-1.5 h-1.5 rounded-full bg-[var(--color-burgundy-700)]"
-        />
-      ))}
+          key={idx}
+          initial={{ opacity: 0, y: 3 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -3 }}
+          transition={{ duration: 0.35 }}
+          className="inline-block"
+        >
+          {THINKING_PHRASES[idx]}<span className="ml-0.5">…</span>
+        </motion.span>
+      </AnimatePresence>
     </div>
   );
 }
