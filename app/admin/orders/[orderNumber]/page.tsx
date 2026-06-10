@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Check, Save, Truck, Send } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
+import { OrderPhotosGrid } from "@/components/OrderPhotosGrid";
 import { isAdmin } from "@/lib/admin";
 import {
   fetchOrderByNumber, ORDER_STATUS_LABEL, ORDER_STATUSES,
@@ -271,6 +272,11 @@ export default function AdminOrderDetailPage() {
               ))}
             </ul>
           </section>
+
+          {/* Body photographs — always-visible 4-slot grid on the admin
+              side so the atelier can immediately see whether the customer
+              provided any context for the cutter. */}
+          <OrderPhotosGrid orderId={order.id} audience="admin" />
 
           {/* Status history */}
           <section className="mt-10">

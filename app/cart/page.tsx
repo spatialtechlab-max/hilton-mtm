@@ -4,13 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Minus, Plus, Pencil, Trash2, ShoppingBag, Tag, Check, X, MapPin, Star } from "lucide-react";
+import { ArrowLeft, ArrowRight, Minus, Plus, Pencil, Trash2, ShoppingBag, Tag, Check, X, MapPin, Star, Camera, Upload } from "lucide-react";
 import { useCart, removeFromCart, updateQty, clearCart } from "@/lib/cart";
 import { useAuth } from "@/components/AuthProvider";
 import { ProfileForm } from "@/components/ProfileForm";
 import { AuthForm } from "@/components/AuthForm";
 import { createOrderFromCart, fetchProfile, isProfileComplete, type Profile } from "@/lib/orders";
 import { listMyAddresses, upsertAddress, MAX_ADDRESSES, type Address, type AddressInput } from "@/lib/addresses";
+import { uploadOrderPhoto, ORDER_VIEWS, ORDER_VIEW_LABEL, type OrderView } from "@/lib/orderMedia";
 import { supabase } from "@/lib/supabase";
 
 const fmt = (n: number) =>
@@ -63,6 +64,37 @@ export default function CartPage() {
   }, [user]);
 
   const selectedAddr = addresses.find((a) => a.id === selectedAddrId) ?? null;
+
+  // Body-measurement photos: one optional File per labeled view. Kept in
+  // local state until the order is placed — we don't know the orderId
+  // until createOrderFromCart returns. After the insert, placeOrder
+  // uploads any picked files to the order-media bucket.
+  const [photos, setPhotos] = useState<Record<OrderView, File | null>>({
+    front: null, back: null, left: null, right: null,
+  });
+  const [photoPreviews, setPhotoPreviews] = useState<Record<OrderView, string | null>>({
+    front: null, back: null, left: null, right: null,
+  });
+
+  function pickPhoto(view: OrderView, file: File | null) {
+    setPhotos((p) => ({ ...p, [view]: file }));
+    setPhotoPreviews((prev) => {
+      // Revoke previous object URL to avoid memory leaks.
+      const old = prev[view];
+      if (old) URL.revokeObjectURL(old);
+      return { ...prev, [view]: file ? URL.createObjectURL(file) : null };
+    });
+  }
+  function clearPhoto(view: OrderView) {
+    pickPhoto(view, null);
+  }
+  useEffect(() => {
+    // Revoke all preview URLs when the cart unmounts.
+    return () => {
+      Object.values(photoPreviews).forEach((url) => url && URL.revokeObjectURL(url));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const grandTotal = applied ? Math.max(0, Math.round((subtotal - applied.amount) * 100) / 100) : subtotal;
 
@@ -140,6 +172,19 @@ export default function CartPage() {
       setPhase("cart");
       return;
     }
+    // Body photos — upload any selected files against the new order. We
+    // await these (sequentially) because the customer expects to see the
+    // photos on their order page right after redirect. A single upload
+    // failure doesn't block the others or the redirect.
+    const picked = ORDER_VIEWS.filter((v) => photos[v]);
+    for (const view of picked) {
+      const file = photos[view];
+      if (!file) continue;
+      try {
+        await uploadOrderPhoto(order.id, user.id, view, file);
+      } catch { /* swallow — the customer can re-upload from the order page later */ }
+    }
+
     // Confirmation email — fire-and-forget. The order is already
     // saved; we don't want a transient email-service hiccup to
     // strand the customer on the cart page.
@@ -404,6 +449,38 @@ export default function CartPage() {
                 </div>
               )}
 
+              {/* Body-measurement photos — optional, four labeled slots
+                  (Front / Back / Left / Right). The cutter uses these to
+                  understand body structure beyond the numeric measurements
+                  on file. Applies to every order type, not just custom
+                  commissions, because even a stock-item buyer may benefit
+                  from the atelier having body context for future fittings. */}
+              {user && (
+                <div className="mb-6 pb-6 border-b border-black/10">
+                  <div className="flex items-baseline justify-between gap-3 mb-1">
+                    <h3 className="text-eyebrow text-[var(--color-charcoal-500)] inline-flex items-center gap-2">
+                      <Camera size={12} strokeWidth={1.5} /> Body photographs
+                    </h3>
+                    <span className="text-eyebrow text-[0.58rem] text-[var(--color-charcoal-500)]">Optional</span>
+                  </div>
+                  <p className="text-[0.72rem] text-[var(--color-charcoal-500)] leading-relaxed mb-3">
+                    Help the cutter understand your build. Each slot accepts one photo —
+                    front, back, and a side view from each direction. Visible only to the atelier.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {ORDER_VIEWS.map((view) => (
+                      <PhotoSlot
+                        key={view}
+                        label={ORDER_VIEW_LABEL[view]}
+                        preview={photoPreviews[view]}
+                        onPick={(file) => pickPhoto(view, file)}
+                        onClear={() => clearPhoto(view)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <h2 className="text-eyebrow text-[var(--color-charcoal-500)]">Order summary</h2>
               <div className="mt-5 space-y-3 text-[0.9rem]">
                 <div className="flex justify-between">
@@ -532,6 +609,60 @@ export default function CartPage() {
               ← Back to cart
             </button>
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** One dropzone for a single labeled body photo. Clicking the empty
+ *  state opens the file picker; once a file is chosen the preview thumb
+ *  takes over and the X clears it back to the placeholder. */
+function PhotoSlot({
+  label, preview, onPick, onClear,
+}: {
+  label: string;
+  preview: string | null;
+  onPick: (file: File | null) => void;
+  onClear: () => void;
+}) {
+  const inputId = `photo-${label.toLowerCase().replace(/\s+/g, "-")}`;
+  return (
+    <div className="block">
+      <label
+        htmlFor={inputId}
+        className="relative block aspect-[3/4] border border-dashed border-black/20 bg-white/40 hover:border-[var(--color-burgundy-700)]/50 transition-colors cursor-pointer overflow-hidden"
+      >
+        {preview ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={preview} alt={label} className="absolute inset-0 w-full h-full object-cover" />
+          </>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-[var(--color-charcoal-500)]">
+            <Upload size={16} strokeWidth={1.5} />
+            <span className="mt-1 text-[0.6rem] uppercase tracking-[0.18em]">Add photo</span>
+          </div>
+        )}
+      </label>
+      <input
+        id={inputId}
+        type="file"
+        accept="image/jpeg,image/png,image/heic,image/webp"
+        className="sr-only"
+        onChange={(e) => onPick(e.currentTarget.files?.[0] ?? null)}
+      />
+      <div className="flex items-center justify-between mt-1.5">
+        <span className="text-eyebrow text-[0.58rem] text-[var(--color-charcoal-700)]">{label}</span>
+        {preview && (
+          <button
+            type="button"
+            onClick={onClear}
+            aria-label={`Remove ${label} photo`}
+            className="text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors"
+          >
+            <X size={11} strokeWidth={1.5} />
+          </button>
         )}
       </div>
     </div>

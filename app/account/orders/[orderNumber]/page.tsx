@@ -9,6 +9,7 @@ import {
   fetchOrderByNumber, ORDER_STATUS_LABEL, ORDER_STATUSES,
   type Order, type OrderItem, type StatusHistoryEntry,
 } from "@/lib/orders";
+import { OrderPhotosGrid } from "@/components/OrderPhotosGrid";
 import { supabase } from "@/lib/supabase";
 
 const fmt = (n: number) => `BHD ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
@@ -183,6 +184,10 @@ export default function OrderDetailPage() {
                   ))}
                 </ul>
               </section>
+
+              {/* Body photographs — only renders when the customer
+                  uploaded at least one at checkout. */}
+              <OrderPhotosGrid orderId={order.id} audience="customer" />
             </div>
 
             {/* Sidebar — delivery, summary */}
