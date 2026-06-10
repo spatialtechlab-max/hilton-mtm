@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Minus, Plus, Pencil, Trash2, ShoppingBag } from "lucide-react";
+import { ArrowLeft, ArrowRight, Minus, Plus, Pencil, Trash2, ShoppingBag, Tag, Check, X } from "lucide-react";
 import { useCart, removeFromCart, updateQty, clearCart } from "@/lib/cart";
 import { useAuth } from "@/components/AuthProvider";
 import { ProfileForm } from "@/components/ProfileForm";
@@ -24,6 +24,46 @@ export default function CartPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [placing, setPlacing] = useState(false);
   const [error, setError]     = useState<string | null>(null);
+
+  // Discount code state. Applied = a validated code stamped with the
+  // percentage and amount returned by the server. We keep the input
+  // separate so the visitor can clear and try a different one.
+  const [codeInput, setCodeInput] = useState("");
+  const [applying, setApplying]   = useState(false);
+  const [discountError, setDiscountError] = useState<string | null>(null);
+  const [applied, setApplied] = useState<{ code: string; percent: number; amount: number } | null>(null);
+
+  const grandTotal = applied ? Math.max(0, Math.round((subtotal - applied.amount) * 100) / 100) : subtotal;
+
+  async function applyDiscount() {
+    setDiscountError(null);
+    const code = codeInput.trim().toUpperCase();
+    if (!code) return;
+    setApplying(true);
+    try {
+      const res = await fetch("/api/discount-codes/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, subtotal }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.valid) {
+        setDiscountError(body?.reason ?? "Couldn't apply that code.");
+        setApplied(null);
+        return;
+      }
+      setApplied({ code: body.code, percent: body.percent_off, amount: body.amount });
+      setCodeInput("");
+    } catch {
+      setDiscountError("Couldn't reach the discount service. Please try again.");
+    } finally {
+      setApplying(false);
+    }
+  }
+  function clearDiscount() {
+    setApplied(null);
+    setDiscountError(null);
+  }
 
   // When the user signs in mid-checkout, advance phase automatically.
   useEffect(() => {
@@ -47,7 +87,12 @@ export default function CartPage() {
   async function placeOrder(p: Profile) {
     if (!user) return;
     setPlacing(true);
-    const { order, error } = await createOrderFromCart(items, p, user.email ?? "");
+    const { order, error } = await createOrderFromCart(
+      items,
+      p,
+      user.email ?? "",
+      applied ? { code: applied.code } : null,
+    );
     if (error || !order) {
       setError(error ?? "Could not place the order.");
       setPlacing(false);
@@ -205,14 +250,75 @@ export default function CartPage() {
                   <span className="text-[var(--color-charcoal-500)]">Subtotal</span>
                   <span className="text-[var(--color-charcoal-900)]">{fmt(subtotal)}</span>
                 </div>
+                {applied && (
+                  <div className="flex justify-between text-[var(--color-burgundy-700)]">
+                    <span className="inline-flex items-center gap-2">
+                      <Tag size={12} strokeWidth={1.5} /> {applied.code} · {applied.percent}% off
+                    </span>
+                    <span className="tabular-nums">− {fmt(applied.amount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-[var(--color-charcoal-500)]">Delivery</span>
                   <span className="text-[var(--color-charcoal-900)]">Calculated at checkout</span>
                 </div>
               </div>
+
+              {/* Discount code — line-item entry the customer can apply
+                  any time before placing the order. */}
+              <div className="mt-5 border-t border-black/10 pt-5">
+                {!applied ? (
+                  <>
+                    <label className="block text-eyebrow text-[var(--color-charcoal-500)] mb-2">
+                      Discount code
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={codeInput}
+                        onChange={(e) => { setCodeInput(e.target.value.toUpperCase().slice(0, 5)); setDiscountError(null); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void applyDiscount(); } }}
+                        placeholder="DIS25"
+                        maxLength={5}
+                        className="flex-1 min-w-0 bg-white border border-black/15 px-3 py-2.5 text-[0.9rem] tabular-nums tracking-[0.18em] uppercase focus:outline-none focus:border-[var(--color-burgundy-700)]"
+                      />
+                      <button
+                        type="button"
+                        onClick={applyDiscount}
+                        disabled={applying || codeInput.trim().length < 5}
+                        className="text-eyebrow border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] px-4 py-2.5 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] transition-colors disabled:opacity-50"
+                      >
+                        {applying ? "Checking…" : "Apply"}
+                      </button>
+                    </div>
+                    {discountError && (
+                      <p className="mt-2 text-[0.78rem] text-[var(--color-burgundy-700)]">
+                        {discountError}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between gap-3 bg-[var(--color-burgundy-50)] border border-[var(--color-burgundy-700)]/20 px-3 py-2.5">
+                    <span className="text-[0.85rem] text-[var(--color-burgundy-700)] inline-flex items-center gap-2">
+                      <Check size={14} strokeWidth={1.5} />
+                      <span className="tabular-nums tracking-[0.15em]">{applied.code}</span>
+                      <span className="opacity-70">applied</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearDiscount}
+                      aria-label="Remove discount code"
+                      className="text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)] transition-colors"
+                    >
+                      <X size={14} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className="mt-6 pt-5 border-t border-black/10 flex justify-between items-baseline">
                 <span className="text-eyebrow text-[var(--color-charcoal-900)]">Total</span>
-                <span className="text-display text-[1.5rem] text-[var(--color-burgundy-700)]">{fmt(subtotal)}</span>
+                <span className="text-display text-[1.5rem] text-[var(--color-burgundy-700)]">{fmt(grandTotal)}</span>
               </div>
 
               <button

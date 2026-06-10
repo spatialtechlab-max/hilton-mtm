@@ -46,6 +46,9 @@ export async function POST(req: Request) {
     shippingAddressLine1: (order as { shipping_address?: { line1?: string } }).shipping_address?.line1,
     shippingCity: (order as { shipping_address?: { city?: string } }).shipping_address?.city,
     shippingCountry: (order as { shipping_address?: { country?: string } }).shipping_address?.country,
+    discountCode:    (order as { discount_code?: string | null }).discount_code ?? undefined,
+    discountPercent: (order as { discount_percent?: number | null }).discount_percent ?? undefined,
+    discountAmount:  (order as { discount_amount?: number | null }).discount_amount ?? undefined,
   });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 500 });
   return NextResponse.json({ sent: true });

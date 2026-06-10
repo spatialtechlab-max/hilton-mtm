@@ -308,6 +308,18 @@ export default function AdminOrderDetailPage() {
 
           <div className="border border-black/10 p-6">
             <h3 className="text-eyebrow text-[var(--color-charcoal-500)]">Total</h3>
+            {order.discount_code && order.discount_amount ? (
+              <div className="mt-2 space-y-1 text-[0.85rem]">
+                <div className="flex justify-between text-[var(--color-charcoal-500)]">
+                  <span>Items</span>
+                  <span className="tabular-nums">{fmt(Number(order.subtotal) + Number(order.discount_amount))}</span>
+                </div>
+                <div className="flex justify-between text-[var(--color-burgundy-700)]">
+                  <span>{order.discount_code} · {order.discount_percent}% off</span>
+                  <span className="tabular-nums">− {fmt(Number(order.discount_amount))}</span>
+                </div>
+              </div>
+            ) : null}
             <p className="text-display text-[1.75rem] mt-2 text-[var(--color-burgundy-700)] tabular-nums">
               {fmt(Number(order.subtotal))}
             </p>

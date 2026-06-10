@@ -121,8 +121,12 @@ export async function sendOrderConfirmationEmail(args: {
   shippingAddressLine1?: string;
   shippingCity?: string;
   shippingCountry?: string;
+  discountCode?: string;
+  discountPercent?: number;
+  discountAmount?: number;
 }) {
   const firstName = args.name.split(/\s+/)[0] || "";
+  const itemsGross = args.items.reduce((s, it) => s + it.price_num * it.qty, 0);
   const rows = args.items.map((it) => `
     <tr>
       <td style="padding:14px 0;border-bottom:1px solid rgba(0,0,0,0.06)">
@@ -140,14 +144,34 @@ export async function sendOrderConfirmationEmail(args: {
       ${args.shippingAddressLine1}<br>
       ${[args.shippingCity, args.shippingCountry].filter(Boolean).join(", ")}
     </p>` : "";
+
+  // Show a Subtotal → Discount → Total breakdown when a code was applied
+  // so the customer sees the saving clearly. Otherwise keep the original
+  // single Total row.
+  const hasDiscount = Boolean(args.discountCode && args.discountAmount && args.discountAmount > 0);
+  const totalsRows = hasDiscount
+    ? `
+      <tr><td style="padding:16px 0 6px;font-family:Arial,sans-serif;font-size:12px;color:rgba(0,0,0,0.55)">Subtotal</td>
+          <td align="right" style="padding:16px 0 6px;font-family:Georgia,serif;font-size:16px">${formatBhd(itemsGross)}</td></tr>
+      <tr><td style="padding:6px 0;font-family:Arial,sans-serif;font-size:12px;color:${BURGUNDY}">
+            ${args.discountCode} · ${args.discountPercent}% off
+          </td>
+          <td align="right" style="padding:6px 0;font-family:Georgia,serif;font-size:16px;color:${BURGUNDY}">
+            − ${formatBhd(args.discountAmount ?? 0)}
+          </td></tr>
+      <tr><td style="padding:12px 0 0;font-family:Georgia,serif;font-size:18px;border-top:1px solid rgba(0,0,0,0.12)">Total</td>
+          <td align="right" style="padding:12px 0 0;font-family:Georgia,serif;font-size:20px;color:${BURGUNDY};border-top:1px solid rgba(0,0,0,0.12)">${formatBhd(args.subtotal)}</td></tr>`
+    : `
+      <tr><td style="padding:16px 0 0;font-family:Georgia,serif;font-size:18px">Total</td>
+          <td align="right" style="padding:16px 0 0;font-family:Georgia,serif;font-size:20px;color:${BURGUNDY}">${formatBhd(args.subtotal)}</td></tr>`;
+
   const body = `
     <p>${firstName ? `Dear ${firstName},` : "Hello,"}</p>
     <p>Your commission is received. We will confirm next steps within one working day. Order details for your records:</p>
     <p style="font-family:Arial,sans-serif;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(0,0,0,0.5);margin:24px 0 12px">Order ${args.orderNumber}</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
       ${rows}
-      <tr><td style="padding:16px 0 0;font-family:Georgia,serif;font-size:18px">Total</td>
-          <td align="right" style="padding:16px 0 0;font-family:Georgia,serif;font-size:20px;color:${BURGUNDY}">${formatBhd(args.subtotal)}</td></tr>
+      ${totalsRows}
     </table>
     ${shippingBlock}
     <p style="margin-top:32px">A house tailor will be in touch shortly to schedule your fitting.</p>

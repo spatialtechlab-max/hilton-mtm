@@ -62,6 +62,11 @@ export type Order = {
   subtotal: number;
   currency: string;
   notes: string;
+  // Discount snapshot — frozen at order-placement time so reporting stays
+  // honest even if the discount code is later changed or deleted.
+  discount_code?: string | null;
+  discount_percent?: number | null;
+  discount_amount?: number | null;
   // Courier dispatch — set when ops marks the order as shipped.
   courier_name?: string | null;
   tracking_number?: string | null;
@@ -122,15 +127,46 @@ export async function upsertProfile(p: Profile): Promise<{ error: string | null 
 
 /* ───────────────────────────── Orders ───────────────────────────── */
 
-/** Convert the local cart into an order in Supabase. Returns the new order. */
+/** Convert the local cart into an order in Supabase. Returns the new order.
+ *  Optionally accepts a discount snapshot that was validated client-side; we
+ *  re-validate server-side via /api/discount-codes/validate before persisting
+ *  so a tampered client can't change the percentage. */
 export async function createOrderFromCart(
   items: CartItem[],
   profile: Profile,
   email: string,
+  discount?: { code: string } | null,
 ): Promise<{ order: Order | null; error: string | null }> {
   if (items.length === 0) return { order: null, error: "Cart is empty." };
 
-  const subtotal = items.reduce((s, i) => s + i.priceNum * i.qty, 0);
+  const grossSubtotal = items.reduce((s, i) => s + i.priceNum * i.qty, 0);
+
+  // Re-validate the discount server-side to lock in the percentage and
+  // discount amount. Failures degrade gracefully — the order still goes
+  // through at full price so a transient code-service outage doesn't
+  // block checkout.
+  let discountSnapshot: { code: string; percent: number; amount: number } | null = null;
+  if (discount?.code) {
+    try {
+      const res = await fetch("/api/discount-codes/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: discount.code, subtotal: grossSubtotal }),
+      });
+      const body = await res.json();
+      if (res.ok && body.valid) {
+        discountSnapshot = {
+          code: String(body.code),
+          percent: Number(body.percent_off),
+          amount: Number(body.amount),
+        };
+      }
+    } catch { /* fall through — checkout still continues */ }
+  }
+
+  const subtotal = discountSnapshot
+    ? Math.max(0, Math.round((grossSubtotal - discountSnapshot.amount) * 100) / 100)
+    : grossSubtotal;
 
   // Insert the order
   const { data: order, error: orderErr } = await supabase
@@ -148,6 +184,9 @@ export async function createOrderFromCart(
       },
       subtotal,
       currency: "BHD",
+      discount_code:    discountSnapshot?.code ?? null,
+      discount_percent: discountSnapshot?.percent ?? null,
+      discount_amount:  discountSnapshot?.amount ?? null,
     })
     .select("*")
     .single();
