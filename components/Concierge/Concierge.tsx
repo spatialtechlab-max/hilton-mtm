@@ -45,12 +45,11 @@ const CATEGORY_LABEL: Record<NonNullable<Recommendation["category"]>, string> = 
   trouser: "Tailored trouser",
 };
 
-// Only the suit recommendation gets a photograph — the rest stay text-only
-// (the user pointed out that pairing a "Made-to-measure shirt for party"
-// with a shirting flat-lay reads as a generic stock photo, which is worse
-// than no image at all). Keeping image surface scarce makes each photo
-// feel earned.
-const CATEGORY_IMG: Partial<Record<NonNullable<Recommendation["category"]>, string>> = {
+// Fallback static atelier shot per garment, used only when the model
+// failed to ground its choice in an in-stock SKU (so no fabric_image
+// came back from the server). When the recommendation has a real cloth
+// photo from the ERP, we show that instead — see RecommendationCard.
+const CATEGORY_FALLBACK_IMG: Partial<Record<NonNullable<Recommendation["category"]>, string>> = {
   suit: "/atelier/showroom-double-breasted.jpg",
 };
 
@@ -337,7 +336,12 @@ function RecommendationCard({
 }) {
   const matchPct = Math.max(0, Math.min(100, Math.round(rec.match ?? 75)));
   const cat = rec.category;
-  const img = CATEGORY_IMG[cat];
+  // Real ERP product photo first (stitched on by the chat route from the
+  // matched SKU), then a static atelier shot for known categories, then
+  // text-only. ERP photos for clothjacket-style items are hosted on a
+  // remote domain — the Next/Image patterns config already allows them.
+  const img = rec.fabric_image || CATEGORY_FALLBACK_IMG[cat];
+  const isErpImage = Boolean(rec.fabric_image && img === rec.fabric_image);
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -352,7 +356,14 @@ function RecommendationCard({
             alt={CATEGORY_LABEL[cat]}
             fill
             sizes="320px"
-            className="object-cover"
+            // ERP source images cap at ~560×420 and are pre-shot on a
+            // studio white background; we ship the original bytes
+            // (unoptimized) and use mix-blend multiply to drop the
+            // background so the cloth tile reads as a swatch rather
+            // than a white plate. Static atelier fallbacks get the
+            // normal optimisation path and a plain cover crop.
+            unoptimized={isErpImage}
+            className={isErpImage ? "object-contain p-2 mix-blend-multiply" : "object-cover"}
           />
           {/* Match badge */}
           <div className="absolute top-2 left-2 px-2 py-1 bg-[var(--color-ivory-100)]/95 text-[var(--color-burgundy-700)] text-eyebrow text-[0.58rem]">
@@ -387,6 +398,20 @@ function RecommendationCard({
         {rec.fabric_hint && (
           <div className="mt-1 text-[0.78rem] text-[var(--color-charcoal-700)]">
             {rec.fabric_hint}
+          </div>
+        )}
+        {(rec.fabric_brand || rec.fabric_price) && (
+          <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-black/10 pt-2">
+            {rec.fabric_brand && (
+              <span className="text-eyebrow text-[var(--color-charcoal-500)] text-[0.6rem] truncate">
+                {rec.fabric_brand}
+              </span>
+            )}
+            {rec.fabric_price && (
+              <span className="text-[0.85rem] text-[var(--color-burgundy-700)] tabular-nums whitespace-nowrap">
+                {rec.fabric_price}
+              </span>
+            )}
           </div>
         )}
         <p className="mt-2 text-[0.85rem] text-[var(--color-charcoal-700)] leading-relaxed">

@@ -8,7 +8,7 @@
  * the bot never goes silent in front of a customer.
  */
 import { NextResponse } from "next/server";
-import { getInventorySummaryForPrompt } from "@/lib/inventorySummary";
+import { getInventory, summarizeInventory, findFabric, type Inventory } from "@/lib/inventorySummary";
 
 type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
 
@@ -29,6 +29,12 @@ export type Recommendation = {
   // widget can deep-link the customizer to skip the fabric step entirely
   // and land the visitor on the cloth they've already been recommended.
   fabric_sku?: string;
+  // Enrichments stitched on server-side from the matched inventory row
+  // so the widget's card can show the real ERP product photo, brand,
+  // and price the customer will actually see at checkout.
+  fabric_image?: string;
+  fabric_brand?: string;
+  fabric_price?: string;
   match?: number;       // 0–100, how well the recommendation matches the brief
   rationale: string;
 };
@@ -129,11 +135,15 @@ export async function POST(req: Request) {
   // Pull the live ERP inventory for the four active garments and stitch it
   // into a second system message. We derive the base URL from the request
   // host so the same code works on prod and preview deploys without env.
+  // The raw inventory map is also kept around so we can attach the matched
+  // fabric's photo + brand + price to the recommendation after the LLM
+  // returns its choice.
   const origin = new URL(req.url).origin;
   let inventoryBlock = "";
+  let inventory: Inventory | null = null;
   try {
-    const summary = await getInventorySummaryForPrompt(origin);
-    inventoryBlock = `LIVE INVENTORY (refreshed per request):\n\n${summary}`;
+    inventory = await getInventory(origin);
+    inventoryBlock = `LIVE INVENTORY (refreshed per request):\n\n${summarizeInventory(inventory)}`;
   } catch {
     // Inventory failures are non-fatal — the model still answers in
     // generic mill terms; the customer can pick cloth at the fitting.
@@ -186,6 +196,26 @@ export async function POST(req: Request) {
         /* Bot returned malformed JSON — drop the recommendation, keep the prose. */
       }
     }
+
+    // Stitch the matched ERP product photo, brand and price onto the
+    // recommendation so the widget can render the cloth the model named
+    // (not a generic stock photo, not the wrong garment). We only enrich
+    // when the model returned a real numeric SKU — placeholder SKUs like
+    // ATELIER-TROUSER intentionally stay image-less so the card honestly
+    // signals "no stock, finalised at fitting".
+    if (recommendation?.fabric_sku && inventory && !recommendation.fabric_sku.startsWith("ATELIER-")) {
+      const hit = findFabric(inventory, recommendation.fabric_sku);
+      if (hit) {
+        if (hit.fabric.image) recommendation.fabric_image = hit.fabric.image;
+        if (hit.fabric.brand && hit.fabric.brand !== "Missing value") {
+          recommendation.fabric_brand = hit.fabric.brand;
+        }
+        if (hit.fabric.price && hit.fabric.price !== "Missing value") {
+          recommendation.fabric_price = hit.fabric.price;
+        }
+      }
+    }
+
     const reply = raw.replace(/```json[\s\S]*?```/g, "").trim();
     return NextResponse.json({ reply: reply || FALLBACK_REPLY, recommendation });
   } catch (err) {

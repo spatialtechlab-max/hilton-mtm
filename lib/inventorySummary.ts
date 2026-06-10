@@ -1,9 +1,9 @@
 /**
  * Builds a compact, prompt-ready summary of the live ERP fabric inventory
- * for the four active garment categories. The concierge route injects this
- * into the system prompt so Sebastian can only recommend cloth the atelier
- * actually holds — and can stamp the recommendation with a real SKU that
- * deep-links the customer straight into the spec step of /customize.
+ * for the four active garment categories, AND exposes the raw fabric maps
+ * so callers (the concierge route) can look up a matched SKU after the
+ * LLM responds — to attach the real ERP product photo to the
+ * recommendation card.
  *
  * Calls the project's own /api/fabrics endpoint (which already handles ERP
  * + the mtm_garments gate + admin disables + the house shirting library)
@@ -11,7 +11,7 @@
  */
 
 const CATEGORIES = ["suit", "jacket", "shirt", "trouser"] as const;
-type Category = typeof CATEGORIES[number];
+export type Category = typeof CATEGORIES[number];
 
 // Cap per category so the prompt budget stays sensible. The model only
 // needs a representative spread to choose from — not every SKU in the
@@ -19,7 +19,7 @@ type Category = typeof CATEGORIES[number];
 // atelier curates by recency.
 const MAX_PER_CATEGORY = 12;
 
-type Fabric = {
+export type Fabric = {
   sku: string;
   name?: string;
   brand?: string;
@@ -29,7 +29,39 @@ type Fabric = {
   weight?: string;
   origin?: string;
   price?: string;
+  image?: string;
 };
+
+export type Inventory = Record<Category, Fabric[]>;
+
+async function fetchOne(baseUrl: string, category: Category): Promise<Fabric[]> {
+  try {
+    const res = await fetch(`${baseUrl}/api/fabrics?category=${category}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const arr = Array.isArray(data?.fabrics) ? data.fabrics : [];
+    return arr.slice(0, MAX_PER_CATEGORY);
+  } catch {
+    return [];
+  }
+}
+
+/** Fetches all four categories in parallel. */
+export async function getInventory(baseUrl: string): Promise<Inventory> {
+  const results = await Promise.all(CATEGORIES.map((c) => fetchOne(baseUrl, c)));
+  return Object.fromEntries(CATEGORIES.map((c, i) => [c, results[i]])) as Inventory;
+}
+
+/** Find a fabric across the inventory by SKU. */
+export function findFabric(inv: Inventory, sku: string): { fabric: Fabric; category: Category } | null {
+  for (const cat of CATEGORIES) {
+    const f = inv[cat].find((x) => String(x.sku) === String(sku));
+    if (f) return { fabric: f, category: cat };
+  }
+  return null;
+}
 
 /** One-line summary of a single fabric — terse, model-friendly. */
 function lineForFabric(f: Fabric): string {
@@ -47,37 +79,15 @@ function lineForFabric(f: Fabric): string {
   return tail ? `${main} — ${tail}` : main;
 }
 
-async function fetchOne(baseUrl: string, category: Category): Promise<Fabric[]> {
-  try {
-    const res = await fetch(`${baseUrl}/api/fabrics?category=${category}`, {
-      // The underlying ERP fetch already ISR-caches; re-using the cache here
-      // would over-couple the chat to its 5-minute window. Default cache is
-      // fine — Vercel reuses the same compute region so this is near-local.
-      cache: "no-store",
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    const arr = Array.isArray(data?.fabrics) ? data.fabrics : [];
-    return arr.slice(0, MAX_PER_CATEGORY);
-  } catch {
-    return [];
-  }
-}
-
 /**
  * Returns a single text block ready to slot into the system prompt.
  * Layout is intentionally rigid (uppercase category headers, dashes, no
  * markdown) so the model latches onto it as data rather than prose.
- *
- * Empty categories print a "(no stock — recommend ATELIER-<CAT> placeholder)"
- * line so the model doesn't hallucinate a SKU when there's nothing to pick.
  */
-export async function getInventorySummaryForPrompt(baseUrl: string): Promise<string> {
-  const results = await Promise.all(CATEGORIES.map((c) => fetchOne(baseUrl, c)));
-
+export function summarizeInventory(inv: Inventory): string {
   const sections: string[] = [];
-  CATEGORIES.forEach((cat, i) => {
-    const fabrics = results[i];
+  CATEGORIES.forEach((cat) => {
+    const fabrics = inv[cat];
     const header = `${cat.toUpperCase()} CLOTH (${fabrics.length} in stock):`;
     if (fabrics.length === 0) {
       sections.push(`${header}\n  - (no stock — use "ATELIER-${cat.toUpperCase()}" as fabric_sku)`);
@@ -87,4 +97,12 @@ export async function getInventorySummaryForPrompt(baseUrl: string): Promise<str
     sections.push(`${header}\n${lines}`);
   });
   return sections.join("\n\n");
+}
+
+/** Convenience wrapper kept for any direct callers that don't need the
+ *  raw fabric maps — equivalent to summarizeInventory(await getInventory(...)).
+ */
+export async function getInventorySummaryForPrompt(baseUrl: string): Promise<string> {
+  const inv = await getInventory(baseUrl);
+  return summarizeInventory(inv);
 }
