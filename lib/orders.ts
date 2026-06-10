@@ -130,12 +130,25 @@ export async function upsertProfile(p: Profile): Promise<{ error: string | null 
 /** Convert the local cart into an order in Supabase. Returns the new order.
  *  Optionally accepts a discount snapshot that was validated client-side; we
  *  re-validate server-side via /api/discount-codes/validate before persisting
- *  so a tampered client can't change the percentage. */
+ *  so a tampered client can't change the percentage.
+ *
+ *  `shipTo` overrides the profile address when the visitor picked or added
+ *  a different address at checkout (address book flow). The order row
+ *  snapshots whatever address came in here so reporting stays honest if the
+ *  saved address is later edited or deleted. */
 export async function createOrderFromCart(
   items: CartItem[],
   profile: Profile,
   email: string,
   discount?: { code: string } | null,
+  shipTo?: {
+    full_name?: string;
+    phone?: string;
+    line1: string;
+    line2?: string | null;
+    city: string;
+    country: string;
+  } | null,
 ): Promise<{ order: Order | null; error: string | null }> {
   if (items.length === 0) return { order: null, error: "Cart is empty." };
 
@@ -168,20 +181,33 @@ export async function createOrderFromCart(
     ? Math.max(0, Math.round((grossSubtotal - discountSnapshot.amount) * 100) / 100)
     : grossSubtotal;
 
+  // Resolve the shipping snapshot. The address-book picker passes one in
+  // explicitly; older flows fall back to the legacy profile fields.
+  const shipping = shipTo
+    ? {
+        line1:   shipTo.line1,
+        line2:   shipTo.line2 ?? null,
+        city:    shipTo.city,
+        country: shipTo.country,
+      }
+    : {
+        line1:   profile.address_line1,
+        line2:   profile.address_line2,
+        city:    profile.city,
+        country: profile.country,
+      };
+  const recipient = shipTo?.full_name?.trim() || profile.full_name;
+  const phone     = shipTo?.phone?.trim()     || profile.phone;
+
   // Insert the order
   const { data: order, error: orderErr } = await supabase
     .from("mtm_orders")
     .insert({
       user_id:          profile.id,
-      customer_name:    profile.full_name,
+      customer_name:    recipient,
       customer_email:   email,
-      customer_phone:   profile.phone,
-      shipping_address: {
-        line1:   profile.address_line1,
-        line2:   profile.address_line2,
-        city:    profile.city,
-        country: profile.country,
-      },
+      customer_phone:   phone,
+      shipping_address: shipping,
       subtotal,
       currency: "BHD",
       discount_code:    discountSnapshot?.code ?? null,

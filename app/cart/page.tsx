@@ -4,12 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Minus, Plus, Pencil, Trash2, ShoppingBag, Tag, Check, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Minus, Plus, Pencil, Trash2, ShoppingBag, Tag, Check, X, MapPin, Star } from "lucide-react";
 import { useCart, removeFromCart, updateQty, clearCart } from "@/lib/cart";
 import { useAuth } from "@/components/AuthProvider";
 import { ProfileForm } from "@/components/ProfileForm";
 import { AuthForm } from "@/components/AuthForm";
 import { createOrderFromCart, fetchProfile, isProfileComplete, type Profile } from "@/lib/orders";
+import { listMyAddresses, upsertAddress, MAX_ADDRESSES, type Address, type AddressInput } from "@/lib/addresses";
 import { supabase } from "@/lib/supabase";
 
 const fmt = (n: number) =>
@@ -32,6 +33,36 @@ export default function CartPage() {
   const [applying, setApplying]   = useState(false);
   const [discountError, setDiscountError] = useState<string | null>(null);
   const [applied, setApplied] = useState<{ code: string; percent: number; amount: number } | null>(null);
+
+  // Address-book picker state. We seed from listMyAddresses once the
+  // visitor signs in, default-select whichever row has is_default = true,
+  // and let the visitor switch or add a new address inline without
+  // leaving checkout.
+  const [addresses, setAddresses]     = useState<Address[]>([]);
+  const [selectedAddrId, setSelected] = useState<string | null>(null);
+  const [addingAddress, setAddingAddress] = useState(false);
+  const [newAddr, setNewAddr] = useState<AddressInput>({
+    label: "", full_name: "", phone: "",
+    line1: "", line2: "", city: "", country: "Bahrain",
+    is_default: false,
+  });
+
+  useEffect(() => {
+    if (!user) { setAddresses([]); setSelected(null); return; }
+    let cancelled = false;
+    (async () => {
+      const rows = await listMyAddresses();
+      if (cancelled) return;
+      setAddresses(rows);
+      if (rows.length > 0 && !selectedAddrId) {
+        setSelected((rows.find((r) => r.is_default) ?? rows[0]).id);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const selectedAddr = addresses.find((a) => a.id === selectedAddrId) ?? null;
 
   const grandTotal = applied ? Math.max(0, Math.round((subtotal - applied.amount) * 100) / 100) : subtotal;
 
@@ -92,6 +123,16 @@ export default function CartPage() {
       p,
       user.email ?? "",
       applied ? { code: applied.code } : null,
+      selectedAddr
+        ? {
+            full_name: selectedAddr.full_name,
+            phone:     selectedAddr.phone,
+            line1:     selectedAddr.line1,
+            line2:     selectedAddr.line2 ?? null,
+            city:      selectedAddr.city,
+            country:   selectedAddr.country,
+          }
+        : null,
     );
     if (error || !order) {
       setError(error ?? "Could not place the order.");
@@ -244,6 +285,125 @@ export default function CartPage() {
 
             {/* Summary */}
             <aside className="lg:sticky lg:top-28 self-start border border-black/10 p-6 lg:p-8 bg-[var(--color-ivory-200)]">
+              {/* Address picker — shows when the visitor has signed in and
+                  has saved addresses. The default is pre-selected; they
+                  can switch or add a new one inline without leaving cart. */}
+              {user && addresses.length > 0 && !addingAddress && (
+                <div className="mb-6 pb-6 border-b border-black/10">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <h3 className="text-eyebrow text-[var(--color-charcoal-500)] inline-flex items-center gap-2">
+                      <MapPin size={12} strokeWidth={1.5} /> Ship to
+                    </h3>
+                    {addresses.length < MAX_ADDRESSES && (
+                      <button
+                        type="button"
+                        onClick={() => setAddingAddress(true)}
+                        className="text-eyebrow text-[0.62rem] text-[var(--color-burgundy-700)] hover:underline inline-flex items-center gap-1"
+                      >
+                        <Plus size={11} strokeWidth={1.5} /> New address
+                      </button>
+                    )}
+                  </div>
+                  <ul className="space-y-2">
+                    {addresses.map((a) => (
+                      <li key={a.id}>
+                        <label className={`block border px-3 py-3 cursor-pointer transition-colors ${
+                          selectedAddrId === a.id
+                            ? "border-[var(--color-burgundy-700)] bg-[var(--color-ivory-100)]"
+                            : "border-black/10 bg-white/40 hover:border-[var(--color-burgundy-700)]/40"
+                        }`}>
+                          <div className="flex items-start gap-3">
+                            <input
+                              type="radio"
+                              name="ship-to"
+                              value={a.id}
+                              checked={selectedAddrId === a.id}
+                              onChange={() => setSelected(a.id)}
+                              className="mt-1 accent-[var(--color-burgundy-700)]"
+                            />
+                            <div className="min-w-0 flex-1 text-[0.82rem] leading-relaxed">
+                              <div className="text-eyebrow text-[var(--color-burgundy-700)] text-[0.58rem] inline-flex items-center gap-1.5">
+                                {a.is_default && <Star size={10} strokeWidth={1.5} className="fill-current" />}
+                                {a.label || (a.is_default ? "Default" : "Address")}
+                              </div>
+                              <div className="mt-1 text-[var(--color-charcoal-900)]">
+                                {a.full_name}
+                              </div>
+                              <div className="text-[var(--color-charcoal-700)]">
+                                {a.line1}{a.line2 ? `, ${a.line2}` : ""} · {a.city}, {a.country}
+                              </div>
+                            </div>
+                          </div>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/account/addresses"
+                    className="mt-3 inline-block text-eyebrow text-[0.6rem] text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors"
+                  >
+                    Manage saved addresses →
+                  </Link>
+                </div>
+              )}
+
+              {/* Inline add-new-address form. Same fields as the address
+                  book page, kept narrow so it fits the aside. */}
+              {user && addingAddress && (
+                <div className="mb-6 pb-6 border-b border-black/10">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <h3 className="text-eyebrow text-[var(--color-charcoal-500)] inline-flex items-center gap-2">
+                      <Plus size={12} strokeWidth={1.5} /> New address
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setAddingAddress(false)}
+                      aria-label="Cancel new address"
+                      className="text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors"
+                    >
+                      <X size={14} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2.5">
+                    <SmallField placeholder="Recipient name" value={newAddr.full_name} onChange={(v) => setNewAddr({ ...newAddr, full_name: v })} />
+                    <SmallField placeholder="Phone" value={newAddr.phone} onChange={(v) => setNewAddr({ ...newAddr, phone: v })} />
+                    <SmallField placeholder="Address line 1" value={newAddr.line1} onChange={(v) => setNewAddr({ ...newAddr, line1: v })} />
+                    <SmallField placeholder="Address line 2 (optional)" value={newAddr.line2 ?? ""} onChange={(v) => setNewAddr({ ...newAddr, line2: v })} />
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <SmallField placeholder="City" value={newAddr.city} onChange={(v) => setNewAddr({ ...newAddr, city: v })} />
+                      <SmallField placeholder="Country" value={newAddr.country} onChange={(v) => setNewAddr({ ...newAddr, country: v })} />
+                    </div>
+                    <SmallField placeholder="Label (Home, Office… optional)" value={newAddr.label ?? ""} onChange={(v) => setNewAddr({ ...newAddr, label: v })} />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!newAddr.full_name.trim() || !newAddr.phone.trim() || !newAddr.line1.trim() || !newAddr.city.trim() || !newAddr.country.trim()) {
+                          setError("Recipient, phone, address line 1, city and country are required.");
+                          return;
+                        }
+                        setError(null);
+                        const { data, error: err } = await upsertAddress({
+                          ...newAddr,
+                          is_default: addresses.length === 0, // first one becomes default automatically
+                        });
+                        if (err || !data) {
+                          setError(err ?? "Couldn't save the address.");
+                          return;
+                        }
+                        const fresh = await listMyAddresses();
+                        setAddresses(fresh);
+                        setSelected(data.id);
+                        setNewAddr({ label: "", full_name: "", phone: "", line1: "", line2: "", city: "", country: "Bahrain", is_default: false });
+                        setAddingAddress(false);
+                      }}
+                      className="mt-1 text-eyebrow inline-flex items-center justify-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-4 py-2.5 hover:bg-[var(--color-burgundy-800)] transition-colors"
+                    >
+                      Save & use this address
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <h2 className="text-eyebrow text-[var(--color-charcoal-500)]">Order summary</h2>
               <div className="mt-5 space-y-3 text-[0.9rem]">
                 <div className="flex justify-between">
@@ -375,5 +535,25 @@ export default function CartPage() {
         )}
       </div>
     </div>
+  );
+}
+
+/** Compact text input used by the inline new-address form in the cart
+ *  aside. Kept text-only to fit the narrow column. */
+function SmallField({
+  placeholder, value, onChange,
+}: {
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full bg-white border border-black/15 px-3 py-2 text-[0.85rem] focus:outline-none focus:border-[var(--color-burgundy-700)]"
+    />
   );
 }

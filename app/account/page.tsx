@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  ArrowRight, LogOut, ShoppingBag, Ruler, CalendarClock, Mail, Package,
+  ArrowRight, LogOut, ShoppingBag, Ruler, CalendarClock, Mail, Package, MapPin,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { AuthForm } from "@/components/AuthForm";
@@ -252,7 +252,13 @@ function AccountDashboard({ user, onSignOut }: { user: User; onSignOut: () => vo
 
           {/* Other cards */}
           {!needsProfile && (
-            <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <DashCard
+                icon={<MapPin size={18} strokeWidth={1.5} />}
+                title="Addresses"
+                body="Save up to five delivery addresses; pick one at checkout."
+                cta={{ href: "/account/addresses", label: "Manage addresses" }}
+              />
               <DashCard
                 icon={<Ruler size={18} strokeWidth={1.5} />}
                 title="Saved measurements"
