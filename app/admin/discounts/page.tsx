@@ -267,7 +267,7 @@ export default function AdminDiscountsPage() {
             )}
           </div>
         </div>
-        <div className="px-6 py-6 flex flex-wrap items-end gap-x-5 gap-y-4">
+        <div className="px-6 py-6 flex flex-wrap items-start gap-x-5 gap-y-4">
           <label className="block w-32">
             <span className="text-eyebrow text-[var(--color-charcoal-500)]">Code</span>
             <input
@@ -316,11 +316,15 @@ export default function AdminDiscountsPage() {
               className="mt-2 w-full bg-white border border-black/15 px-3 py-2.5 text-[0.95rem] focus:outline-none focus:border-[var(--color-burgundy-700)]"
             />
           </label>
-          <div className="ml-auto">
+          {/* Spacer pushes the action button to the right edge while keeping
+              it aligned with the input rows above. The pt-[1.45rem] matches
+              the eyebrow + mt-2 height so the button starts at the same
+              vertical line as the inputs. */}
+          <div className="ml-auto pt-[1.45rem]">
             <button
               type="button"
               onClick={handleSave}
-              className="text-eyebrow inline-flex items-center justify-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-5 py-3 hover:bg-[var(--color-burgundy-800)] transition-colors"
+              className="text-eyebrow inline-flex items-center justify-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-5 py-2.5 hover:bg-[var(--color-burgundy-800)] transition-colors"
             >
               <Save size={13} strokeWidth={1.5} /> {editing ? "Update code" : "Create code"}
             </button>
