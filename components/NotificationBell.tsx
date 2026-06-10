@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, Sparkles } from "lucide-react";
+import { Bell } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "./AuthProvider";
 import { isAdmin } from "@/lib/admin";
@@ -258,72 +259,74 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-0 top-full mt-2 w-[min(92vw,380px)] bg-[var(--color-ivory-100)] border border-black/10 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.45)] z-[60] overflow-hidden"
+            className="absolute right-0 top-full mt-2 w-[min(92vw,380px)] bg-[var(--color-ivory-100)] border border-black/8 shadow-[0_18px_50px_-18px_rgba(0,0,0,0.32)] z-[60] overflow-hidden"
             role="dialog"
             aria-label="Notifications"
           >
-            {/* Concierge desk header — burgundy plate, large monogrammed
-                avatar, name in display serif. Reads like a hotel
-                concierge stamp at the top of the panel. */}
-            <header className="relative bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-5 pt-5 pb-4 overflow-hidden">
-              {/* Faint diagonal house-mark texture, kept extremely subtle */}
-              <div
+            {/* Concierge correspondence card — ivory paper, centered
+                brand monogram, generous whitespace. Reads like a
+                personal note from the atelier rather than a system
+                notification feed. */}
+            <header className="relative px-7 pt-7 pb-6 text-center">
+              {/* Hairline top accent rule, burgundy, very thin */}
+              <span
                 aria-hidden
-                className="absolute inset-0 opacity-[0.05] pointer-events-none"
-                style={{
-                  backgroundImage:
-                    "repeating-linear-gradient(45deg, rgba(255,255,255,0.6) 0 1px, transparent 1px 14px)",
-                }}
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-px bg-[var(--color-burgundy-700)]"
               />
-              <div className="relative flex items-start gap-3">
-                {/* Avatar — larger, with a thin ivory ring + live pulse dot */}
-                <div className="relative shrink-0">
-                  <span className="w-11 h-11 rounded-full bg-[var(--color-ivory-100)] text-[var(--color-burgundy-700)] inline-flex items-center justify-center ring-1 ring-[var(--color-ivory-100)]/40">
-                    <Sparkles size={18} strokeWidth={1.6} />
-                  </span>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 ring-2 ring-[var(--color-burgundy-700)]">
-                    <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-60" />
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-eyebrow text-[var(--color-ivory-100)]/75 text-[0.6rem]">
-                    {admin ? "Atelier Desk · Live" : "Concierge · Live"}
-                  </div>
-                  <div className="text-display text-[1.5rem] leading-none mt-1 tracking-[0.005em]">
-                    Sebastian
-                  </div>
-                  <div className="text-[0.72rem] text-[var(--color-ivory-100)]/70 mt-1.5 italic">
-                    {admin ? "Watching the floor." : "At your service."}
-                  </div>
-                </div>
-                {!user && (
+              {/* The house mark, small and dignified */}
+              <Image
+                src="/logo-burgundy.png"
+                alt=""
+                width={108}
+                height={91}
+                priority
+                className="mx-auto h-9 w-auto object-contain opacity-95 select-none"
+                draggable={false}
+              />
+              {/* Eyebrow — small caps, generously spaced */}
+              <div className="mt-5 text-[0.55rem] uppercase tracking-[0.42em] text-[var(--color-charcoal-500)]">
+                {admin ? "From the Atelier Desk" : "From the Concierge"}
+              </div>
+              {/* Sebastian, in display serif at a real luxury weight */}
+              <div className="mt-3 text-display text-[1.75rem] text-[var(--color-charcoal-900)] leading-none">
+                Sebastian
+              </div>
+              {/* Italic burgundy subtitle — the personal touch */}
+              <div className="mt-2.5 text-[0.78rem] text-[var(--color-burgundy-700)] italic">
+                {admin ? "Notes from the floor" : "Notes for you"}
+              </div>
+              {!user && (
+                <div className="mt-5">
                   <Link
                     href="/account"
-                    className="self-start text-eyebrow text-[0.6rem] text-[var(--color-ivory-100)]/80 hover:text-[var(--color-ivory-100)] transition-colors shrink-0 border border-[var(--color-ivory-100)]/30 px-2.5 py-1"
                     onClick={() => setOpen(false)}
+                    className="inline-block text-eyebrow text-[0.58rem] text-[var(--color-burgundy-700)] border-b border-[var(--color-burgundy-700)]/40 pb-0.5 hover:border-[var(--color-burgundy-700)] transition-colors"
                   >
                     Sign in
                   </Link>
-                )}
-              </div>
-              {/* Thin gold-ivory divider rule below the header text */}
-              <div className="relative mt-4 -mx-5 h-px bg-[var(--color-ivory-100)]/15" />
-              <div className="relative mt-3 text-eyebrow text-[0.58rem] text-[var(--color-ivory-100)]/65">
-                {admin ? "House activity" : "Your notifications"}
+                </div>
+              )}
+              {/* Bottom rule — narrow, centered, ornament-style */}
+              <div className="mt-6 flex items-center justify-center gap-3 text-[var(--color-burgundy-700)]/30">
+                <span className="h-px w-12 bg-current" />
+                <span className="text-[0.5rem] tracking-[0.3em] text-[var(--color-charcoal-500)] uppercase">
+                  {admin ? "Activity" : "Updates"}
+                </span>
+                <span className="h-px w-12 bg-current" />
               </div>
             </header>
-            <ul className="max-h-[60vh] overflow-y-auto divide-y divide-black/5">
+            <ul className="max-h-[60vh] overflow-y-auto divide-y divide-black/[0.06]">
               {!user ? (
-                <li className="px-4 py-6 text-[0.85rem] text-[var(--color-charcoal-700)] leading-relaxed">
-                  Sign in and I'll keep you informed as your commission moves
-                  through the atelier — first cut, fitting, finishing,
+                <li className="px-7 py-7 text-[0.82rem] text-[var(--color-charcoal-700)] leading-relaxed italic text-center">
+                  Sign in and I will keep you informed as your commission
+                  moves through the atelier — first cut, fitting, finishing,
                   delivery.
                 </li>
               ) : notes.length === 0 ? (
-                <li className="px-4 py-6 text-[0.85rem] text-[var(--color-charcoal-500)]">
+                <li className="px-7 py-7 text-[0.82rem] text-[var(--color-charcoal-500)] italic text-center">
                   {admin
-                    ? "The atelier desk is quiet. New commissions and status changes will appear here."
-                    : "No commissions yet. Begin one and I'll update you here."}
+                    ? "The atelier desk is quiet for the moment."
+                    : "No commissions yet. Begin one and I will write to you here."}
                 </li>
               ) : (
                 notes.map((n) => (
@@ -334,17 +337,14 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
               )}
             </ul>
             {user && (
-              <footer className="px-5 py-3.5 border-t border-black/10 bg-[var(--color-ivory-200)]/60 flex items-center justify-between gap-3">
-                <span className="text-eyebrow text-[0.58rem] text-[var(--color-charcoal-500)]">
-                  {admin ? "Atelier desk" : "Concierge"}
-                </span>
+              <footer className="border-t border-black/[0.07] px-7 py-4 text-center">
                 <Link
                   href={admin ? "/admin/orders" : "/account"}
                   onClick={() => setOpen(false)}
-                  className="text-eyebrow text-[0.62rem] text-[var(--color-burgundy-700)] inline-flex items-center gap-1.5 hover:gap-2.5 transition-all"
+                  className="text-[0.7rem] italic text-[var(--color-burgundy-700)] inline-flex items-center gap-2 hover:gap-3 transition-all"
                 >
-                  {admin ? "Open the desk" : "All commissions"}
-                  <span aria-hidden>→</span>
+                  {admin ? "Open the atelier desk" : "See all of your commissions"}
+                  <span aria-hidden className="text-[0.8em]">→</span>
                 </Link>
               </footer>
             )}
@@ -355,27 +355,58 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
   );
 }
 
+/** Split the bell note's compound title into "HMTM-2026-0005" + the
+ *  status / subtitle that follows the middle dot. Falls back gracefully
+ *  for messages that don't follow that format. */
+function splitTitle(title: string): { lead: string; tail: string } {
+  const i = title.indexOf("·");
+  if (i < 0) return { lead: title.trim(), tail: "" };
+  return {
+    lead: title.slice(0, i).trim(),
+    tail: title.slice(i + 1).trim(),
+  };
+}
+
+/** Pull the trailing "— 10 Jun, 14:24" timestamp from the bell body so we
+ *  can right-align it editorially instead of dragging it through the
+ *  prose. Returns the stripped body + the extracted stamp. */
+function splitBody(body: string | undefined): { prose: string; stamp: string } {
+  if (!body) return { prose: "", stamp: "" };
+  const m = body.match(/\s*—\s*([^—]+)$/);
+  if (!m) return { prose: body, stamp: "" };
+  return { prose: body.slice(0, m.index).trim(), stamp: m[1].trim() };
+}
+
 function NoteRow({ note, onClose }: { note: N; onClose: () => void }) {
+  const { lead, tail } = splitTitle(note.title);
+  const { prose, stamp } = splitBody(note.body);
   const body = (
-    <div className="group relative px-5 py-3.5 flex items-start gap-3 hover:bg-[var(--color-ivory-200)] transition-colors">
-      {/* Burgundy slide-in rule on the left edge — signals "selectable" */}
+    <div className="group relative px-7 py-4 hover:bg-[var(--color-ivory-200)]/45 transition-colors">
+      {/* Discreet diamond ornament aligned with the headline baseline */}
       <span
         aria-hidden
-        className="absolute left-0 top-2 bottom-2 w-[2px] bg-[var(--color-burgundy-700)] origin-top scale-y-0 group-hover:scale-y-100 transition-transform duration-300 ease-out"
+        className="absolute left-4 top-[1.45rem] w-[5px] h-[5px] bg-[var(--color-burgundy-700)] rotate-45 opacity-70 group-hover:opacity-100 transition-opacity"
       />
-      <span className="mt-0.5 w-9 h-9 rounded-full bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] inline-flex items-center justify-center shrink-0 shadow-sm shadow-black/10">
-        <Sparkles size={13} strokeWidth={1.6} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="text-[0.88rem] text-[var(--color-charcoal-900)] tabular-nums leading-snug group-hover:text-[var(--color-burgundy-700)] transition-colors">
-          {note.title}
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="min-w-0 flex-1 text-display text-[0.95rem] text-[var(--color-charcoal-900)] tabular-nums leading-tight truncate group-hover:text-[var(--color-burgundy-700)] transition-colors">
+          {lead}
         </div>
-        {note.body && (
-          <div className="text-[0.78rem] text-[var(--color-charcoal-500)] mt-1 leading-relaxed line-clamp-2">
-            {note.body}
-          </div>
+        {stamp && (
+          <span className="shrink-0 text-[0.68rem] text-[var(--color-charcoal-500)] italic tabular-nums">
+            {stamp}
+          </span>
         )}
       </div>
+      {tail && (
+        <div className="mt-1 text-[0.62rem] uppercase tracking-[0.28em] text-[var(--color-burgundy-700)]/85">
+          {tail}
+        </div>
+      )}
+      {prose && (
+        <p className="mt-2 text-[0.8rem] text-[var(--color-charcoal-700)] leading-relaxed line-clamp-2">
+          {prose}
+        </p>
+      )}
     </div>
   );
   return note.href ? (
