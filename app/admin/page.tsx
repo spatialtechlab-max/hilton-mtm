@@ -115,10 +115,10 @@ export default function AdminPage() {
       <Shell>
         <div className="max-w-md">
           <Lock size={22} strokeWidth={1.4} className="text-[var(--color-burgundy-700)]" />
-          <h1 className="text-display text-[clamp(2rem,4vw,3rem)] mt-4">Not authorised</h1>
+          <h1 className="text-display text-[clamp(2rem,4vw,3rem)] mt-4">Access restricted</h1>
           <p className="mt-4 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
-            The account <span className="text-[var(--color-charcoal-900)]">{user.email}</span> isn&rsquo;t on the admin
-            list. Add it to the Supabase <code className="text-[0.85rem]">mtm_admins</code> table.
+            This area is reserved for the atelier. If you have an account here, please continue
+            shopping or visit <Link href="/account" className="text-[var(--color-burgundy-700)] underline">your account</Link> instead.
           </p>
         </div>
       </Shell>
@@ -155,8 +155,7 @@ export default function AdminPage() {
     <Shell>
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-5 border-b border-black/10 pb-8">
         <div>
-          <span className="text-eyebrow text-[var(--color-burgundy-700)]">Atelier Admin</span>
-          <h1 className="text-display text-[clamp(2.25rem,4.5vw,3.5rem)] mt-3 leading-[1.02]">Customization options</h1>
+          <h1 className="text-display text-[clamp(2.25rem,4.5vw,3.5rem)] leading-[1.02]">Customization options</h1>
           <p className="mt-3 text-[0.9rem] text-[var(--color-charcoal-500)]">
             {stepCount > 0 ? `${stepCount} steps · ${options.length} options` : "Manage the options shown in the customizer."}
           </p>
