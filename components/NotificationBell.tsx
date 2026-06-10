@@ -258,33 +258,59 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-0 top-full mt-2 w-[min(92vw,360px)] bg-[var(--color-ivory-100)] border border-black/10 shadow-2xl shadow-black/15 z-[60]"
+            className="absolute right-0 top-full mt-2 w-[min(92vw,380px)] bg-[var(--color-ivory-100)] border border-black/10 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.45)] z-[60] overflow-hidden"
             role="dialog"
             aria-label="Notifications"
           >
-            <header className="px-4 py-3 border-b border-black/10 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="w-7 h-7 rounded-full bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] inline-flex items-center justify-center shrink-0">
-                  <Sparkles size={12} strokeWidth={1.6} />
-                </span>
-                <div className="min-w-0">
-                  <div className="text-eyebrow text-[var(--color-burgundy-700)] text-[0.58rem]">
-                    {admin ? "Sebastian · Atelier desk" : "From Sebastian"}
+            {/* Concierge desk header — burgundy plate, large monogrammed
+                avatar, name in display serif. Reads like a hotel
+                concierge stamp at the top of the panel. */}
+            <header className="relative bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-5 pt-5 pb-4 overflow-hidden">
+              {/* Faint diagonal house-mark texture, kept extremely subtle */}
+              <div
+                aria-hidden
+                className="absolute inset-0 opacity-[0.05] pointer-events-none"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(45deg, rgba(255,255,255,0.6) 0 1px, transparent 1px 14px)",
+                }}
+              />
+              <div className="relative flex items-start gap-3">
+                {/* Avatar — larger, with a thin ivory ring + live pulse dot */}
+                <div className="relative shrink-0">
+                  <span className="w-11 h-11 rounded-full bg-[var(--color-ivory-100)] text-[var(--color-burgundy-700)] inline-flex items-center justify-center ring-1 ring-[var(--color-ivory-100)]/40">
+                    <Sparkles size={18} strokeWidth={1.6} />
+                  </span>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 ring-2 ring-[var(--color-burgundy-700)]">
+                    <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-60" />
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-eyebrow text-[var(--color-ivory-100)]/75 text-[0.6rem]">
+                    {admin ? "Atelier Desk · Live" : "Concierge · Live"}
                   </div>
-                  <div className="text-display text-[1.0rem] text-[var(--color-charcoal-900)] leading-none mt-0.5">
-                    {admin ? "Activity" : "Notifications"}
+                  <div className="text-display text-[1.5rem] leading-none mt-1 tracking-[0.005em]">
+                    Sebastian
+                  </div>
+                  <div className="text-[0.72rem] text-[var(--color-ivory-100)]/70 mt-1.5 italic">
+                    {admin ? "Watching the floor." : "At your service."}
                   </div>
                 </div>
+                {!user && (
+                  <Link
+                    href="/account"
+                    className="self-start text-eyebrow text-[0.6rem] text-[var(--color-ivory-100)]/80 hover:text-[var(--color-ivory-100)] transition-colors shrink-0 border border-[var(--color-ivory-100)]/30 px-2.5 py-1"
+                    onClick={() => setOpen(false)}
+                  >
+                    Sign in
+                  </Link>
+                )}
               </div>
-              {user ? null : (
-                <Link
-                  href="/account"
-                  className="text-eyebrow text-[0.6rem] text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors shrink-0"
-                  onClick={() => setOpen(false)}
-                >
-                  Sign in
-                </Link>
-              )}
+              {/* Thin gold-ivory divider rule below the header text */}
+              <div className="relative mt-4 -mx-5 h-px bg-[var(--color-ivory-100)]/15" />
+              <div className="relative mt-3 text-eyebrow text-[0.58rem] text-[var(--color-ivory-100)]/65">
+                {admin ? "House activity" : "Your notifications"}
+              </div>
             </header>
             <ul className="max-h-[60vh] overflow-y-auto divide-y divide-black/5">
               {!user ? (
@@ -308,13 +334,17 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
               )}
             </ul>
             {user && (
-              <footer className="px-4 py-3 border-t border-black/10">
+              <footer className="px-5 py-3.5 border-t border-black/10 bg-[var(--color-ivory-200)]/60 flex items-center justify-between gap-3">
+                <span className="text-eyebrow text-[0.58rem] text-[var(--color-charcoal-500)]">
+                  {admin ? "Atelier desk" : "Concierge"}
+                </span>
                 <Link
                   href={admin ? "/admin/orders" : "/account"}
                   onClick={() => setOpen(false)}
-                  className="text-eyebrow text-[0.62rem] text-[var(--color-burgundy-700)] hover:underline"
+                  className="text-eyebrow text-[0.62rem] text-[var(--color-burgundy-700)] inline-flex items-center gap-1.5 hover:gap-2.5 transition-all"
                 >
-                  {admin ? "Open the atelier desk →" : "See all commissions →"}
+                  {admin ? "Open the desk" : "All commissions"}
+                  <span aria-hidden>→</span>
                 </Link>
               </footer>
             )}
@@ -327,14 +357,23 @@ export function NotificationBell({ tone = "dark" }: { tone?: "dark" | "light" })
 
 function NoteRow({ note, onClose }: { note: N; onClose: () => void }) {
   const body = (
-    <div className="px-4 py-3 flex items-start gap-3 hover:bg-[var(--color-ivory-200)] transition-colors">
-      <span className="mt-0.5 w-8 h-8 rounded-full bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] inline-flex items-center justify-center shrink-0">
-        <Sparkles size={12} strokeWidth={1.6} />
+    <div className="group relative px-5 py-3.5 flex items-start gap-3 hover:bg-[var(--color-ivory-200)] transition-colors">
+      {/* Burgundy slide-in rule on the left edge — signals "selectable" */}
+      <span
+        aria-hidden
+        className="absolute left-0 top-2 bottom-2 w-[2px] bg-[var(--color-burgundy-700)] origin-top scale-y-0 group-hover:scale-y-100 transition-transform duration-300 ease-out"
+      />
+      <span className="mt-0.5 w-9 h-9 rounded-full bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] inline-flex items-center justify-center shrink-0 shadow-sm shadow-black/10">
+        <Sparkles size={13} strokeWidth={1.6} />
       </span>
       <div className="min-w-0 flex-1">
-        <div className="text-[0.86rem] text-[var(--color-charcoal-900)] tabular-nums">{note.title}</div>
+        <div className="text-[0.88rem] text-[var(--color-charcoal-900)] tabular-nums leading-snug group-hover:text-[var(--color-burgundy-700)] transition-colors">
+          {note.title}
+        </div>
         {note.body && (
-          <div className="text-[0.78rem] text-[var(--color-charcoal-500)] mt-0.5 line-clamp-2">{note.body}</div>
+          <div className="text-[0.78rem] text-[var(--color-charcoal-500)] mt-1 leading-relaxed line-clamp-2">
+            {note.body}
+          </div>
         )}
       </div>
     </div>
