@@ -193,26 +193,37 @@ export async function sendOrderConfirmationEmail(args: {
       ${[args.shippingCity, args.shippingCountry].filter(Boolean).join(", ")}
     </p>` : "";
 
-  // Show a Subtotal → Discount → Total breakdown when a code was applied
-  // so the customer sees the saving clearly. Otherwise keep the original
-  // single Total row.
+  // Show a Subtotal · Discount · Total breakdown when a code was applied.
+  // Horizontal layout (3 columns side-by-side) keeps the email compact on
+  // desktop so the customer doesn't have to scroll through three stacked
+  // rows just to see they saved BHD 8. Falls back to a single right-
+  // aligned Total row when no discount was applied.
   //
   // Each item row above has 3 cells (thumb + details + price). The totals
-  // rows therefore need colspan=2 on the label so the value stays aligned
-  // with the per-item prices on the far right.
+  // row uses colspan=3 with a NESTED 3-column table inside so the
+  // breakdown spans the full card width and the columns can size
+  // independently of the items table above.
   const hasDiscount = Boolean(args.discountCode && args.discountAmount && args.discountAmount > 0);
   const totalsRows = hasDiscount
     ? `
-      <tr><td colspan="2" style="padding:16px 0 6px;font-family:Arial,sans-serif;font-size:12px;color:rgba(0,0,0,0.55)">Subtotal</td>
-          <td align="right" style="padding:16px 0 6px;font-family:Georgia,serif;font-size:16px">${formatBhd(itemsGross)}</td></tr>
-      <tr><td colspan="2" style="padding:6px 0;font-family:Arial,sans-serif;font-size:12px;color:${BURGUNDY}">
-            ${args.discountCode} · ${args.discountPercent}% off
-          </td>
-          <td align="right" style="padding:6px 0;font-family:Georgia,serif;font-size:16px;color:${BURGUNDY}">
-            − ${formatBhd(args.discountAmount ?? 0)}
-          </td></tr>
-      <tr><td colspan="2" style="padding:12px 0 0;font-family:Georgia,serif;font-size:18px;border-top:1px solid rgba(0,0,0,0.12)">Total</td>
-          <td align="right" style="padding:12px 0 0;font-family:Georgia,serif;font-size:20px;color:${BURGUNDY};border-top:1px solid rgba(0,0,0,0.12)">${formatBhd(args.subtotal)}</td></tr>`
+      <tr><td colspan="3" style="padding-top:12px">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid rgba(0,0,0,0.12)">
+          <tr>
+            <td width="33%" style="padding:16px 8px 0 0;vertical-align:top">
+              <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(0,0,0,0.55)">Subtotal</div>
+              <div style="font-family:Georgia,serif;font-size:18px;color:${CHARCOAL};margin-top:6px">${formatBhd(itemsGross)}</div>
+            </td>
+            <td width="34%" style="padding:16px 8px 0;vertical-align:top;text-align:center">
+              <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:${BURGUNDY}">${args.discountCode} · ${args.discountPercent}% off</div>
+              <div style="font-family:Georgia,serif;font-size:18px;color:${BURGUNDY};margin-top:6px">− ${formatBhd(args.discountAmount ?? 0)}</div>
+            </td>
+            <td width="33%" style="padding:16px 0 0 8px;vertical-align:top;text-align:right">
+              <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(0,0,0,0.55)">Total</div>
+              <div style="font-family:Georgia,serif;font-size:22px;color:${BURGUNDY};margin-top:6px">${formatBhd(args.subtotal)}</div>
+            </td>
+          </tr>
+        </table>
+      </td></tr>`
     : `
       <tr><td colspan="2" style="padding:16px 0 0;font-family:Georgia,serif;font-size:18px">Total</td>
           <td align="right" style="padding:16px 0 0;font-family:Georgia,serif;font-size:20px;color:${BURGUNDY}">${formatBhd(args.subtotal)}</td></tr>`;
