@@ -352,4 +352,18 @@ export const MEDIA_SLOTS: MediaSlot[] = [
     recommendedSize: "1800 × 1200 px",
   },
 
+  // ── /account sign-in panel ──
+  {
+    key: "account.signin",
+    group: "Editorial",
+    label: "Sign-in page — split-screen photo",
+    description:
+      "The large portrait photo on the left side of the /account sign-in screen. Shown only to signed-out visitors.",
+    fallback:
+      "https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=1600&auto=format&fit=crop",
+    fallbackAlt: "The Hilton atelier",
+    aspect: "3/4",
+    recommendedSize: "1500 × 2000 px",
+  },
+
 ];

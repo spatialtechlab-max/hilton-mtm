@@ -1,19 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Menu, X, ShoppingBag, User } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { Menu, X, ShoppingBag, User, LogOut, Shield, Mail } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Logo } from "./Logo";
 import { nav } from "@/lib/site";
 import { useAuth } from "./AuthProvider";
 import { useCart } from "@/lib/cart";
+import { isAdmin } from "@/lib/admin";
 import { NotificationBell } from "./NotificationBell";
 
 export function Navigation() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, signOut } = useAuth();
   const { count: cartCount } = useCart();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -104,17 +106,11 @@ export function Navigation() {
 
             {/* Account / Sign in (desktop) */}
             {user ? (
-              <Link
-                href="/account"
-                aria-label="Your account"
-                className={`hidden lg:inline-flex items-center justify-center w-10 h-10 transition-colors ${
-                  onDark
-                    ? "text-[var(--color-ivory-100)]/85 hover:text-[var(--color-ivory-100)]"
-                    : "text-[var(--color-charcoal-800)] hover:text-[var(--color-burgundy-700)]"
-                }`}
-              >
-                <User size={20} strokeWidth={1.5} />
-              </Link>
+              <AccountMenu
+                user={user}
+                onDark={onDark}
+                onSignOut={async () => { await signOut(); router.push("/"); }}
+              />
             ) : (
               <Link
                 href="/account"
@@ -216,5 +212,143 @@ export function Navigation() {
         )}
       </AnimatePresence>
     </>
+  );
+}
+
+/**
+ * Desktop-only profile pop-over. Opens on hover, stays open as long as
+ * the user is over the trigger or the panel. A short close delay lets
+ * the cursor drift across the gap between them. Also opens on click so
+ * keyboard / touch users get the same affordance.
+ *
+ * Shows the user's email + name + a couple of quick links so the most
+ * common ask — signing out without leaving the page they're on — is
+ * one click away.
+ */
+function AccountMenu({
+  user,
+  onDark,
+  onSignOut,
+}: {
+  user: { email?: string | null; user_metadata?: Record<string, unknown> | null };
+  onDark: boolean;
+  onSignOut: () => void | Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [admin, setAdmin] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const email = user.email ?? "";
+  const name =
+    (user.user_metadata as { full_name?: string; name?: string } | undefined)?.full_name ??
+    (user.user_metadata as { full_name?: string; name?: string } | undefined)?.name ??
+    "";
+  const initial = (name || email || "?").trim().charAt(0).toUpperCase();
+
+  useEffect(() => {
+    let cancelled = false;
+    isAdmin(email).then((a) => { if (!cancelled) setAdmin(a); });
+    return () => { cancelled = true; };
+  }, [email]);
+
+  function show() {
+    if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null; }
+    setOpen(true);
+  }
+  function hideSoon() {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setOpen(false), 140);
+  }
+
+  return (
+    <div
+      className="hidden lg:block relative"
+      onMouseEnter={show}
+      onMouseLeave={hideSoon}
+    >
+      <button
+        type="button"
+        aria-label="Your account"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className={`inline-flex items-center justify-center w-10 h-10 transition-colors ${
+          onDark
+            ? "text-[var(--color-ivory-100)]/85 hover:text-[var(--color-ivory-100)]"
+            : "text-[var(--color-charcoal-800)] hover:text-[var(--color-burgundy-700)]"
+        }`}
+      >
+        <User size={20} strokeWidth={1.5} />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            role="menu"
+            className="absolute right-0 top-full mt-2 w-72 bg-[var(--color-ivory-100)] border border-black/10 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.25)]"
+          >
+            <div className="px-5 py-4 border-b border-black/10 flex items-center gap-3">
+              <div className="shrink-0 w-10 h-10 rounded-full bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] inline-flex items-center justify-center text-display text-[1rem]">
+                {initial}
+              </div>
+              <div className="min-w-0 flex-1">
+                {name && (
+                  <p className="text-[0.95rem] text-[var(--color-charcoal-900)] truncate leading-tight">
+                    {name}
+                  </p>
+                )}
+                <p className="text-[0.78rem] text-[var(--color-charcoal-500)] truncate inline-flex items-center gap-1.5 mt-0.5">
+                  <Mail size={11} strokeWidth={1.5} className="shrink-0" /> {email}
+                </p>
+              </div>
+            </div>
+
+            <div className="py-2">
+              <Link
+                href="/account"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 px-5 py-2.5 text-[0.9rem] text-[var(--color-charcoal-800)] hover:bg-[var(--color-ivory-200)] hover:text-[var(--color-burgundy-700)] transition-colors"
+              >
+                <User size={15} strokeWidth={1.5} /> Your account
+              </Link>
+              <Link
+                href="/cart"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 px-5 py-2.5 text-[0.9rem] text-[var(--color-charcoal-800)] hover:bg-[var(--color-ivory-200)] hover:text-[var(--color-burgundy-700)] transition-colors"
+              >
+                <ShoppingBag size={15} strokeWidth={1.5} /> Your cart
+              </Link>
+              {admin && (
+                <Link
+                  href="/admin"
+                  role="menuitem"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 px-5 py-2.5 text-[0.9rem] text-[var(--color-charcoal-800)] hover:bg-[var(--color-ivory-200)] hover:text-[var(--color-burgundy-700)] transition-colors"
+                >
+                  <Shield size={15} strokeWidth={1.5} /> Atelier admin
+                </Link>
+              )}
+            </div>
+
+            <div className="border-t border-black/10">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={async () => { setOpen(false); await onSignOut(); }}
+                className="w-full flex items-center gap-3 px-5 py-3 text-[0.9rem] text-[var(--color-burgundy-700)] hover:bg-[var(--color-burgundy-50)] transition-colors text-left"
+              >
+                <LogOut size={15} strokeWidth={1.5} /> Sign out
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

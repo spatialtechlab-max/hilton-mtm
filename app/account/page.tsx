@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -10,6 +9,7 @@ import {
 import type { User } from "@supabase/supabase-js";
 import { AuthForm } from "@/components/AuthForm";
 import { useAuth } from "@/components/AuthProvider";
+import { MediaImageClient } from "@/components/MediaImageClient";
 import { PlaceholderBadge } from "@/components/PlaceholderBadge";
 import { ProfileForm } from "@/components/ProfileForm";
 import { isAdmin } from "@/lib/admin";
@@ -17,9 +17,6 @@ import {
   fetchProfile, isProfileComplete, listMyOrders, ORDER_STATUS_LABEL,
   type Profile, type Order,
 } from "@/lib/orders";
-
-const ATELIER_IMG =
-  "https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=1600&auto=format&fit=crop";
 
 export default function AccountPage() {
   const { user, loading, signOut } = useAuth();
@@ -60,9 +57,10 @@ function SignInSplit() {
       {/* Editorial visual */}
       <div className="relative hidden lg:block overflow-hidden bg-[var(--color-charcoal-900)]">
         <PlaceholderBadge />
-        <Image
-          src={ATELIER_IMG}
-          alt="The Hilton atelier"
+        <MediaImageClient
+          slot="account.signin"
+          fallback="https://images.unsplash.com/photo-1593030103066-0093718efeb9?q=80&w=1600&auto=format&fit=crop"
+          fallbackAlt="The Hilton atelier"
           fill
           sizes="50vw"
           className="object-cover"
