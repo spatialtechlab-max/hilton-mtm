@@ -196,21 +196,25 @@ export async function sendOrderConfirmationEmail(args: {
   // Show a Subtotal → Discount → Total breakdown when a code was applied
   // so the customer sees the saving clearly. Otherwise keep the original
   // single Total row.
+  //
+  // Each item row above has 3 cells (thumb + details + price). The totals
+  // rows therefore need colspan=2 on the label so the value stays aligned
+  // with the per-item prices on the far right.
   const hasDiscount = Boolean(args.discountCode && args.discountAmount && args.discountAmount > 0);
   const totalsRows = hasDiscount
     ? `
-      <tr><td style="padding:16px 0 6px;font-family:Arial,sans-serif;font-size:12px;color:rgba(0,0,0,0.55)">Subtotal</td>
+      <tr><td colspan="2" style="padding:16px 0 6px;font-family:Arial,sans-serif;font-size:12px;color:rgba(0,0,0,0.55)">Subtotal</td>
           <td align="right" style="padding:16px 0 6px;font-family:Georgia,serif;font-size:16px">${formatBhd(itemsGross)}</td></tr>
-      <tr><td style="padding:6px 0;font-family:Arial,sans-serif;font-size:12px;color:${BURGUNDY}">
+      <tr><td colspan="2" style="padding:6px 0;font-family:Arial,sans-serif;font-size:12px;color:${BURGUNDY}">
             ${args.discountCode} · ${args.discountPercent}% off
           </td>
           <td align="right" style="padding:6px 0;font-family:Georgia,serif;font-size:16px;color:${BURGUNDY}">
             − ${formatBhd(args.discountAmount ?? 0)}
           </td></tr>
-      <tr><td style="padding:12px 0 0;font-family:Georgia,serif;font-size:18px;border-top:1px solid rgba(0,0,0,0.12)">Total</td>
+      <tr><td colspan="2" style="padding:12px 0 0;font-family:Georgia,serif;font-size:18px;border-top:1px solid rgba(0,0,0,0.12)">Total</td>
           <td align="right" style="padding:12px 0 0;font-family:Georgia,serif;font-size:20px;color:${BURGUNDY};border-top:1px solid rgba(0,0,0,0.12)">${formatBhd(args.subtotal)}</td></tr>`
     : `
-      <tr><td style="padding:16px 0 0;font-family:Georgia,serif;font-size:18px">Total</td>
+      <tr><td colspan="2" style="padding:16px 0 0;font-family:Georgia,serif;font-size:18px">Total</td>
           <td align="right" style="padding:16px 0 0;font-family:Georgia,serif;font-size:20px;color:${BURGUNDY}">${formatBhd(args.subtotal)}</td></tr>`;
 
   const body = `
