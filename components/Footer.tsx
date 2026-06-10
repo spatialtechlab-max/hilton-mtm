@@ -119,7 +119,7 @@ export function Footer() {
               rel="noopener noreferrer"
               className="text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)] transition-colors"
             >
-              Anti-Matter Labs
+              Antimatter Labs
             </a>
           </span>
           <div className="flex gap-6">
