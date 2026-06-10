@@ -129,6 +129,13 @@ export function Concierge() {
   function takeMeThere(rec: Recommendation) {
     const params = new URLSearchParams({ category: rec.category });
     if (rec.tier) params.set("tier", rec.tier);
+    // Real ERP SKUs deep-link the customer to the spec step of the
+    // customizer with the cloth Sebastian picked already selected.
+    // ATELIER-* placeholders (no-stock fallback) are dropped — sending
+    // them would land on a non-existent fabric tile.
+    if (rec.fabric_sku && !rec.fabric_sku.startsWith("ATELIER-")) {
+      params.set("sku", rec.fabric_sku);
+    }
     router.push(`/customize?${params.toString()}`);
     setOpen(false);
   }

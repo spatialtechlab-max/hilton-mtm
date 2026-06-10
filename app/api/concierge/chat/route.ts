@@ -8,6 +8,7 @@
  * the bot never goes silent in front of a customer.
  */
 import { NextResponse } from "next/server";
+import { getInventorySummaryForPrompt } from "@/lib/inventorySummary";
 
 type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
 
@@ -24,6 +25,10 @@ export type Recommendation = {
     | "first-commission"
     | string; // tolerate model improvising — UI handles unknown strings safely
   fabric_hint?: string;
+  // Real ERP SKU picked from the live in-stock list. When present the
+  // widget can deep-link the customizer to skip the fabric step entirely
+  // and land the visitor on the cloth they've already been recommended.
+  fabric_sku?: string;
   match?: number;       // 0–100, how well the recommendation matches the brief
   rationale: string;
 };
@@ -63,7 +68,7 @@ If the visitor says "shirt" or "shirt preferred", you MUST return category "shir
 
 YOUR JOB
 1. If the brief is ambiguous in any single dimension (occasion, climate, formality, colour), ask ONE short clarifying question — never two.
-2. When you have enough, recommend one garment + tier with a one-line rationale naming a real mill or cloth weight.
+2. When you have enough, recommend one garment + tier with a one-line rationale naming a real mill or cloth weight from the LIVE INVENTORY section below.
 3. ALWAYS append a fenced JSON block AFTER your prose, in this exact shape:
 
 \`\`\`json
@@ -71,11 +76,17 @@ YOUR JOB
   "category": "suit" | "jacket" | "shirt" | "trouser",
   "tier": "essential" | "signature" | "bespoke",
   "occasion": "business" | "wedding" | "black-tie" | "party" | "travel" | "casual" | "first-commission",
-  "fabric_hint": "Italian worsted wool" | "summer-weight mohair blend" | "linen-cotton" | "...",
+  "fabric_hint": "short phrase describing the cloth — brand + composition + colour",
+  "fabric_sku": "the SKU number copied verbatim from the LIVE INVENTORY list",
   "match": 78,
-  "rationale": "One sentence reason naming a mill or cloth weight."
+  "rationale": "One sentence reason naming the actual mill/cloth weight you picked."
 }
 \`\`\`
+
+LIVE INVENTORY RULES
+- The "fabric_sku" MUST come from the LIVE INVENTORY block below — copy the digits exactly as they appear after "SKU ".
+- The "fabric_hint" MUST describe the SAME cloth you put in "fabric_sku" — never invent a mill or composition that isn't in the list for that category.
+- If the matching category in LIVE INVENTORY shows "(no stock — use ...)", use that ATELIER-<CAT> placeholder as the fabric_sku and explain the customer will finalise the cloth at the fitting.
 
 MATCH HEURISTIC (0–100)
 - 85–100: confident — visitor named occasion + garment + at least one constraint (climate, colour, formality).
@@ -115,6 +126,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ reply: FALLBACK_REPLY }, { status: 500 });
   }
 
+  // Pull the live ERP inventory for the four active garments and stitch it
+  // into a second system message. We derive the base URL from the request
+  // host so the same code works on prod and preview deploys without env.
+  const origin = new URL(req.url).origin;
+  let inventoryBlock = "";
+  try {
+    const summary = await getInventorySummaryForPrompt(origin);
+    inventoryBlock = `LIVE INVENTORY (refreshed per request):\n\n${summary}`;
+  } catch {
+    // Inventory failures are non-fatal — the model still answers in
+    // generic mill terms; the customer can pick cloth at the fitting.
+    inventoryBlock = "LIVE INVENTORY: temporarily unavailable. Recommend ATELIER placeholders and explain the customer will pick cloth at the fitting.";
+  }
+
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -131,8 +156,12 @@ export async function POST(req: Request) {
         // OpenRouter catalogue at sensible cost. The earlier "haiku" tier
         // was demonstrably misclassifying "party wear" as "wedding".
         model: "anthropic/claude-sonnet-4.6",
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
-        max_tokens: 420,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: inventoryBlock },
+          ...messages,
+        ],
+        max_tokens: 460,
         temperature: 0.3,
       }),
     });
