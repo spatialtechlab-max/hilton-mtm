@@ -155,8 +155,7 @@ export default function AddressBookPage() {
     <Shell>
       <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-5 border-b border-black/10 pb-8">
         <div>
-          <span className="text-eyebrow text-[var(--color-burgundy-700)]">Your account</span>
-          <h1 className="text-display text-[clamp(2rem,4vw,3rem)] mt-2 leading-tight inline-flex items-center gap-3">
+          <h1 className="text-display text-[clamp(2rem,4vw,3rem)] leading-tight inline-flex items-center gap-3">
             <MapPin size={26} strokeWidth={1.5} className="text-[var(--color-burgundy-700)]" />
             Addresses
           </h1>
