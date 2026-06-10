@@ -33,14 +33,14 @@ export async function POST(req: Request) {
   }
 
   const { data: items } = await sb.from("mtm_order_items").select("*").eq("order_id", orderId);
-  type Item = { name: string; type_label: string; qty: number; price_num: number };
+  type Item = { name: string; type_label: string; qty: number; price_num: number; image?: string | null };
 
   const result = await sendOrderConfirmationEmail({
     to: (order as { customer_email: string }).customer_email,
     name: (order as { customer_name: string }).customer_name,
     orderNumber: (order as { order_number: string }).order_number,
     items: ((items as Item[]) ?? []).map((i) => ({
-      name: i.name, type_label: i.type_label, qty: i.qty, price_num: i.price_num,
+      name: i.name, type_label: i.type_label, qty: i.qty, price_num: i.price_num, image: i.image ?? null,
     })),
     subtotal: Number((order as { subtotal: number }).subtotal ?? 0),
     shippingAddressLine1: (order as { shipping_address?: { line1?: string } }).shipping_address?.line1,

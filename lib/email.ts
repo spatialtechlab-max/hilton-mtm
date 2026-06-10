@@ -49,34 +49,70 @@ async function send({ to, subject, html, text, from }: SendArgs): Promise<{ ok: 
 }
 
 const BURGUNDY = "#6e2639";
+const BURGUNDY_DARK = "#561d2c";
 const IVORY = "#f6efe5";
+const IVORY_DARK = "#ece3d4";
 const CHARCOAL = "#1f1d1b";
+const CHARCOAL_500 = "#6b6663";
 
-/** Shared HTML chrome — cream background, burgundy header, Cormorant-style
- *  serif via Georgia fallback so the email keeps the brand feel even when
- *  custom fonts don't load. */
+/** Public URL for the brand mark used in transactional emails. We use the
+ *  storefront's vercel.app deployment because hiltonmtm.com is host-routed
+ *  to /coming-soon by middleware — static assets there still resolve, but
+ *  the vercel.app URL is the canonical place we know is live during this
+ *  pre-launch phase. */
+const LOGO_URL = "https://hilton-mtm-virid.vercel.app/logo-burgundy.png";
+
+/** Shared HTML chrome — premium concierge correspondence card. Real Hilton
+ *  monogram at the top on a cream plate, burgundy hairline accents, deep
+ *  burgundy footer with the house address. Georgia + Arial fallbacks so
+ *  the brand feel survives clients that strip webfonts. */
 function shell(opts: { preview: string; heading: string; body: string; cta?: { label: string; url: string } }) {
   const cta = opts.cta
-    ? `<div style="margin: 32px 0 16px"><a href="${opts.cta.url}" style="display:inline-block;background:${BURGUNDY};color:#fff;text-decoration:none;padding:14px 28px;font-family:Arial,sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase">${opts.cta.label}</a></div>`
+    ? `<div style="margin:36px 0 8px;text-align:center"><a href="${opts.cta.url}" style="display:inline-block;background:${BURGUNDY};color:#fff;text-decoration:none;padding:15px 34px;font-family:Arial,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase">${opts.cta.label}</a></div>`
     : "";
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${opts.heading}</title></head>
 <body style="margin:0;background:${IVORY};color:${CHARCOAL};font-family:Georgia,'Times New Roman',serif">
 <div style="display:none;visibility:hidden;opacity:0;height:0;width:0;font-size:1px;line-height:1px;max-height:0;max-width:0;overflow:hidden">${opts.preview}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${IVORY}">
-  <tr><td align="center" style="padding:48px 16px">
-    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#fff;border:1px solid rgba(0,0,0,0.08)">
-      <tr><td style="padding:36px 40px 24px;border-bottom:1px solid rgba(0,0,0,0.08);text-align:center">
-        <div style="font-family:Georgia,serif;font-size:28px;letter-spacing:0.5px;color:${BURGUNDY}">Hilton Made to Measure</div>
-        <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(0,0,0,0.45);margin-top:6px">Since 1970 · Manama, Bahrain</div>
+  <tr><td align="center" style="padding:40px 16px 48px">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border:1px solid rgba(0,0,0,0.06);border-top:3px solid ${BURGUNDY}">
+      <!-- ─── House plate: brand monogram + tagline ─── -->
+      <tr><td style="padding:42px 40px 28px;text-align:center;background:#fff">
+        <img src="${LOGO_URL}" alt="Hilton Made to Measure" width="120" height="100" style="display:block;margin:0 auto;max-width:120px;height:auto;border:0;outline:none;text-decoration:none">
+        <div style="font-family:Arial,sans-serif;font-size:9px;letter-spacing:3.5px;text-transform:uppercase;color:${CHARCOAL_500};margin-top:18px">Bespoke since 1970 · Manama, Bahrain</div>
+        <!-- Burgundy ornament rule -->
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:22px auto 0">
+          <tr>
+            <td style="border-top:1px solid rgba(110,38,57,0.25);width:48px;font-size:0;line-height:0">&nbsp;</td>
+            <td style="padding:0 10px;color:${BURGUNDY};font-size:10px;font-family:Georgia,serif">◆</td>
+            <td style="border-top:1px solid rgba(110,38,57,0.25);width:48px;font-size:0;line-height:0">&nbsp;</td>
+          </tr>
+        </table>
       </td></tr>
-      <tr><td style="padding:40px">
-        <h1 style="font-family:Georgia,serif;font-size:32px;line-height:1.15;margin:0 0 16px;color:${CHARCOAL};font-weight:normal">${opts.heading}</h1>
-        <div style="font-size:15px;line-height:1.65">${opts.body}</div>
+
+      <!-- ─── Content ─── -->
+      <tr><td style="padding:36px 44px 40px">
+        <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.15;margin:0 0 18px;color:${CHARCOAL};font-weight:normal;letter-spacing:0.2px">${opts.heading}</h1>
+        <div style="font-family:Georgia,'Times New Roman',serif;font-size:15px;line-height:1.7;color:#2a2826">${opts.body}</div>
         ${cta}
       </td></tr>
-      <tr><td style="padding:24px 40px;border-top:1px solid rgba(0,0,0,0.08);font-family:Arial,sans-serif;font-size:11px;color:rgba(0,0,0,0.5);text-align:center;line-height:1.6">
-        Shop No. 119, Shaikh Abdulla Avenue · Manama, Kingdom of Bahrain<br>
-        +973 1724 5689 · <a href="mailto:atelier@hiltonmtm.com" style="color:${BURGUNDY};text-decoration:none">atelier@hiltonmtm.com</a>
+
+      <!-- ─── Footer: burgundy concierge plate ─── -->
+      <tr><td style="background:${BURGUNDY};padding:28px 40px 32px;text-align:center;color:rgba(255,255,255,0.85);font-family:Georgia,serif">
+        <div style="font-family:Georgia,serif;font-size:18px;letter-spacing:0.5px;color:#fff;margin-bottom:6px">Hilton Made to Measure</div>
+        <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-bottom:18px">The atelier on Shaikh Abdulla Avenue</div>
+        <div style="font-family:Arial,sans-serif;font-size:11px;line-height:1.7;color:rgba(255,255,255,0.8)">
+          Shop No. 119, Shaikh Abdulla Avenue<br>
+          Manama, Kingdom of Bahrain<br>
+          +973 1724 5689 · <a href="mailto:atelier@hiltonmtm.com" style="color:#fff;text-decoration:underline">atelier@hiltonmtm.com</a>
+        </div>
+      </td></tr>
+    </table>
+
+    <!-- Subtle below-card eyebrow with order/account hint -->
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;margin-top:16px">
+      <tr><td style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(0,0,0,0.4);text-align:center;line-height:1.7">
+        Sent with care by Sebastian, your concierge.
       </td></tr>
     </table>
   </td></tr>
@@ -110,7 +146,7 @@ export async function sendWelcomeEmail(args: { to: string; name?: string }) {
 
 /* ───────────────────── 2. Order confirmation ───────────────────── */
 
-type OrderEmailItem = { name: string; type_label: string; qty: number; price_num: number };
+type OrderEmailItem = { name: string; type_label: string; qty: number; price_num: number; image?: string | null };
 
 export async function sendOrderConfirmationEmail(args: {
   to: string;
@@ -127,18 +163,30 @@ export async function sendOrderConfirmationEmail(args: {
 }) {
   const firstName = args.name.split(/\s+/)[0] || "";
   const itemsGross = args.items.reduce((s, it) => s + it.price_num * it.qty, 0);
-  const rows = args.items.map((it) => `
+  const rows = args.items.map((it) => {
+    // 72px square thumbnail per line item. ERP product photos sometimes
+    // ship on a studio-white plate; emails can't run mix-blend tricks, so
+    // we just render the photo as-is against an ivory cell. The image
+    // column only renders when the order item actually has an image URL.
+    const thumbCell = it.image
+      ? `<td width="80" style="padding:16px 14px 16px 0;border-bottom:1px solid rgba(0,0,0,0.06);vertical-align:top">
+          <img src="${it.image}" width="72" height="72" alt="" style="display:block;width:72px;height:72px;object-fit:cover;background:${IVORY};border:1px solid rgba(0,0,0,0.08)">
+        </td>`
+      : `<td width="0" style="border-bottom:1px solid rgba(0,0,0,0.06);font-size:0;line-height:0">&nbsp;</td>`;
+    return `
     <tr>
-      <td style="padding:14px 0;border-bottom:1px solid rgba(0,0,0,0.06)">
+      ${thumbCell}
+      <td style="padding:16px 0;border-bottom:1px solid rgba(0,0,0,0.06);vertical-align:top">
         <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(0,0,0,0.45)">${it.type_label}</div>
-        <div style="font-family:Georgia,serif;font-size:16px;margin-top:2px">${it.name}</div>
-        ${it.qty > 1 ? `<div style="font-size:12px;color:rgba(0,0,0,0.55);margin-top:2px">Qty ${it.qty}</div>` : ""}
+        <div style="font-family:Georgia,serif;font-size:16px;margin-top:3px;color:${CHARCOAL}">${it.name}</div>
+        ${it.qty > 1 ? `<div style="font-size:12px;color:rgba(0,0,0,0.55);margin-top:3px">Qty ${it.qty}</div>` : ""}
       </td>
-      <td align="right" style="padding:14px 0;border-bottom:1px solid rgba(0,0,0,0.06);font-family:Georgia,serif;font-size:16px;color:${BURGUNDY};white-space:nowrap;vertical-align:top">
+      <td align="right" style="padding:16px 0;border-bottom:1px solid rgba(0,0,0,0.06);font-family:Georgia,serif;font-size:16px;color:${BURGUNDY};white-space:nowrap;vertical-align:top">
         ${formatBhd(it.price_num * it.qty)}
       </td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
   const shippingBlock = args.shippingAddressLine1 ? `
     <p style="margin-top:32px"><strong style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(0,0,0,0.5)">Ship to</strong><br>
       ${args.shippingAddressLine1}<br>
