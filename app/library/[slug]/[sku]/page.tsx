@@ -65,7 +65,7 @@ export async function generateMetadata({
   const hit = await resolveProduct(slug, sku);
   if (!hit) return {};
   return {
-    title: `${hit.item.name} — ${hit.item.type}`,
+    title: `${hit.item.name} · ${hit.item.type}`,
     description: hit.item.description ?? hit.item.alt,
   };
 }
@@ -123,9 +123,9 @@ export default async function ProductPage({
   ].filter((r): r is { label: string; value: string } => r !== null);
 
   const howItWorks = [
-    { icon: <Sparkles size={20} strokeWidth={1.4} />, title: "Refine your design", body: "Choose your fit, cloth, lapels, buttons, lining and more — every detail is yours." },
+    { icon: <Sparkles size={20} strokeWidth={1.4} />, title: "Refine your design", body: "Choose your fit, cloth, lapels, buttons, lining and more; every detail is yours." },
     { icon: <Ruler size={20} strokeWidth={1.4} />, title: "Enter your measurements", body: "Add your measurements online, or get measured in minutes at the atelier." },
-    { icon: <ShieldCheck size={20} strokeWidth={1.4} />, title: "Experience superior fit", body: "Cut to your body and adjusted until it’s right — your first alteration is on us." },
+    { icon: <ShieldCheck size={20} strokeWidth={1.4} />, title: "Experience superior fit", body: "Cut to your body and adjusted until it’s right. Your first alteration is on us." },
   ];
 
   return (
@@ -276,7 +276,7 @@ export default async function ProductPage({
           <div className="bg-[var(--color-ivory-200)] p-7">
             <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-2">New to Hilton Made to Measure?</div>
             <p className="text-[0.9rem] text-[var(--color-charcoal-700)] leading-relaxed">
-              See how a bespoke commission comes together — from cloth, to cut, to your final fitting.
+              See how a bespoke commission comes together, from cloth, to cut, to your final fitting.
             </p>
             <Link href="/made-to-measure" className="mt-3 inline-flex items-center gap-2 text-eyebrow text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)] transition-colors">
               Learn how it works <ArrowRight size={14} strokeWidth={1.5} />

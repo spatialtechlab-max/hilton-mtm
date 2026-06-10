@@ -24,7 +24,7 @@ const timeline = [
     year: "2011",
     title: "The Next Chapter in Zinj",
     body:
-      "The official birth of the Hilton Bespoke flagship in Zinj — a new space dedicated entirely to high-end, highly personalised bespoke tailoring and premium global fabrics.",
+      "The official birth of the Hilton Bespoke flagship in Zinj: a new space dedicated entirely to high-end, highly personalised bespoke tailoring and premium global fabrics.",
   },
   {
     year: "2016",
@@ -36,7 +36,7 @@ const timeline = [
     year: "2019",
     title: "The House is Formed",
     body:
-      "The official launch of our mother brand, Hilton Tailoring House — unifying Hilton Tailors, Hilton Bespoke and Hilton Made to Measure under one trusted name in Bahrain.",
+      "The official launch of our mother brand, Hilton Tailoring House, unifying Hilton Tailors, Hilton Bespoke and Hilton Made to Measure under one trusted name in Bahrain.",
   },
 ];
 
@@ -76,12 +76,12 @@ export default function HeritagePage() {
             </Reveal>
             <Reveal delay={0.28}>
               <p className="text-[1.05rem] text-[var(--color-charcoal-700)] leading-relaxed max-w-2xl">
-                Joseph's son, George, grew up immersed in the family business. After studying the trade abroad, George returned to build upon his father's legacy — introducing international fabric brands and a more personalised, high-end experience to a discerning clientele.
+                Joseph's son, George, grew up immersed in the family business. After studying the trade abroad, George returned to build upon his father's legacy, introducing international fabric brands and a more personalised, high-end experience to a discerning clientele.
               </p>
             </Reveal>
             <Reveal delay={0.36}>
               <p className="text-[1.05rem] text-[var(--color-charcoal-700)] leading-relaxed max-w-2xl">
-                Today, under the banner of Hilton Tailoring House, we take pride in a dedicated team of master craftsmen — many of whom were personally trained by Joseph himself. Every skilled professional in our workshop specialises in a particular aspect of tailoring. Together, we work toward a single goal: exceptional, comfortable, perfectly fitted garments that elevate your personal style.
+                Today, under the banner of Hilton Tailoring House, we take pride in a dedicated team of master craftsmen, many of whom were personally trained by Joseph himself. Every skilled professional in our workshop specialises in a particular aspect of tailoring. Together, we work toward a single goal: exceptional, comfortable, perfectly fitted garments that elevate your personal style.
               </p>
             </Reveal>
           </div>

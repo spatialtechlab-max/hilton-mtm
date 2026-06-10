@@ -128,7 +128,7 @@ export function Concierge() {
           id: uid(),
           role: "assistant",
           content:
-            "Forgive me — I lost the line for a moment. Could you say that again?",
+            "Forgive me; I lost the line for a moment. Could you say that again?",
         },
       ]);
     } finally {

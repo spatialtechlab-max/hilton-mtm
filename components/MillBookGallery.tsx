@@ -35,7 +35,7 @@ export function MillBookGallery() {
           </div>
           <Reveal delay={0.2}>
             <p className="md:max-w-sm text-[0.9rem] text-[var(--color-charcoal-700)] leading-relaxed">
-              A walk through the swatch folios that live on the bench — the
+              A walk through the swatch folios that live on the bench: the
               same houses, in cloth.
             </p>
           </Reveal>

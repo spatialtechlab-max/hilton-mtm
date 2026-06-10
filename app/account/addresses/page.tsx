@@ -160,8 +160,8 @@ export default function AddressBookPage() {
             Addresses
           </h1>
           <p className="mt-3 text-[0.9rem] text-[var(--color-charcoal-500)] max-w-2xl">
-            Save up to {MAX_ADDRESSES} delivery addresses for your commissions. One is your default — checkout
-            will pre-select it, and you can switch or add a new one inline at any time.
+            Save up to {MAX_ADDRESSES} delivery addresses for your commissions. One is your default;
+            checkout will pre-select it, and you can switch or add a new one inline at any time.
           </p>
         </div>
         {!editorOpen && items.length < MAX_ADDRESSES && (

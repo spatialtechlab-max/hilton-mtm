@@ -50,7 +50,7 @@ export default function HomePage() {
             <Reveal delay={0.45}>
               <p className="mt-8 max-w-md text-[1rem] text-[var(--color-ivory-200)]/90 leading-relaxed">
                 Impeccably tailored suits and crisp shirting. Footwear and the finishing touches.
-                At Hilton MTM, we don&rsquo;t just sell garments — we craft them around you.
+                At Hilton MTM, we don&rsquo;t just sell garments; we craft them around you.
               </p>
             </Reveal>
 
@@ -91,7 +91,7 @@ export default function HomePage() {
           <div className="lg:col-span-7 lg:col-start-6">
             <h2 className="text-display text-[clamp(2rem,3.8vw,3.5rem)] leading-[1.05]">
               <SplitReveal
-                text="Every piece in our collection is merely a starting point — the beginning of a conversation about your personal style."
+                text="Every piece in our collection is merely a starting point: the beginning of a conversation about your personal style."
                 staggerWord={0.025}
               />
             </h2>

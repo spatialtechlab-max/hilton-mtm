@@ -59,7 +59,7 @@ const SEBASTIAN_LINE: Record<OrderStatus, string> = {
   cutting:          "Your commission is on the cutting bench.",
   in_production:    "Your commission has moved into production.",
   fitting_ready:    "Your fitting is ready when you are.",
-  finishing:        "We are at the finishing stage — almost there.",
+  finishing:        "We are at the finishing stage. Almost there.",
   ready_for_pickup: "Your commission is ready for pickup at the atelier.",
   delivered:        "Your commission has been delivered. A pleasure to dress you.",
   cancelled:        "Your commission has been cancelled.",
@@ -71,7 +71,7 @@ function customerOrderToNotification(o: Order): N {
   return {
     id: `order-${o.id}-${o.updated_at}`,
     title: `${o.order_number} · ${ORDER_STATUS_LABEL[o.status]}`,
-    body: `${SEBASTIAN_LINE[o.status]} — ${new Date(o.updated_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
+    body: `${SEBASTIAN_LINE[o.status]} · ${new Date(o.updated_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
     href: `/account/orders/${o.order_number}`,
     ts: new Date(o.updated_at).getTime(),
     unread: true,
@@ -89,7 +89,7 @@ function adminOrderToNotification(o: Order): N {
   return {
     id: `admin-${o.id}-${o.updated_at}`,
     title: `${o.order_number} · ${ORDER_STATUS_LABEL[o.status]}`,
-    body: `${body} — ${new Date(o.updated_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
+    body: `${body} · ${new Date(o.updated_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
     href: `/admin/orders`,
     ts: new Date(o.updated_at).getTime(),
     unread: true,
@@ -103,7 +103,7 @@ function messageToCustomerNotification(m: RecentMessage): N {
   return {
     id: `msg-${m.id}`,
     title: `${m.order_number} · Note from the atelier`,
-    body: `${m.note} — ${new Date(m.changed_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
+    body: `${m.note} · ${new Date(m.changed_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
     href: `/account/orders/${m.order_number}`,
     ts: new Date(m.changed_at).getTime(),
     unread: true,
@@ -114,7 +114,7 @@ function messageToAdminNotification(m: RecentMessage): N {
   return {
     id: `admin-msg-${m.id}`,
     title: `${m.order_number} · Sent to ${m.customer_name || "customer"}`,
-    body: `${m.note} — ${new Date(m.changed_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
+    body: `${m.note} · ${new Date(m.changed_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`,
     href: `/admin/orders`,
     ts: new Date(m.changed_at).getTime(),
     unread: true,
@@ -367,12 +367,12 @@ function splitTitle(title: string): { lead: string; tail: string } {
   };
 }
 
-/** Pull the trailing "— 10 Jun, 14:24" timestamp from the bell body so we
+/** Pull the trailing "· 10 Jun, 14:24" timestamp from the bell body so we
  *  can right-align it editorially instead of dragging it through the
  *  prose. Returns the stripped body + the extracted stamp. */
 function splitBody(body: string | undefined): { prose: string; stamp: string } {
   if (!body) return { prose: "", stamp: "" };
-  const m = body.match(/\s*—\s*([^—]+)$/);
+  const m = body.match(/\s*·\s*([^·]+)$/);
   if (!m) return { prose: body, stamp: "" };
   return { prose: body.slice(0, m.index).trim(), stamp: m[1].trim() };
 }

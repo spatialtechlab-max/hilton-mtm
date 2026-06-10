@@ -180,8 +180,8 @@ export default async function LibraryPage({
               </h2>
               <p className="mt-5 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
                 Nothing has been catalogued under {ERP_CATEGORIES_FOR_SLUG[slug as keyof typeof ERP_CATEGORIES_FOR_SLUG]?.join(" · ") ?? slug.toUpperCase()} in the ERP yet.
-                As soon as the atelier uploads items under one of those categories — with a
-                cropped swatch and at least one on-form garment photo — they&rsquo;ll appear
+                As soon as the atelier uploads items under one of those categories, with a
+                cropped swatch and at least one on-form garment photo, they&rsquo;ll appear
                 here automatically.
               </p>
             </Reveal>

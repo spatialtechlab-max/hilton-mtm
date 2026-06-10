@@ -50,7 +50,7 @@ export function Partners() {
             <Reveal delay={0.2}>
               <p className="text-[1rem] md:text-[1.05rem] text-[var(--color-charcoal-700)] leading-relaxed max-w-prose">
                 Every commission begins at the bolt. We work with the mills that
-                set the standard for the wool, mohair and cashmere worlds —
+                set the standard for the wool, mohair and cashmere worlds:
                 houses still weaving in Biella, in Yorkshire, in Huddersfield,
                 some for nearly two centuries. Their cloth, our hand.
               </p>

@@ -51,16 +51,32 @@ export default function CartPage() {
   useEffect(() => {
     if (!user) { setAddresses([]); setSelected(null); return; }
     let cancelled = false;
-    (async () => {
+    async function refresh() {
       const rows = await listMyAddresses();
       if (cancelled) return;
       setAddresses(rows);
-      if (rows.length > 0 && !selectedAddrId) {
-        setSelected((rows.find((r) => r.is_default) ?? rows[0]).id);
-      }
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      setSelected((prev) => {
+        // Keep the explicit selection if it still exists; otherwise
+        // fall through to whatever is now flagged as default (the
+        // customer may have just promoted a different row from the
+        // address book), or the first available row.
+        if (prev && rows.some((r) => r.id === prev)) return prev;
+        if (rows.length === 0) return null;
+        return (rows.find((r) => r.is_default) ?? rows[0]).id;
+      });
+    }
+    refresh();
+    // Refresh whenever the customer comes back to this tab — covers
+    // the "go to /account/addresses, change default, come back" loop.
+    const onFocus = () => { refresh(); };
+    const onShow  = (e: PageTransitionEvent) => { if (e.persisted) refresh(); };
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("pageshow", onShow);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("pageshow", onShow);
+    };
   }, [user]);
 
   const selectedAddr = addresses.find((a) => a.id === selectedAddrId) ?? null;
@@ -341,11 +357,11 @@ export default function CartPage() {
                     <span className="text-eyebrow text-[0.62rem] text-[var(--color-charcoal-500)]">Optional</span>
                   </div>
                   <p className="text-[0.85rem] text-[var(--color-charcoal-700)] leading-relaxed mb-5 max-w-2xl">
-                    Help the cutter understand your build. Each slot accepts one photo — front,
+                    Help the cutter understand your build. Each slot accepts one photo: front,
                     back, and a side view from each direction. Visible only to the atelier; we never
                     share these.
                   </p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-[520px]">
                     {ORDER_VIEWS.map((view) => (
                       <PhotoSlot
                         key={view}
@@ -575,7 +591,7 @@ export default function CartPage() {
 
               <p className="mt-4 text-[0.72rem] text-[var(--color-charcoal-500)] leading-relaxed">
                 You&rsquo;ll sign in (or create an account) at checkout to save your pattern on file.
-                Secure payment will be added soon — your atelier will confirm by email.
+                Secure payment will be added soon; your atelier will confirm by email.
               </p>
             </aside>
           </div>

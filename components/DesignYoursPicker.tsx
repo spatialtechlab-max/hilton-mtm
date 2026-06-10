@@ -163,8 +163,8 @@ export function DesignYoursPicker() {
             <Reveal delay={0.2}>
               <p className="mt-4 text-[1.05rem] text-[var(--color-charcoal-700)] leading-relaxed max-w-prose">
                 Pick the garment you'd like to commission. Each flow is the
-                same considered sequence — cloth first, then style, then
-                measure — tuned to what you're making.
+                same considered sequence: cloth first, then style, then
+                measure, tuned to what you're making.
               </p>
             </Reveal>
           </div>

@@ -13,7 +13,7 @@ const inStore = [
     n: "01",
     title: "Book Your Appointment",
     body:
-      "Reach out by phone or email to schedule a time. We book private appointments to make sure we can give you our full, undivided attention — without any rush.",
+      "Reach out by phone or email to schedule a time. We book private appointments to make sure we can give you our full, undivided attention, without any rush.",
   },
   {
     n: "02",
@@ -25,13 +25,13 @@ const inStore = [
     n: "03",
     title: "Choose Your Customisation Level",
     body:
-      "Three different tiers to fit your needs — Essentials (a great foundation for quality made-to-measure), Signature (our standard Hilton finish), or Full Bespoke (extensive hand-stitching and completely custom canvas construction).",
+      "Three different tiers to fit your needs: Essentials (a great foundation for quality made-to-measure), Signature (our standard Hilton finish), or Full Bespoke (extensive hand-stitching and completely custom canvas construction).",
   },
   {
     n: "04",
     title: "Getting Measured",
     body:
-      "Our experienced master tailor takes your precise measurements. We don't just write down numbers — we look at your posture and listen to how you actually like your clothes to fit, so the final cut is both comfortable and flattering.",
+      "Our experienced master tailor takes your precise measurements. We don't just write down numbers; we look at your posture and listen to how you actually like your clothes to fit, so the final cut is both comfortable and flattering.",
   },
   {
     n: "05",
@@ -52,7 +52,7 @@ const online = [
     n: "01",
     title: "Pick Your Fabric",
     body:
-      "Browse the online collection to find the right material. We provide clear details on the weight and feel of each fabric so you know exactly what to expect — whether you need a breathable summer jacket or a warm winter coat.",
+      "Browse the online collection to find the right material. We provide clear details on the weight and feel of each fabric so you know exactly what to expect, whether you need a breathable summer jacket or a warm winter coat.",
   },
   {
     n: "02",
@@ -64,7 +64,7 @@ const online = [
     n: "03",
     title: "Design Your Garment",
     body:
-      "Customise the details of your clothing on the website. You are in control of the style — from the type of lapel and pockets down to the lining and button choices.",
+      "Customise the details of your clothing on the website. You are in control of the style, from the type of lapel and pockets down to the lining and button choices.",
   },
   {
     n: "04",
@@ -92,7 +92,7 @@ export default function ProcessPage() {
       <PageHero
         eyebrow="The Method"
         title="Made to Measure."
-        intro="Two ways to get your perfect fit. Sit down with us in person, or design your clothing from the comfort of your home. The process is built around you — your lifestyle, your needs."
+        intro="Two ways to get your perfect fit. Sit down with us in person, or design your clothing from the comfort of your home. The process is built around you: your lifestyle, your needs."
         slot="process.hero"
         image={{
           src: "https://images.unsplash.com/photo-1593030761757-71fae45fa0e7?q=80&w=1400&auto=format&fit=crop",
@@ -113,7 +113,7 @@ export default function ProcessPage() {
               </h2>
               <Reveal delay={0.2}>
                 <p className="mt-8 text-[1.05rem] text-[var(--color-charcoal-700)] leading-relaxed max-w-md">
-                  For those who prefer a traditional, face-to-face consultation at our tailoring house in Manama — or during our US trunk shows.
+                  For those who prefer a traditional, face-to-face consultation at our tailoring house in Manama, or during our US trunk shows.
                 </p>
               </Reveal>
             </div>
@@ -166,7 +166,7 @@ export default function ProcessPage() {
               </h2>
               <Reveal delay={0.2}>
                 <p className="mt-8 text-[1.05rem] text-[var(--color-charcoal-700)] leading-relaxed max-w-md">
-                  A simple, step-by-step digital process for designing custom clothing from anywhere — fabric, tier, style and measurements, all from the comfort of your home.
+                  A simple, step-by-step digital process for designing custom clothing from anywhere: fabric, tier, style and measurements, all from the comfort of your home.
                 </p>
               </Reveal>
               <Reveal delay={0.3}>

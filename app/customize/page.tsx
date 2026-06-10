@@ -67,7 +67,7 @@ const CATEGORY_COPY: Record<StepCategory, { h1: string; intro: string }> = {
   },
   shirt: {
     h1: "Your shirt, made to measure.",
-    intro: "A few quiet choices — collar, cuff, and fit — then your measurements. At the end, take your specification with you.",
+    intro: "A few quiet choices: collar, cuff, and fit, then your measurements. At the end, take your specification with you.",
   },
   trouser: {
     h1: "Your trousers, made to measure.",
@@ -353,7 +353,7 @@ function CustomizeInner() {
     const tierLabel = hasTiers ? tierObj.name : "Made to measure";
     const categoryNoun = category === "trouser" ? "trousers" : category;
     const lineName = hasTiers
-      ? `Bespoke ${categoryNoun} commission — ${tierLabel}`
+      ? `Bespoke ${categoryNoun} commission · ${tierLabel}`
       : `Made-to-measure ${categoryNoun}`;
     pushToCart({
       sku: `MTM-${category.toUpperCase()}-${Date.now()}`,
@@ -1053,7 +1053,7 @@ function FabricPicker({
           Choose the cloth your garment will be built around.
         </h2>
         <p className="mt-5 text-[1rem] text-[var(--color-charcoal-700)] leading-relaxed">
-          Every commission begins with the cloth. Below are the fabrics currently in the house — Italian and Indian
+          Every commission begins with the cloth. Below are the fabrics currently in the house: Italian and Indian
           worsteds, plain weaves and patterns. Pick one and we&rsquo;ll build the rest of the design around it.
         </p>
       </div>
@@ -1074,7 +1074,7 @@ function FabricPicker({
       {!loading && fabrics.length === 0 && (
         <div className="mt-12 border border-black/10 p-8 bg-[var(--color-ivory-200)] max-w-2xl">
           <p className="text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
-            No fabrics for this category yet — the catalogue will populate automatically as soon as the atelier
+            No fabrics for this category yet. The catalogue will populate automatically as soon as the atelier
             adds them in the ERP. In the meantime you can still proceed: we&rsquo;ll use the house default cloth.
           </p>
           <button
@@ -1470,10 +1470,10 @@ function MeasurementsPhase({
           Take your measurements.
         </h2>
         <p className="mt-4 text-[1.05rem] text-[var(--color-charcoal-700)] italic">
-          A few minutes with a soft tape — {allActive.length} quiet numbers.
+          A few minutes with a soft tape, {allActive.length} quiet numbers.
         </p>
         <p className="mt-5 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
-          Each clip is a short loop showing precisely how the tape should sit. Take what you can — anything you skip,
+          Each clip is a short loop showing precisely how the tape should sit. Take what you can; anything you skip,
           we will refine at the fitting. Stand naturally, with a thin shirt; pull the tape snug but never tight.
         </p>
 
@@ -1506,7 +1506,7 @@ function MeasurementsPhase({
         <div className="mt-10 p-6 border border-black/10 bg-[var(--color-ivory-200)]">
           <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-2">Prefer in-person?</div>
           <p className="text-[0.9rem] text-[var(--color-charcoal-800)] leading-relaxed">
-            Skip ahead and book a fitting — the master tailor will take every measurement at the atelier.
+            Skip ahead and book a fitting; the master tailor will take every measurement at the atelier.
             Your specification stays saved either way.
           </p>
           <Link
@@ -1696,7 +1696,7 @@ function SummaryPanel({
           Your bespoke is set.
         </h2>
         <p className="mt-5 max-w-xl text-[1rem] text-[var(--color-charcoal-700)] leading-relaxed">
-          Review your specification on the right — tap <span className="text-[var(--color-burgundy-700)]">Edit</span> on
+          Review your specification on the right. Tap <span className="text-[var(--color-burgundy-700)]">Edit</span> on
           any line to change just that detail. When you&rsquo;re ready, add it to your cart to proceed to checkout.
         </p>
 
@@ -1810,7 +1810,7 @@ function SummaryPanel({
           </dl>
         ) : (
           <p className="text-[0.82rem] text-[var(--color-charcoal-500)] leading-relaxed">
-            None entered yet — we&rsquo;ll measure you at the fitting, or tap Edit to add them now.
+            None entered yet. We&rsquo;ll measure you at the fitting, or tap Edit to add them now.
           </p>
         )}
 
@@ -1978,7 +1978,7 @@ function CartPanel({
   const catSteps = allSteps;
   const fit = findLiveOption(allSteps, "fit", selections.fit)?.label ?? "Tailored fit";
   const categoryNoun = category === "trouser" ? "trousers" : category;
-  const lineTitle = hasTiers ? `Bespoke commission — ${tierObj.name}` : `Made-to-measure ${categoryNoun}`;
+  const lineTitle = hasTiers ? `Bespoke commission · ${tierObj.name}` : `Made-to-measure ${categoryNoun}`;
   const baseLabel = basePrice > 0 ? formatBhd(basePrice) : "Priced per spec";
 
   return (
@@ -1999,7 +1999,7 @@ function CartPanel({
           Ready for checkout.
         </h2>
         <p className="mt-4 max-w-xl text-[1rem] text-[var(--color-charcoal-700)] leading-relaxed">
-          Your made-to-measure order is held in your cart. Complete secure payment to begin the make —
+          Your made-to-measure order is held in your cart. Complete secure payment to begin the make;
           we&rsquo;ll confirm your first fitting by email.
         </p>
       </div>
@@ -2060,7 +2060,7 @@ function CartPanel({
       </div>
 
       <p className="mt-4 flex items-center gap-2 text-[0.8rem] text-[var(--color-charcoal-500)]">
-        <Lock size={12} strokeWidth={1.5} /> Secure payment is being integrated — your cart stays saved.
+        <Lock size={12} strokeWidth={1.5} /> Secure payment is being integrated; your cart stays saved.
       </p>
     </div>
   );
