@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Send, X, RotateCcw, Sparkles, ArrowRight } from "lucide-react";
 import type { Recommendation, Clarification } from "@/app/api/concierge/chat/route";
+import { supabase } from "@/lib/supabase";
 
 /**
  * Sebastian — the floating Concierge widget.
@@ -94,9 +95,15 @@ export function Concierge() {
       const payload = nextHistory
         .filter((m) => m.role !== "assistant" || m.id !== "greeting")
         .map(({ role, content }) => ({ role, content }));
+      // Forward the visitor's JWT (if any) so the server can ground the
+      // chat in their profile city's real climate via Open-Meteo. Anon
+      // visitors get no header and the server falls back to the atelier.
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await fetch("/api/concierge/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ messages: payload }),
       });
       const data = (await res.json()) as {

@@ -8,7 +8,39 @@
  * the bot never goes silent in front of a customer.
  */
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { getInventory, summarizeInventory, findFabric, type Inventory } from "@/lib/inventorySummary";
+import { getClimateBrief, climateBlockForPrompt, type ClimateBrief } from "@/lib/climate";
+
+const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const ANON     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+/** Look up the caller's profile city + country from their Supabase JWT.
+ *  Returns null when the visitor isn't signed in, the env is missing, or
+ *  the profile hasn't been completed — the route then defaults to the
+ *  atelier's own climate (Manama) as a sensible baseline. */
+async function lookupVisitorLocation(req: Request): Promise<{ city: string; country?: string } | null> {
+  if (!SUPA_URL || !ANON) return null;
+  const auth = req.headers.get("authorization") ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!token) return null;
+  try {
+    const sb = createClient(SUPA_URL, ANON, { global: { headers: { Authorization: `Bearer ${token}` } } });
+    const { data: u } = await sb.auth.getUser(token);
+    if (!u?.user?.id) return null;
+    const { data: profile } = await sb
+      .from("mtm_profiles")
+      .select("city,country")
+      .eq("id", u.user.id)
+      .maybeSingle();
+    const city = (profile as { city?: string } | null)?.city?.trim();
+    const country = (profile as { country?: string } | null)?.country?.trim();
+    if (!city) return null;
+    return { city, country: country || undefined };
+  } catch {
+    return null;
+  }
+}
 
 type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
 
@@ -122,6 +154,11 @@ LIVE INVENTORY RULES
 - The "fabric_hint" MUST describe the SAME cloth you put in "fabric_sku" — never invent a mill or composition that isn't in the list for that category.
 - If the matching category in LIVE INVENTORY shows "(no stock — use ...)", use that ATELIER-<CAT> placeholder as the fabric_sku and explain the customer will finalise the cloth at the fitting.
 
+CLIMATE RULES
+- A "VISITOR BASE CLIMATE" or "ATELIER BASE CLIMATE" block may appear below with real current temperatures and the coming week's outlook. Use it as the visitor's default — pick cloth weights that suit those numbers (e.g. 200–260g tropical worsteds and linen-blends for 30°C+; 280–340g flannels and worsted-wool for 5–15°C).
+- If the visitor names a DIFFERENT destination for the commission (a winter wedding in Switzerland when their base is Dubai), prioritise that destination's climate over the base block.
+- Don't quote raw degrees in your prose unless asked — let the climate guide your cloth choice silently.
+
 MATCH HEURISTIC (0–100)
 - 85–100: confident — visitor named occasion + garment + at least one constraint (climate, colour, formality).
 - 65–84:  good guess — at least two constraints known.
@@ -178,6 +215,26 @@ export async function POST(req: Request) {
     inventoryBlock = "LIVE INVENTORY: temporarily unavailable. Recommend ATELIER placeholders and explain the customer will pick cloth at the fitting.";
   }
 
+  // Climate brief. If the visitor is signed in and has a profile city
+  // we ground the prompt in THEIR weather; otherwise we default to the
+  // atelier's home (Manama). Open-Meteo handles geocoding + forecast in
+  // two cached calls per request — no API key, free for non-commercial.
+  let climateBlock = "";
+  try {
+    const loc = await lookupVisitorLocation(req);
+    let brief: ClimateBrief | null = null;
+    let mode: "user" | "atelier" = "atelier";
+    if (loc) {
+      brief = await getClimateBrief(loc.city, loc.country);
+      if (brief) mode = "user";
+    }
+    if (!brief) brief = await getClimateBrief("Manama", "Bahrain");
+    if (brief) climateBlock = climateBlockForPrompt(brief, mode);
+  } catch {
+    /* Climate failures are non-fatal — Sebastian falls back to general
+       world-climate knowledge from his training. */
+  }
+
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -197,6 +254,7 @@ export async function POST(req: Request) {
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "system", content: inventoryBlock },
+          ...(climateBlock ? [{ role: "system" as const, content: climateBlock }] : []),
           ...messages,
         ],
         max_tokens: 460,
