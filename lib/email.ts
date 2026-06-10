@@ -75,7 +75,7 @@ function shell(opts: { preview: string; heading: string; body: string; cta?: { l
 <div style="display:none;visibility:hidden;opacity:0;height:0;width:0;font-size:1px;line-height:1px;max-height:0;max-width:0;overflow:hidden">${opts.preview}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${IVORY}">
   <tr><td align="center" style="padding:40px 16px 48px">
-    <table role="presentation" width="780" cellpadding="0" cellspacing="0" border="0" style="max-width:780px;width:100%;background:#ffffff;border:1px solid rgba(0,0,0,0.06);border-top:3px solid ${BURGUNDY}">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border:1px solid rgba(0,0,0,0.06);border-top:3px solid ${BURGUNDY}">
       <!-- ─── House plate: brand monogram + tagline ─── -->
       <tr><td style="padding:42px 40px 28px;text-align:center;background:#fff">
         <img src="${LOGO_URL}" alt="Hilton Made to Measure" width="120" height="100" style="display:block;margin:0 auto;max-width:120px;height:auto;border:0;outline:none;text-decoration:none">
@@ -110,7 +110,7 @@ function shell(opts: { preview: string; heading: string; body: string; cta?: { l
     </table>
 
     <!-- Subtle below-card eyebrow with order/account hint -->
-    <table role="presentation" width="780" cellpadding="0" cellspacing="0" border="0" style="max-width:780px;width:100%;margin-top:16px">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;margin-top:16px">
       <tr><td style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(0,0,0,0.4);text-align:center;line-height:1.7">
         Sent with care by Sebastian, your concierge.
       </td></tr>
