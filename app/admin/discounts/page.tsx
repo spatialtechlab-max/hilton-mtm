@@ -237,25 +237,38 @@ export default function AdminDiscountsPage() {
         </p>
       )}
 
-      {/* Editor row — sits at the top, doubles as add-new + edit-existing */}
+      {/* Editor — sits at the top, doubles as add-new + edit-existing */}
       <section className="mt-10 border border-black/10 bg-[var(--color-ivory-100)]">
-        <div className="px-6 py-5 border-b border-black/10 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-black/10 flex items-center justify-between gap-4">
           <h2 className="text-eyebrow text-[var(--color-burgundy-700)] inline-flex items-center gap-2">
             <Plus size={14} strokeWidth={1.5} />
             {editing ? `Editing ${editing.code}` : "New discount code"}
           </h2>
-          {editing && (
-            <button
-              type="button"
-              onClick={cancelEdit}
-              className="text-eyebrow text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors"
-            >
-              Cancel
-            </button>
-          )}
+          <div className="flex items-center gap-5">
+            <label className="inline-flex items-center gap-2 text-[0.85rem] text-[var(--color-charcoal-800)]">
+              <input
+                type="checkbox"
+                checked={draft.active}
+                onChange={(e) => setDraft({ ...draft, active: e.target.checked })}
+                className="w-4 h-4 accent-[var(--color-burgundy-700)]"
+              />
+              <span className="inline-flex items-center gap-1.5">
+                <Power size={12} strokeWidth={1.5} /> Active
+              </span>
+            </label>
+            {editing && (
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="text-eyebrow text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </div>
-        <div className="px-6 py-6 grid grid-cols-1 md:grid-cols-[160px_120px_1fr_1fr_120px] gap-5 items-end">
-          <label className="block">
+        <div className="px-6 py-6 flex flex-wrap items-end gap-x-5 gap-y-4">
+          <label className="block w-32">
             <span className="text-eyebrow text-[var(--color-charcoal-500)]">Code</span>
             <input
               type="text"
@@ -268,7 +281,7 @@ export default function AdminDiscountsPage() {
             />
             <span className="block mt-1 text-[0.7rem] text-[var(--color-charcoal-500)]">5 chars · last 2 digits</span>
           </label>
-          <label className="block">
+          <label className="block w-24">
             <span className="text-eyebrow text-[var(--color-charcoal-500)] inline-flex items-center gap-1.5">
               <Percent size={12} strokeWidth={1.5} /> Percent
             </span>
@@ -281,7 +294,7 @@ export default function AdminDiscountsPage() {
               className="mt-2 w-full bg-white border border-black/15 px-3 py-2.5 text-[0.95rem] tabular-nums focus:outline-none focus:border-[var(--color-burgundy-700)]"
             />
           </label>
-          <label className="block">
+          <label className="block w-56">
             <span className="text-eyebrow text-[var(--color-charcoal-500)] inline-flex items-center gap-1.5">
               <CalendarDays size={12} strokeWidth={1.5} /> Starts
             </span>
@@ -292,7 +305,7 @@ export default function AdminDiscountsPage() {
               className="mt-2 w-full bg-white border border-black/15 px-3 py-2.5 text-[0.95rem] focus:outline-none focus:border-[var(--color-burgundy-700)]"
             />
           </label>
-          <label className="block">
+          <label className="block w-56">
             <span className="text-eyebrow text-[var(--color-charcoal-500)] inline-flex items-center gap-1.5">
               <CalendarDays size={12} strokeWidth={1.5} /> Ends
             </span>
@@ -303,24 +316,13 @@ export default function AdminDiscountsPage() {
               className="mt-2 w-full bg-white border border-black/15 px-3 py-2.5 text-[0.95rem] focus:outline-none focus:border-[var(--color-burgundy-700)]"
             />
           </label>
-          <div className="flex flex-col gap-2">
-            <label className="inline-flex items-center gap-2 text-[0.85rem]">
-              <input
-                type="checkbox"
-                checked={draft.active}
-                onChange={(e) => setDraft({ ...draft, active: e.target.checked })}
-                className="w-4 h-4"
-              />
-              <span className="inline-flex items-center gap-1.5">
-                <Power size={12} strokeWidth={1.5} /> Active
-              </span>
-            </label>
+          <div className="ml-auto">
             <button
               type="button"
               onClick={handleSave}
-              className="text-eyebrow inline-flex items-center justify-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-4 py-2.5 hover:bg-[var(--color-burgundy-800)] transition-colors"
+              className="text-eyebrow inline-flex items-center justify-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-5 py-3 hover:bg-[var(--color-burgundy-800)] transition-colors"
             >
-              <Save size={13} strokeWidth={1.5} /> {editing ? "Update" : "Create"}
+              <Save size={13} strokeWidth={1.5} /> {editing ? "Update code" : "Create code"}
             </button>
           </div>
         </div>
