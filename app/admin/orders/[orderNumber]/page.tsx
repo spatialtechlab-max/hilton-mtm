@@ -9,7 +9,6 @@ import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import {
   fetchOrderByNumber, ORDER_STATUS_LABEL, ORDER_STATUSES,
-  updateOrderStatus,
   type Order, type OrderItem, type StatusHistoryEntry, type OrderStatus,
 } from "@/lib/orders";
 import { supabase } from "@/lib/supabase";
@@ -68,14 +67,23 @@ export default function AdminOrderDetailPage() {
   async function handleSave() {
     if (!order) return;
     setSaving(true);
-    const { error } = await updateOrderStatus(order.id, status);
-    setSaving(false);
-    if (!error) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? "";
+      const res = await fetch("/api/admin/orders/status", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: order.id, status }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error ?? "Update failed.");
       setSaved(true);
       setOrder({ ...order, status });
       window.setTimeout(() => setSaved(false), 1800);
       const r = await fetchOrderByNumber(orderNumber);
       setHistory(r.history);
+    } finally {
+      setSaving(false);
     }
   }
 

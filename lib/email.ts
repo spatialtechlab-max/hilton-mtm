@@ -164,7 +164,41 @@ export async function sendOrderConfirmationEmail(args: {
   });
 }
 
-/* ──────────────────── 3. Courier dispatch ──────────────────── */
+/* ──────────────────── 3. Order status update ──────────────────── */
+
+export async function sendOrderStatusEmail(args: {
+  to: string;
+  name: string;
+  orderNumber: string;
+  statusLabel: string;
+  sebastianLine: string;
+}) {
+  const firstName = args.name.split(/\s+/)[0] || "";
+  const body = `
+    <p>${firstName ? `Dear ${firstName},` : "Hello,"}</p>
+    <p>A small update on your commission.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0">
+      <tr><td style="padding:12px 0;border-bottom:1px solid rgba(0,0,0,0.08);font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(0,0,0,0.5)">Order</td>
+          <td align="right" style="padding:12px 0;border-bottom:1px solid rgba(0,0,0,0.08);font-family:Georgia,serif;font-size:16px">${args.orderNumber}</td></tr>
+      <tr><td style="padding:12px 0;font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(0,0,0,0.5)">Now</td>
+          <td align="right" style="padding:12px 0;font-family:Georgia,serif;font-size:16px;color:${BURGUNDY}">${args.statusLabel}</td></tr>
+    </table>
+    <p style="font-style:italic;color:rgba(0,0,0,0.7)">${args.sebastianLine}</p>
+    <p>You can follow every step of the commission from your account at any time.</p>
+  `;
+  return send({
+    to: args.to,
+    subject: `Order ${args.orderNumber} · ${args.statusLabel}`,
+    html: shell({
+      preview: `Order ${args.orderNumber} is now ${args.statusLabel.toLowerCase()}.`,
+      heading: `Order ${args.orderNumber} update.`,
+      body,
+      cta: { label: "View Order", url: `${SITE_URL}/account/orders/${args.orderNumber}` },
+    }),
+  });
+}
+
+/* ──────────────────── 4. Courier dispatch ──────────────────── */
 
 export async function sendCourierDispatchEmail(args: {
   to: string;
