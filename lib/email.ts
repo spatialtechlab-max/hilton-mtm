@@ -203,23 +203,28 @@ export async function sendOrderConfirmationEmail(args: {
   // row uses colspan=3 with a NESTED 3-column table inside so the
   // breakdown spans the full card width and the columns can size
   // independently of the items table above.
+  // Truly single-row totals strip. Label and value sit INLINE in each
+  // column (not stacked) so the whole breakdown reads as one horizontal
+  // strap — Subtotal BHD 32 · DIS25 −BHD 8 · Total BHD 24 — taking only
+  // one line of vertical space on desktop. Each column uses align="left/
+  // center/right" so the strip reads naturally left-to-right.
   const hasDiscount = Boolean(args.discountCode && args.discountAmount && args.discountAmount > 0);
   const totalsRows = hasDiscount
     ? `
-      <tr><td colspan="3" style="padding-top:12px">
+      <tr><td colspan="3" style="padding-top:14px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid rgba(0,0,0,0.12)">
           <tr>
-            <td width="33%" style="padding:16px 8px 0 0;vertical-align:top">
-              <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(0,0,0,0.55)">Subtotal</div>
-              <div style="font-family:Georgia,serif;font-size:18px;color:${CHARCOAL};margin-top:6px">${formatBhd(itemsGross)}</div>
+            <td align="left" style="padding:14px 6px 0 0;font-family:Georgia,serif;font-size:15px;color:${CHARCOAL};white-space:nowrap">
+              <span style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(0,0,0,0.55)">Subtotal&nbsp;</span>
+              ${formatBhd(itemsGross)}
             </td>
-            <td width="34%" style="padding:16px 8px 0;vertical-align:top;text-align:center">
-              <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:${BURGUNDY}">${args.discountCode} · ${args.discountPercent}% off</div>
-              <div style="font-family:Georgia,serif;font-size:18px;color:${BURGUNDY};margin-top:6px">− ${formatBhd(args.discountAmount ?? 0)}</div>
+            <td align="center" style="padding:14px 6px 0;font-family:Georgia,serif;font-size:15px;color:${BURGUNDY};white-space:nowrap">
+              <span style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase">${args.discountCode}&nbsp;${args.discountPercent}%&nbsp;off&nbsp;</span>
+              −&nbsp;${formatBhd(args.discountAmount ?? 0)}
             </td>
-            <td width="33%" style="padding:16px 0 0 8px;vertical-align:top;text-align:right">
-              <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(0,0,0,0.55)">Total</div>
-              <div style="font-family:Georgia,serif;font-size:22px;color:${BURGUNDY};margin-top:6px">${formatBhd(args.subtotal)}</div>
+            <td align="right" style="padding:14px 0 0 6px;font-family:Georgia,serif;font-size:20px;color:${BURGUNDY};white-space:nowrap">
+              <span style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(0,0,0,0.55)">Total&nbsp;</span>
+              ${formatBhd(args.subtotal)}
             </td>
           </tr>
         </table>
