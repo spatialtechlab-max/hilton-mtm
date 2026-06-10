@@ -53,14 +53,10 @@ export function AuthForm({
           },
         });
         if (error) { setError(error.message); return; }
-        // Welcome email — fire-and-forget. Server route reads the JWT
-        // and resolves the email itself so we can't be tricked into
-        // notifying an address that isn't really the caller's.
+        // Welcome email fires from AuthProvider on SIGNED_IN (handles
+        // every signup path — password, OAuth, email-link confirm —
+        // through a single hook), so no per-form fetch here.
         if (data.session) {
-          fetch("/api/notify/welcome", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${data.session.access_token}` },
-          }).catch(() => { /* non-blocking */ });
           onSuccess?.();
         } else {
           setNotice("Check your inbox to confirm your email, then sign in.");
