@@ -8,6 +8,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendOrderConfirmationEmail } from "@/lib/email";
+import { computeOrderTotals, VAT_RATE } from "@/lib/checkoutFees";
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -35,6 +36,9 @@ export async function POST(req: Request) {
   const { data: items } = await sb.from("mtm_order_items").select("*").eq("order_id", orderId);
   type Item = { name: string; type_label: string; qty: number; price_num: number; image?: string | null };
 
+  const subtotal = Number((order as { subtotal: number }).subtotal ?? 0);
+  const totals   = computeOrderTotals(subtotal);
+
   const result = await sendOrderConfirmationEmail({
     to: (order as { customer_email: string }).customer_email,
     name: (order as { customer_name: string }).customer_name,
@@ -42,13 +46,17 @@ export async function POST(req: Request) {
     items: ((items as Item[]) ?? []).map((i) => ({
       name: i.name, type_label: i.type_label, qty: i.qty, price_num: i.price_num, image: i.image ?? null,
     })),
-    subtotal: Number((order as { subtotal: number }).subtotal ?? 0),
+    subtotal,
     shippingAddressLine1: (order as { shipping_address?: { line1?: string } }).shipping_address?.line1,
     shippingCity: (order as { shipping_address?: { city?: string } }).shipping_address?.city,
     shippingCountry: (order as { shipping_address?: { country?: string } }).shipping_address?.country,
     discountCode:    (order as { discount_code?: string | null }).discount_code ?? undefined,
     discountPercent: (order as { discount_percent?: number | null }).discount_percent ?? undefined,
     discountAmount:  (order as { discount_amount?: number | null }).discount_amount ?? undefined,
+    vat:        totals.vat,
+    vatRate:    VAT_RATE,
+    shipping:   totals.shipping,
+    grandTotal: totals.grandTotal,
   });
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 500 });
   return NextResponse.json({ sent: true });

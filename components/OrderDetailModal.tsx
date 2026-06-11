@@ -15,6 +15,7 @@ import {
   type OrderStatus,
   type StatusHistoryEntry,
 } from "@/lib/orders";
+import { computeOrderTotals, VAT_RATE } from "@/lib/checkoutFees";
 
 const fmt = (n: number) =>
   `BHD ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
@@ -364,9 +365,35 @@ export function OrderDetailModal({
                     </div>
                     <div className="border border-black/10 p-5">
                       <h3 className="text-eyebrow text-[var(--color-charcoal-500)]">Total</h3>
-                      <p className="text-display text-[1.5rem] mt-2 text-[var(--color-burgundy-700)] tabular-nums">
-                        {fmt(Number(order.subtotal))}
-                      </p>
+                      {(() => {
+                        const t = computeOrderTotals(Number(order.subtotal));
+                        const gross = Number(order.subtotal) + Number(order.discount_amount ?? 0);
+                        return (
+                          <div className="mt-2 space-y-1 text-[0.82rem]">
+                            <div className="flex justify-between text-[var(--color-charcoal-500)]">
+                              <span>Items</span>
+                              <span className="tabular-nums">{fmt(gross)}</span>
+                            </div>
+                            {order.discount_code && order.discount_amount ? (
+                              <div className="flex justify-between text-[var(--color-burgundy-700)]">
+                                <span>{order.discount_code} · {order.discount_percent}% off</span>
+                                <span className="tabular-nums">− {fmt(Number(order.discount_amount))}</span>
+                              </div>
+                            ) : null}
+                            <div className="flex justify-between text-[var(--color-charcoal-500)]">
+                              <span>VAT ({Math.round(VAT_RATE * 100)}%)</span>
+                              <span className="tabular-nums">{fmt(t.vat)}</span>
+                            </div>
+                            <div className="flex justify-between text-[var(--color-charcoal-500)]">
+                              <span>Shipping</span>
+                              <span className="tabular-nums">{fmt(t.shipping)}</span>
+                            </div>
+                            <p className="text-display text-[1.5rem] mt-2 text-[var(--color-burgundy-700)] tabular-nums">
+                              {fmt(t.grandTotal)}
+                            </p>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </aside>
                 </div>

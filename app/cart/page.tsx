@@ -12,6 +12,7 @@ import { AuthForm } from "@/components/AuthForm";
 import { createOrderFromCart, fetchProfile, isProfileComplete, type Profile } from "@/lib/orders";
 import { listMyAddresses, upsertAddress, MAX_ADDRESSES, type Address, type AddressInput } from "@/lib/addresses";
 import { uploadOrderPhoto, ORDER_VIEWS, ORDER_VIEW_LABEL, type OrderView } from "@/lib/orderMedia";
+import { computeOrderTotals, VAT_RATE } from "@/lib/checkoutFees";
 import { supabase } from "@/lib/supabase";
 
 const fmt = (n: number) =>
@@ -112,7 +113,10 @@ export default function CartPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const grandTotal = applied ? Math.max(0, Math.round((subtotal - applied.amount) * 100) / 100) : subtotal;
+  const itemsAfterDiscount = applied
+    ? Math.max(0, Math.round((subtotal - applied.amount) * 100) / 100)
+    : subtotal;
+  const { vat, shipping, grandTotal } = computeOrderTotals(itemsAfterDiscount);
 
   async function applyDiscount() {
     setDiscountError(null);
@@ -512,8 +516,12 @@ export default function CartPage() {
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-[var(--color-charcoal-500)]">Delivery</span>
-                  <span className="text-[var(--color-charcoal-900)]">Calculated at checkout</span>
+                  <span className="text-[var(--color-charcoal-500)]">VAT ({Math.round(VAT_RATE * 100)}%)</span>
+                  <span className="text-[var(--color-charcoal-900)] tabular-nums">{fmt(vat)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[var(--color-charcoal-500)]">Shipping</span>
+                  <span className="text-[var(--color-charcoal-900)] tabular-nums">{fmt(shipping)}</span>
                 </div>
               </div>
 

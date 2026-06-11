@@ -160,6 +160,10 @@ export async function sendOrderConfirmationEmail(args: {
   discountCode?: string;
   discountPercent?: number;
   discountAmount?: number;
+  vat?: number;
+  vatRate?: number;
+  shipping?: number;
+  grandTotal?: number;
 }) {
   const firstName = args.name.split(/\s+/)[0] || "";
   const itemsGross = args.items.reduce((s, it) => s + it.price_num * it.qty, 0);
@@ -214,29 +218,40 @@ export async function sendOrderConfirmationEmail(args: {
   // breakdown spans the full card width and the columns can size
   // independently of the items table above.
   const hasDiscount = Boolean(args.discountCode && args.discountAmount && args.discountAmount > 0);
-  const totalsRows = hasDiscount
-    ? `
-      <tr><td colspan="3" style="padding-top:12px">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid rgba(0,0,0,0.12)">
-          <tr>
-            <td width="33%" style="padding:16px 8px 0 0;vertical-align:top">
-              <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(0,0,0,0.55)">Subtotal</div>
-              <div style="font-family:Georgia,serif;font-size:18px;color:${CHARCOAL};margin-top:6px">${formatBhd(itemsGross)}</div>
-            </td>
-            <td width="34%" style="padding:16px 8px 0;vertical-align:top;text-align:center">
-              <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:${BURGUNDY}">${args.discountCode} · ${args.discountPercent}% off</div>
-              <div style="font-family:Georgia,serif;font-size:18px;color:${BURGUNDY};margin-top:6px">− ${formatBhd(args.discountAmount ?? 0)}</div>
-            </td>
-            <td width="33%" style="padding:16px 0 0 8px;vertical-align:top;text-align:right">
-              <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(0,0,0,0.55)">Total</div>
-              <div style="font-family:Georgia,serif;font-size:22px;color:${BURGUNDY};margin-top:6px">${formatBhd(args.subtotal)}</div>
-            </td>
-          </tr>
-        </table>
-      </td></tr>`
-    : `
-      <tr><td colspan="2" style="padding:16px 0 0;font-family:Georgia,serif;font-size:18px">Total</td>
-          <td align="right" style="padding:16px 0 0;font-family:Georgia,serif;font-size:20px;color:${BURGUNDY}">${formatBhd(args.subtotal)}</td></tr>`;
+  const vatPercentLabel = Math.round((args.vatRate ?? 0.10) * 100);
+  const vatAmount       = args.vat ?? 0;
+  const shippingAmount  = args.shipping ?? 0;
+  const grandTotal      = args.grandTotal ?? args.subtotal;
+
+  // Build a single right-aligned breakdown table: Items / Discount? / VAT /
+  // Shipping / Total. Two-column layout (label · value) since five rows is
+  // easier to scan vertically than squeezing them across the card.
+  const totalsRows = `
+    <tr><td colspan="3" style="padding-top:12px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid rgba(0,0,0,0.12)">
+        <tr>
+          <td style="padding:14px 0 4px;font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(0,0,0,0.55)">Items</td>
+          <td align="right" style="padding:14px 0 4px;font-family:Georgia,serif;font-size:15px;color:${CHARCOAL}">${formatBhd(itemsGross)}</td>
+        </tr>
+        ${hasDiscount ? `
+        <tr>
+          <td style="padding:4px 0;font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:${BURGUNDY}">${args.discountCode} · ${args.discountPercent}% off</td>
+          <td align="right" style="padding:4px 0;font-family:Georgia,serif;font-size:15px;color:${BURGUNDY}">− ${formatBhd(args.discountAmount ?? 0)}</td>
+        </tr>` : ""}
+        <tr>
+          <td style="padding:4px 0;font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(0,0,0,0.55)">VAT (${vatPercentLabel}%)</td>
+          <td align="right" style="padding:4px 0;font-family:Georgia,serif;font-size:15px;color:${CHARCOAL}">${formatBhd(vatAmount)}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(0,0,0,0.55)">Shipping</td>
+          <td align="right" style="padding:4px 0;font-family:Georgia,serif;font-size:15px;color:${CHARCOAL}">${formatBhd(shippingAmount)}</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 0 0;border-top:1px solid rgba(0,0,0,0.08);font-family:Arial,sans-serif;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(0,0,0,0.7)">Total</td>
+          <td align="right" style="padding:12px 0 0;border-top:1px solid rgba(0,0,0,0.08);font-family:Georgia,serif;font-size:22px;color:${BURGUNDY}">${formatBhd(grandTotal)}</td>
+        </tr>
+      </table>
+    </td></tr>`;
 
   const body = `
     <p>${firstName ? `Dear ${firstName},` : "Hello,"}</p>
@@ -253,7 +268,7 @@ export async function sendOrderConfirmationEmail(args: {
     to: args.to,
     subject: `Order ${args.orderNumber} received · Hilton Made to Measure`,
     html: shell({
-      preview: `Order ${args.orderNumber} received — ${formatBhd(args.subtotal)}.`,
+      preview: `Order ${args.orderNumber} received · ${formatBhd(args.grandTotal ?? args.subtotal)}.`,
       heading: `Order ${args.orderNumber} received.`,
       body,
       cta: { label: "View Order", url: `${SITE_URL}/account/orders/${args.orderNumber}` },

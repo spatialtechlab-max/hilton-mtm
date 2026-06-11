@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Package, Search, Users } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
+import { computeOrderTotals } from "@/lib/checkoutFees";
 import { listAllOrders, ORDER_STATUS_LABEL, ORDER_STATUSES, type Order, type OrderStatus } from "@/lib/orders";
 import { supabase } from "@/lib/supabase";
 import { OrderDetailModal } from "@/components/OrderDetailModal";
@@ -66,7 +67,7 @@ export default function AdminOrdersPage() {
   }, {});
   const totalRevenue = orders
     .filter((o) => o.status !== "cancelled")
-    .reduce((s, o) => s + Number(o.subtotal), 0);
+    .reduce((s, o) => s + computeOrderTotals(Number(o.subtotal)).grandTotal, 0);
 
   // Unique customers count
   const uniqueCustomers = new Set(orders.map((o) => o.user_id)).size;
@@ -188,7 +189,7 @@ export default function AdminOrdersPage() {
                   <td className="py-3 px-3 text-[0.82rem] text-[var(--color-charcoal-500)] hidden md:table-cell">
                     {new Date(o.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                   </td>
-                  <td className="py-3 px-3 text-right text-[0.9rem] text-[var(--color-charcoal-900)] tabular-nums">{fmt(Number(o.subtotal))}</td>
+                  <td className="py-3 px-3 text-right text-[0.9rem] text-[var(--color-charcoal-900)] tabular-nums">{fmt(computeOrderTotals(Number(o.subtotal)).grandTotal)}</td>
                 </tr>
               ))}
             </tbody>
