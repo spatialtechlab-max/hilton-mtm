@@ -260,11 +260,20 @@ function hasGarmentShot(item: ErpItem): boolean {
   return gallery.some((src) => /_pic1_/.test(src));
 }
 
-/** Build LibrarySection[] for one ERP-backed slug from ERP. */
-export function sectionsFromErp(slug: ErpBackedSlug, items: ErpItem[]): LibrarySection[] {
-  const wanted = ERP_CATEGORIES_FOR_SLUG[slug];
+/** Build LibrarySection[] for one ERP-backed slug from ERP.
+ *  `overrideCategories` lets a dynamic caller (e.g. /library/[slug]
+ *  resolving a garment row from mtm_garments) pass in the
+ *  erp_categories column instead of relying on the hardcoded
+ *  ERP_CATEGORIES_FOR_SLUG map. This is how new ERP categories light
+ *  up the storefront without a code edit. */
+export function sectionsFromErp(slug: string, items: ErpItem[], overrideCategories?: string[]): LibrarySection[] {
+  const wanted = overrideCategories
+    ?? ERP_CATEGORIES_FOR_SLUG[slug as ErpBackedSlug]
+    ?? [];
+  if (wanted.length === 0) return [];
+  const wantedUpper = wanted.map((c) => c.toUpperCase());
   const filtered = items
-    .filter((i) => wanted.includes(i.categoryName.toUpperCase()))
+    .filter((i) => wantedUpper.includes(i.categoryName.toUpperCase()))
     .filter(hasGarmentShot);
   if (filtered.length === 0) return [];
 

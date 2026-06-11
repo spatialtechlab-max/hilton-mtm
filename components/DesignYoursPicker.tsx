@@ -49,30 +49,34 @@ const TILE_ASSETS: Record<string, { image: string; alt: string }> = {
   trouser: { image: "/atelier/trofeo-book.jpg",              alt: "Trofeo trouser cloth book" },
 };
 
-// Garments that map onto an existing /library/<slug> route. Anything
-// outside this set still gets a cover slot (so the admin can upload a
-// custom tile photo from /admin/garments) but it routes straight into
-// the customizer rather than a non-existent library page.
-const HAS_LIBRARY_PAGE = new Set(["suit", "jacket", "shirt", "trouser", "chinos"]);
+// Built-in garments whose library lives at a plural slug
+// (/library/suits, /library/jackets …). Anything else with ERP
+// backing routes to /library/<own-slug> directly, which the dynamic
+// library resolver picks up from the mtm_garments row.
+const BUILTIN_LIBRARY_GARMENTS = new Set(["suit", "jacket", "shirt", "trouser"]);
 
 function tileFor(g: Garment, featured: boolean): Tile {
   const assets = TILE_ASSETS[g.slug];
-  const librarySlug = librarySlugForGarment(g.slug);
-  // Every garment has a cover slot (library.<plural>.cover). For
-  // built-ins the slot already has a curated registry fallback; for
-  // custom garments there's no registry fallback, so the tile renders
-  // an empty placeholder until the atelier uploads a real photo from
-  // /admin/garments. Per house policy: no generic cutting-bench
-  // fallback that misleads customers about which garment they're
-  // looking at.
   const slotKey = libraryCoverSlotForGarment(g.slug);
   const slotFallback = MEDIA_SLOTS.find((s) => s.key === slotKey)?.fallback;
-  const hasLibraryPage = HAS_LIBRARY_PAGE.has(g.slug);
   const image = g.tile_image || slotFallback || assets?.image || null;
+  // Routing priority:
+  //   1. Built-in garments → /library/<plural>
+  //   2. Any other garment with at least one ERP categoryName attached
+  //      → /library/<own-slug> (dynamic library resolver)
+  //   3. No ERP backing → /customize?category=<slug>, which surfaces the
+  //      "online customizer isn't open yet" empty state.
+  const hasErp = (g.erp_categories ?? []).length > 0;
+  const isBuiltin = BUILTIN_LIBRARY_GARMENTS.has(g.slug);
+  const href = isBuiltin
+    ? `/library/${librarySlugForGarment(g.slug)}`
+    : hasErp
+      ? `/library/${g.slug}`
+      : `/customize?category=${g.slug}`;
   return {
     category: g.tile_eyebrow || (featured ? "Bespoke commission" : "Made to measure"),
     title: `Design a ${g.label.toLowerCase()}`,
-    href: hasLibraryPage ? `/library/${librarySlug}` : `/customize?category=${g.slug}`,
+    href,
     image,
     alt: assets?.alt ?? g.label,
     slot: slotKey,

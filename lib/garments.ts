@@ -22,13 +22,17 @@ export type Garment = {
   has_tiers: boolean;
   tile_image: string;
   tile_eyebrow: string;
+  /** ERP categoryName strings that belong to this garment. The sync job
+   *  fills this in when a new category appears so /library/<slug> can
+   *  filter ERP items without a hardcoded mapping in the code. */
+  erp_categories: string[];
 };
 
 const BUILTIN: Garment[] = [
-  { slug: "suit",    label: "Suit",    position: 10, active: true, season_note: "", has_tiers: true,  tile_image: "", tile_eyebrow: "Two-piece commission" },
-  { slug: "jacket",  label: "Jacket",  position: 20, active: true, season_note: "", has_tiers: true,  tile_image: "", tile_eyebrow: "Standalone" },
-  { slug: "shirt",   label: "Shirt",   position: 30, active: true, season_note: "", has_tiers: false, tile_image: "", tile_eyebrow: "Shirting" },
-  { slug: "trouser", label: "Trouser", position: 40, active: true, season_note: "", has_tiers: false, tile_image: "", tile_eyebrow: "Tailored" },
+  { slug: "suit",    label: "Suit",    position: 10, active: true, season_note: "", has_tiers: true,  tile_image: "", tile_eyebrow: "Two-piece commission", erp_categories: ["SUITING","SUITINGS","SUITS","SUIES","SUIUS"] },
+  { slug: "jacket",  label: "Jacket",  position: 20, active: true, season_note: "", has_tiers: true,  tile_image: "", tile_eyebrow: "Standalone", erp_categories: ["JACKETING","JACKET","BLAZER","RTWJKT"] },
+  { slug: "shirt",   label: "Shirt",   position: 30, active: true, season_note: "", has_tiers: false, tile_image: "", tile_eyebrow: "Shirting", erp_categories: ["SHIRTING","SHIIRTING","SHIRTS"] },
+  { slug: "trouser", label: "Trouser", position: 40, active: true, season_note: "", has_tiers: false, tile_image: "", tile_eyebrow: "Tailored", erp_categories: ["PANTS"] },
 ];
 
 export async function fetchGarments(opts: { activeOnly?: boolean } = {}): Promise<Garment[]> {
@@ -56,6 +60,7 @@ export async function upsertGarment(g: Partial<Garment> & { slug: string; label:
         has_tiers: g.has_tiers ?? false,
         tile_image: g.tile_image ?? "",
         tile_eyebrow: g.tile_eyebrow ?? "",
+        erp_categories: g.erp_categories ?? [],
         updated_at: new Date().toISOString(),
       },
       { onConflict: "slug" },

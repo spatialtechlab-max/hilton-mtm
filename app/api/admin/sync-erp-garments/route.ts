@@ -140,6 +140,10 @@ export async function POST(req: Request) {
       has_tiers: false,
       tile_image: "",
       tile_eyebrow: "",
+      // Bind this garment row to the ERP categoryName at sync time so the
+      // storefront library page can filter ERP items by it. No code edit
+      // needed when a new category appears — just run the sync.
+      erp_categories: [c.category],
       updated_at: new Date().toISOString(),
     }, { onConflict: "slug" });
     if (upErr) continue;

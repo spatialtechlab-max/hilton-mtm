@@ -7,7 +7,7 @@ import { Reveal, SplitReveal } from "@/components/Reveal";
 import { CtaBanner } from "@/components/CtaBanner";
 import { TieIllustration } from "@/components/TieIllustration";
 import { PlaceholderBadge, isPlaceholder } from "@/components/PlaceholderBadge";
-import { libraries, librarySlugs, type LibraryItem } from "@/lib/libraries";
+import { libraries, librarySlugs, type LibraryItem, type Library } from "@/lib/libraries";
 import { fetchErpItems, sectionsFromErp, isErpBacked, ERP_CATEGORIES_FOR_SLUG } from "@/lib/erp";
 import { MediaImage } from "@/components/MediaImage";
 import { LibraryFilteredGrid } from "@/components/LibraryFilteredGrid";
@@ -48,6 +48,55 @@ async function libraryIsActive(slug: string): Promise<boolean> {
   }
 }
 
+/** Resolve a library config from a garment row when the slug isn't in
+ *  the hardcoded libraries map. This is what makes new ERP categories
+ *  light up the storefront without a code edit — the sync job stores
+ *  erp_categories on the garment row, the admin clicks Live, and the
+ *  storefront builds a dynamic library page on the next request. */
+async function dynamicLibraryFromGarment(slug: string): Promise<{ lib: Library; erpCategories: string[] } | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  try {
+    const sb = createClient(url, key);
+    const { data, error } = await sb
+      .from("mtm_garments")
+      .select("slug,label,active,erp_categories,tile_image,season_note")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (error || !data) return null;
+    const row = data as {
+      slug: string; label: string; active: boolean; erp_categories: string[] | null;
+      tile_image: string | null; season_note: string | null;
+    };
+    if (!row.active) return null;
+    const erpCategories = (row.erp_categories ?? []).filter(Boolean);
+    if (erpCategories.length === 0) return null;
+    // Reuse the trousers library's hero photo as a sane default when the
+    // garment row doesn't have a tile_image. The atelier can override via
+    // /admin/garments → cover upload.
+    const hero = row.tile_image || libraries.trousers?.heroImage || "/products/no-image.svg";
+    const lib: Library = {
+      slug: row.slug,
+      eyebrow: `The ${row.label} Library`,
+      title: `${row.label}.`,
+      intro: row.season_note?.replace(/^Auto-synced from ERP category "[^"]+"\.?$/, "") ||
+        `Live from the ERP — every active ${row.label.toLowerCase()} on the bench.`,
+      heroImage: hero,
+      heroAlt: row.label,
+      stats: [
+        { label: "ERP categories", value: erpCategories.join(" · ") },
+        { label: "Status", value: "Auto-synced" },
+        { label: "Source", value: "ERP" },
+      ],
+      sections: [],
+    };
+    return { lib, erpCategories };
+  } catch {
+    return null;
+  }
+}
+
 export function generateStaticParams() {
   return librarySlugs.map((slug) => ({ slug }));
 }
@@ -72,8 +121,18 @@ export default async function LibraryPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const baseLib = libraries[slug];
-  if (!baseLib) notFound();
+  let baseLib = libraries[slug];
+  let dynamicCategories: string[] | undefined;
+  if (!baseLib) {
+    // Dynamic path: not in the hardcoded libraries map. See if the
+    // atelier has a garment row with this slug + erp_categories — if
+    // so, build the library config on the fly so a new ERP category
+    // that the admin marked Live in /admin/garments just works.
+    const dyn = await dynamicLibraryFromGarment(slug);
+    if (!dyn) notFound();
+    baseLib = dyn.lib;
+    dynamicCategories = dyn.erpCategories;
+  }
   // Atelier-managed gate. If the atelier has hidden the matching
   // garment in /admin/garments (or never enabled it for a new ERP
   // category), the library page 404s — the customer never sees a
@@ -81,16 +140,12 @@ export default async function LibraryPage({
   if (!(await libraryIsActive(slug))) notFound();
 
   // ERP-backed libraries build their sections at request time from the
-  // live ERP feed (ISR-cached for ~5 min). If the ERP returns nothing
-  // for the slug we render an honest empty-state ("No ERP details
-  // found") rather than fall back to placeholder editorial — the
-  // atelier needs to upload items into the right ERP category for
-  // them to appear, and silently substituting fake data has been a
-  // recurring source of confusion. Non-ERP-backed slugs (the curated
-  // lookbook pages) keep their static sections.
-  const erpBacked = isErpBacked(slug);
+  // live ERP feed (ISR-cached for ~5 min). The dynamic path passes
+  // erp_categories from the garment row; the hardcoded path looks
+  // them up by slug.
+  const erpBacked = dynamicCategories !== undefined || isErpBacked(slug);
   const sections = erpBacked
-    ? sectionsFromErp(slug, await fetchErpItems())
+    ? sectionsFromErp(slug, await fetchErpItems(), dynamicCategories)
     : baseLib.sections;
   const lib = { ...baseLib, sections };
   const noErpData = erpBacked && sections.length === 0;
