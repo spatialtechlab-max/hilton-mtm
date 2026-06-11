@@ -8,6 +8,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import {
   fetchGarments, upsertGarment, deleteGarment, toSlug,
+  libraryCoverSlotForGarment,
   type Garment,
 } from "@/lib/garments";
 import {
@@ -100,7 +101,7 @@ export default function AdminGarmentsPage() {
     setError(null);
     try {
       const url = await uploadEditorialImage(file);
-      const slot = `library.${slug}.cover`;
+      const slot = libraryCoverSlotForGarment(slug);
       const alt = garments.find((g) => g.slug === slug)?.label ?? slug;
       const { error: e } = await upsertMediaSlot(slot, url, alt);
       if (e) throw new Error(e);
@@ -116,7 +117,7 @@ export default function AdminGarmentsPage() {
     setBusy(slug);
     setError(null);
     try {
-      const slot = `library.${slug}.cover`;
+      const slot = libraryCoverSlotForGarment(slug);
       const { error: e } = await deleteMediaSlot(slot);
       if (e) throw new Error(e);
       await load();
@@ -280,7 +281,7 @@ export default function AdminGarmentsPage() {
       ) : (
         <ul className="border-y border-black/10 divide-y divide-black/10">
           {garments.map((g) => {
-            const cover = covers[`library.${g.slug}.cover`];
+            const cover = covers[libraryCoverSlotForGarment(g.slug)];
             return (
             <li key={g.slug} className="grid grid-cols-12 gap-3 items-center py-4 px-2">
               {/* Cover thumbnail + upload — writes to the unified

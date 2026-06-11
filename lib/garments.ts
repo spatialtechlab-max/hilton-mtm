@@ -76,3 +76,39 @@ export function toSlug(label: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
+
+/** Resolve the library-cover slot key the storefront uses for a given
+ *  garment. Library URLs are plural (`/library/suits`) but garment slugs
+ *  are singular (`suit`), so this maps singular → plural for known
+ *  built-ins, and applies a generic plural rule for anything custom the
+ *  atelier adds. Used by:
+ *
+ *  - the homepage Categories tile (e.g. `library.suits.cover`)
+ *  - the /library/<plural> hero
+ *  - the Design Yours picker tile
+ *
+ *  Keeping the resolution in one place means uploading a library cover
+ *  on /admin/media or /admin/garments reflects on all three surfaces. */
+const KNOWN_LIBRARY_PLURALS: Record<string, string> = {
+  suit:    "suits",
+  jacket:  "jackets",
+  shirt:   "shirts",
+  trouser: "trousers",
+  shoe:    "shoes",
+  tie:     "ties",
+  belt:    "belts",
+  cloth:   "cloths",
+};
+
+export function librarySlugForGarment(slug: string): string {
+  if (KNOWN_LIBRARY_PLURALS[slug]) return KNOWN_LIBRARY_PLURALS[slug];
+  // Generic English pluralisation: handles "overcoat" → "overcoats",
+  // "tuxedo" → "tuxedos" without a code change. Slugs that already
+  // happen to end in "s" (e.g. "chinos") are left alone.
+  if (slug.endsWith("s")) return slug;
+  return `${slug}s`;
+}
+
+export function libraryCoverSlotForGarment(slug: string): string {
+  return `library.${librarySlugForGarment(slug)}.cover`;
+}
