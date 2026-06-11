@@ -20,31 +20,17 @@ const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const SERVICE  = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-/** ERP category strings that map onto a garment slug we already
- *  serve. Mirrors ERP_CATEGORIES_FOR_GARMENT in lib/erp.ts. Used so
- *  the sync doesn't create duplicate garment rows for SUITING /
- *  JACKETING etc. — those already feed into suit + jacket. */
-const COVERED_CATEGORIES = new Set([
-  "SUITING", "SUITINGS", "SUITS", "SUIT",
-  "JACKETING", "JACKET", "BLAZER", "RTWJKT", "JKT",
-  "SHIRTING", "SHIRTS", "SHIRT", "SHIIRTING",
-  "PANTS", "PANT", "TROUSER", "TROUSERS",
-]);
-
-/** ERP categories that aren't garments (Hilton stocks them, but they
- *  live in accessory libraries — belts, ties, shoes, etc.). Skip
- *  these during the garment sync so we don't pollute mtm_garments. */
-const ACCESSORY_CATEGORIES = new Set([
-  "BELT", "BELTS",
-  "TIE", "TIES", "NECKTIE", "BOWTIE", "BOW TIE", "SILK TIE",
-  "SHOE", "SHOES",
-  "WALLET", "WALLETS",
-  "SOCK", "SOCKS",
-  "POCKET SQUARE", "POCKET SQUARES",
-  "CUFFLINK", "CUFFLINKS",
-  "HANKY", "HANDKERCHIEF", "HANDKERCHIEFS",
-  "FABRIC", "FABRICS", "CLOTH", "CLOTHS",
-]);
+/** ERP category strings that already roll into a built-in garment slug
+ *  (suit / jacket / shirt / trouser). The sync writes their erp_categories
+ *  onto those rows but doesn't create a parallel garment row — those
+ *  already exist as the four canonical built-ins. */
+const COVERED_CATEGORIES_BY_SLUG: Record<string, string[]> = {
+  suit:    ["SUITING", "SUITINGS", "SUITS", "SUIT", "SUIES", "SUIUS"],
+  jacket:  ["JACKETING", "JACKET", "BLAZER", "RTWJKT", "JKT"],
+  shirt:   ["SHIRTING", "SHIRTS", "SHIRT", "SHIIRTING"],
+  trouser: ["PANTS", "PANT", "TROUSER", "TROUSERS"],
+};
+const COVERED_CATEGORIES = new Set(Object.values(COVERED_CATEGORIES_BY_SLUG).flat());
 
 function slugify(s: string): string {
   return s
@@ -92,27 +78,37 @@ export async function POST(req: Request) {
     counts.set(cat, (counts.get(cat) ?? 0) + 1);
   }
 
-  // Classify each distinct category. covered = already maps to an
-  // existing garment slug, accessory = skipped, candidate = new
-  // garment we should consider inserting.
-  type Bucket = "covered" | "accessory" | "candidate";
-  const classify = (c: string): Bucket => {
-    if (COVERED_CATEGORIES.has(c)) return "covered";
-    if (ACCESSORY_CATEGORIES.has(c)) return "accessory";
-    return "candidate";
-  };
+  // Classify each distinct category. covered = already rolls into a
+  // built-in garment row (suit / jacket / shirt / trouser); candidate
+  // = anything else (including accessories like BELT and TIE — the
+  // admin sees every ERP category and decides what's live).
+  type Bucket = "covered" | "candidate";
+  const classify = (c: string): Bucket => COVERED_CATEGORIES.has(c) ? "covered" : "candidate";
 
   const candidates = Array.from(counts.entries())
     .filter(([c]) => classify(c) === "candidate")
     .map(([c, n]) => ({ category: c, slug: slugify(c), label: labelFor(c), count: n }))
     .filter((x) => x.slug.length > 0);
 
+  const admin = createClient(SUPA_URL, SERVICE, { auth: { persistSession: false } });
+
+  // First — keep the four built-in garment rows in sync with whichever
+  // ERP categoryNames currently route into them. New typos or aliases
+  // ("SUIES", "SUIUS" etc.) get appended; nothing is removed manually.
+  for (const [slug, builtinCats] of Object.entries(COVERED_CATEGORIES_BY_SLUG)) {
+    const present = builtinCats.filter((c) => counts.has(c));
+    if (present.length === 0) continue;
+    await admin
+      .from("mtm_garments")
+      .update({ erp_categories: present, updated_at: new Date().toISOString() })
+      .eq("slug", slug);
+  }
+
   if (candidates.length === 0) {
     return NextResponse.json({ added: [], skipped: [], categories: Array.from(counts.keys()) });
   }
 
   // Read existing mtm_garments slugs so we don't double-insert.
-  const admin = createClient(SUPA_URL, SERVICE, { auth: { persistSession: false } });
   const { data: existingRows, error: readErr } = await admin
     .from("mtm_garments")
     .select("slug");
@@ -121,6 +117,17 @@ export async function POST(req: Request) {
 
   const toInsert = candidates.filter((c) => !existing.has(c.slug));
   const skipped = candidates.filter((c) => existing.has(c.slug));
+
+  // Also refresh erp_categories on rows we're "skipping" — the row
+  // already exists but might have an empty erp_categories array (older
+  // accounts pre-dating that column) or might have stale categories
+  // that need merging. The admin can always edit the column manually.
+  for (const s of skipped) {
+    await admin
+      .from("mtm_garments")
+      .update({ erp_categories: [s.category], updated_at: new Date().toISOString() })
+      .eq("slug", s.slug);
+  }
 
   // Position the new rows below the existing highest position so they
   // appear at the bottom of /admin/garments (still hidden) — atelier

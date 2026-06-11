@@ -76,19 +76,22 @@ async function dynamicLibraryFromGarment(slug: string): Promise<{ lib: Library; 
     // garment row doesn't have a tile_image. The atelier can override via
     // /admin/garments → cover upload.
     const hero = row.tile_image || libraries.trousers?.heroImage || "/products/no-image.svg";
+    // House-toned default intro. The atelier can override per garment by
+    // editing the row's season_note in /admin/garments — anything that
+    // isn't the auto-sync stamp is treated as real editorial copy and
+    // surfaces here. Stays customer-facing, never mentions the ERP or
+    // any internal plumbing.
+    const isAutoStamp = /^Auto-synced from ERP category "[^"]+"\.?$/.test(row.season_note ?? "");
+    const editorialIntro = !isAutoStamp && row.season_note ? row.season_note : "";
     const lib: Library = {
       slug: row.slug,
       eyebrow: `The ${row.label} Library`,
       title: `${row.label}.`,
-      intro: row.season_note?.replace(/^Auto-synced from ERP category "[^"]+"\.?$/, "") ||
-        `Live from the ERP — every active ${row.label.toLowerCase()} on the bench.`,
+      intro: editorialIntro
+        || `Tailored ${row.label.toLowerCase()} from the Hilton bench. Browse the active pieces, then book the cut that suits the way you wear them.`,
       heroImage: hero,
       heroAlt: row.label,
-      stats: [
-        { label: "ERP categories", value: erpCategories.join(" · ") },
-        { label: "Status", value: "Auto-synced" },
-        { label: "Source", value: "ERP" },
-      ],
+      stats: [],
       sections: [],
     };
     return { lib, erpCategories };
