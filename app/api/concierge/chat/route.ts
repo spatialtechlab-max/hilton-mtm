@@ -15,10 +15,19 @@ import { getClimateBrief, climateBlockForPrompt, type ClimateBrief } from "@/lib
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-/** Look up the caller's profile city + country from their Supabase JWT.
+/** Look up the caller's location from their Supabase JWT. Priority:
+ *
+ *    1. The DEFAULT row in mtm_addresses (is_default = true) — this is
+ *       the address the customer selected at checkout, so it's the
+ *       authoritative "where I live / where this commission ships" hint
+ *       for cloth-weight recommendations.
+ *    2. The legacy mtm_profiles.city / country — fallback for customers
+ *       who haven't entered an address yet (older accounts pre-dating
+ *       the address book).
+ *
  *  Returns null when the visitor isn't signed in, the env is missing, or
- *  the profile hasn't been completed — the route then defaults to the
- *  atelier's own climate (Manama) as a sensible baseline. */
+ *  neither source has a city — the route then defaults to the atelier's
+ *  own climate (Manama) as a sensible baseline. */
 async function lookupVisitorLocation(req: Request): Promise<{ city: string; country?: string } | null> {
   if (!SUPA_URL || !ANON) return null;
   const auth = req.headers.get("authorization") ?? "";
@@ -28,6 +37,24 @@ async function lookupVisitorLocation(req: Request): Promise<{ city: string; coun
     const sb = createClient(SUPA_URL, ANON, { global: { headers: { Authorization: `Bearer ${token}` } } });
     const { data: u } = await sb.auth.getUser(token);
     if (!u?.user?.id) return null;
+
+    // Default address takes priority. Customers can have multiple
+    // saved addresses; the one flagged default is the one Sebastian
+    // grounds the recommendation on.
+    const { data: defAddr } = await sb
+      .from("mtm_addresses")
+      .select("city,country")
+      .eq("user_id", u.user.id)
+      .eq("is_default", true)
+      .limit(1)
+      .maybeSingle();
+    const addrCity    = (defAddr as { city?: string } | null)?.city?.trim();
+    const addrCountry = (defAddr as { country?: string } | null)?.country?.trim();
+    if (addrCity) {
+      return { city: addrCity, country: addrCountry || undefined };
+    }
+
+    // Fallback: legacy mtm_profiles city/country.
     const { data: profile } = await sb
       .from("mtm_profiles")
       .select("city,country")
