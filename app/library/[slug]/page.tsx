@@ -150,6 +150,13 @@ export default async function LibraryPage({
   const sections = erpBacked
     ? sectionsFromErp(slug, await fetchErpItems(), dynamicCategories)
     : baseLib.sections;
+  // Dynamic garments (synced from ERP — chinos, overcoat, tuxedo, belts,
+  // shoes etc.) ONLY exist on the storefront when the ERP returns at
+  // least one item. If the ERP stops carrying that category, the
+  // library page 404s — customers never see an empty shelf. The admin
+  // still sees the row in /admin/garments so they can decide whether
+  // to keep it Hidden or clean up.
+  if (dynamicCategories !== undefined && sections.length === 0) notFound();
   const lib = { ...baseLib, sections };
   const noErpData = erpBacked && sections.length === 0;
 

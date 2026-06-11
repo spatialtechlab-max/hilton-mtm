@@ -91,14 +91,23 @@ export function DesignYoursPicker() {
   // fallback would flash for a fraction of a second before the real
   // upload swapped in.
   const [overrides, setOverrides] = useState<Record<string, { url: string; alt: string }> | null>(null);
+  // Live set of ERP categoryNames that currently have at least one
+  // active item. Any garment whose erp_categories overlap with this
+  // set gets a tile; the rest are hidden automatically. Built-in
+  // garments without ERP backing (suit/jacket/shirt/trouser with
+  // erp_categories array still populated) are also covered by this
+  // check, so when SUITING disappears from the ERP the Suit tile
+  // would hide too.
+  const [liveErpCategories, setLiveErpCategories] = useState<Set<string> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     Promise.all([
       fetchGarments({ activeOnly: true }),
       fetchAllMediaSlots().catch(() => ({})),
+      fetch("/api/erp-categories").then((r) => r.ok ? r.json() : { categories: [] }).catch(() => ({ categories: [] })),
     ])
-      .then(([g, m]) => {
+      .then(([g, m, erp]) => {
         if (cancelled) return;
         setGarments(g);
         const map: Record<string, { url: string; alt: string }> = {};
@@ -106,21 +115,34 @@ export function DesignYoursPicker() {
           if (row?.url) map[slot] = { url: row.url, alt: row.alt ?? "" };
         }
         setOverrides(map);
+        const cats: string[] = (erp as { categories?: string[] }).categories ?? [];
+        setLiveErpCategories(new Set(cats.map((c) => c.toUpperCase())));
       })
       .catch(() => {
         if (cancelled) return;
         setGarments([]);
         setOverrides({});
+        setLiveErpCategories(new Set());
       });
     return () => { cancelled = true; };
   }, []);
 
-  // First load: render nothing until BOTH garments and the override
-  // map have arrived. Prevents the fraction-of-second flash where the
-  // registry fallback was painted before the real upload loaded.
-  if (!garments || !overrides) {
+  // First load: render nothing until garments, overrides AND the live
+  // ERP category set have arrived. Prevents the flash where a garment
+  // tile paints, then disappears once we learn the ERP has nothing.
+  if (!garments || !overrides || !liveErpCategories) {
     return <section className="pt-32 md:pt-40 pb-20 md:pb-28 min-h-[50vh]" />;
   }
+
+  // Filter out garments whose ERP categories aren't present in the live
+  // ERP feed right now. A garment with no erp_categories at all stays
+  // (those are manually-curated additions); a garment with erp_categories
+  // but ZERO live items hides. Customers never see an empty shelf.
+  const visibleGarments = garments.filter((g) => {
+    const cats = g.erp_categories ?? [];
+    if (cats.length === 0) return true; // manually curated — keep
+    return cats.some((c) => liveErpCategories.has(c.toUpperCase()));
+  });
 
   const resolveTile = (g: Garment, featured: boolean): Tile => {
     const t = tileFor(g, featured);
@@ -134,9 +156,9 @@ export function DesignYoursPicker() {
   // First active garment becomes the featured large tile; next two go in
   // the right column; everything else stacks below alongside the Sebastian
   // helper card.
-  const featured = garments[0] ? resolveTile(garments[0], true) : null;
-  const rightTop = garments.slice(1, 3).map((g) => resolveTile(g, false));
-  const bottom = garments.slice(3).map((g) => resolveTile(g, false));
+  const featured = visibleGarments[0] ? resolveTile(visibleGarments[0], true) : null;
+  const rightTop = visibleGarments.slice(1, 3).map((g) => resolveTile(g, false));
+  const bottom = visibleGarments.slice(3).map((g) => resolveTile(g, false));
 
   return (
     <section className="pt-32 md:pt-40 pb-20 md:pb-28">
