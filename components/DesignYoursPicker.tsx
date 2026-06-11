@@ -24,7 +24,11 @@ type Tile = {
   category: string;
   title: string;
   href: string;
-  image: string;
+  /** Null when the atelier hasn't uploaded a cover for this garment yet —
+   *  the tile then renders an editorial placeholder instead of a generic
+   *  cutting-bench fallback, so it's visually obvious to the admin that
+   *  the cover is missing without misleading the customer. */
+  image: string | null;
   alt: string;
   /** When set, the tile reads its photo from this /admin/media slot
    *  (e.g. library.shirts.cover) so the picker stays in sync with the
@@ -34,19 +38,15 @@ type Tile = {
   fit?: "cover" | "contain";
 };
 
-/** Per-slug hero imagery + alt text. Keyed so adding a Garment row in
- *  /admin/garments with a known slug picks up the curated photo; an
- *  unknown slug (e.g. "chinos") falls through to GENERIC_TILE. */
+/** Per-slug hero imagery + alt text for the four built-in garments. A
+ *  custom garment (chinos, overcoat, tuxedo) deliberately has NO entry
+ *  here — when its cover hasn't been uploaded the tile renders an empty
+ *  editorial placeholder rather than a misleading generic photo. */
 const TILE_ASSETS: Record<string, { image: string; alt: string }> = {
   suit:    { image: "/atelier/showroom-double-breasted.jpg", alt: "A navy double-breasted suit on the form in the Manama atelier" },
   jacket:  { image: "/atelier/the-cut.jpg",                  alt: "A master cutter at work on a sport coat" },
   shirt:   { image: "/atelier/alumo-shirting.jpg",           alt: "Alumo shirting swatches" },
   trouser: { image: "/atelier/trofeo-book.jpg",              alt: "Trofeo trouser cloth book" },
-};
-
-const GENERIC_TILE = {
-  image: "/atelier/the-cut.jpg",
-  alt: "The Hilton atelier at work",
 };
 
 // Garments that map onto an existing /library/<slug> route. Anything
@@ -56,25 +56,25 @@ const GENERIC_TILE = {
 const HAS_LIBRARY_PAGE = new Set(["suit", "jacket", "shirt", "trouser"]);
 
 function tileFor(g: Garment, featured: boolean): Tile {
-  const assets = TILE_ASSETS[g.slug] ?? GENERIC_TILE;
+  const assets = TILE_ASSETS[g.slug];
   const librarySlug = librarySlugForGarment(g.slug);
-  // Every garment now has a cover slot (library.<plural>.cover). For
-  // built-ins the slot already exists in MEDIA_SLOTS with a curated
-  // fallback; for custom garments (chinos / overcoat / tuxedo) there's
-  // no registry fallback but the slot key is still the one the admin
-  // writes to from /admin/garments, so an uploaded cover shows up here.
+  // Every garment has a cover slot (library.<plural>.cover). For
+  // built-ins the slot already has a curated registry fallback; for
+  // custom garments there's no registry fallback, so the tile renders
+  // an empty placeholder until the atelier uploads a real photo from
+  // /admin/garments. Per house policy: no generic cutting-bench
+  // fallback that misleads customers about which garment they're
+  // looking at.
   const slotKey = libraryCoverSlotForGarment(g.slug);
   const slotFallback = MEDIA_SLOTS.find((s) => s.key === slotKey)?.fallback;
   const hasLibraryPage = HAS_LIBRARY_PAGE.has(g.slug);
+  const image = g.tile_image || slotFallback || assets?.image || null;
   return {
     category: g.tile_eyebrow || (featured ? "Bespoke commission" : "Made to measure"),
     title: `Design a ${g.label.toLowerCase()}`,
     href: hasLibraryPage ? `/library/${librarySlug}` : `/customize?category=${g.slug}`,
-    // Priority: per-garment override from /admin/garments → the
-    // registry fallback for the matching library cover → the legacy
-    // hardcoded asset (last resort).
-    image: g.tile_image || slotFallback || assets.image,
-    alt: assets.alt,
+    image,
+    alt: assets?.alt ?? g.label,
     slot: slotKey,
     fit: "cover",
   };
@@ -240,15 +240,23 @@ function CustomizeTile({ tile, large = false }: { tile: Tile; large?: boolean })
     >
       {/* tile.image was already resolved against the override map in
           the parent before render — so this <Image> never paints the
-          registry fallback first and then swaps. No flash. */}
-      <Image
-        src={tile.image}
-        alt={tile.alt}
-        fill
-        sizes="(min-width: 1024px) 50vw, 100vw"
-        className={imgClass}
-      />
-      {fit === "cover" && (
+          registry fallback first and then swaps. No flash.
+          When the atelier hasn't uploaded a cover yet we render an
+          editorial dark placeholder instead of any generic photo, so
+          the missing image is obvious to the admin without misleading
+          the customer about what they're commissioning. */}
+      {tile.image ? (
+        <Image
+          src={tile.image}
+          alt={tile.alt}
+          fill
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          className={imgClass}
+        />
+      ) : (
+        <div className="absolute inset-0 bg-[var(--color-charcoal-900)]" aria-hidden />
+      )}
+      {fit === "cover" && tile.image && (
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
       )}
       <div

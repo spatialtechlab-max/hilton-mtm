@@ -112,10 +112,16 @@ function CustomizeInner() {
   // on mount; if the row is absent the registry default kicks in via
   // resolveTierCopy(...).
   const [settings, setSettings] = useState<Record<string, string>>({});
-  // Whether the visitor arrived with a category in the URL. If not, we
-  // show the Design Yours category-picker landing tiles instead of
-  // silently defaulting to suit.
-  const [hasUrlCategory, setHasUrlCategory] = useState(true);
+  // URL-category routing has three branches:
+  //   "valid"           → URL category matches a configurable garment, render the customizer
+  //   "not-configurable" → URL category is a known garment row but no customizer steps exist for it yet
+  //                       (e.g. admin added "Tuxedo" but hasn't checked any step's applies_to for tuxedo)
+  //   "none"            → no/invalid URL category, render the Design Yours picker
+  // No silent fallback to suit — per client direction, if a garment isn't
+  // configured we say so plainly with a Book a Fitting CTA.
+  const [categoryRouting, setCategoryRouting] = useState<"valid" | "not-configurable" | "none">("none");
+  const [requestedGarmentLabel, setRequestedGarmentLabel] = useState<string>("");
+  const [garmentsList, setGarmentsList] = useState<{ slug: string; label: string }[]>([]);
   const { user } = useAuth();
   const router = useRouter();
   // useSearchParams gives us a reactive value that re-runs the URL-reading
@@ -186,6 +192,7 @@ function CustomizeInner() {
       .then((rows) => {
         if (cancelled) return;
         setActiveGarmentSlugs(new Set(rows.map((r) => r.slug)));
+        setGarmentsList(rows.map((r) => ({ slug: r.slug, label: r.label })));
       })
       .catch(() => { /* keep default */ });
     return () => { cancelled = true; };
@@ -205,9 +212,24 @@ function CustomizeInner() {
     // renders the Design Yours picker tiles below instead of the
     // customizer. We still set `category` to a safe default so the
     // existing hooks behind the picker keep their types happy.
-    const validUrlCategory =
-      isCustomizeCategory(raw) && activeGarmentSlugs.has(raw);
-    setHasUrlCategory(validUrlCategory);
+    // Three branches: a configurable customizer category, a known but
+    // not-yet-configured garment (show "book a fitting" empty state), or
+    // no/invalid category (show the picker).
+    const rawTrim = (raw ?? "").trim();
+    const isConfigurable = isCustomizeCategory(raw);
+    const isKnownGarment = rawTrim && activeGarmentSlugs.has(rawTrim);
+    if (isConfigurable && isKnownGarment) {
+      setCategoryRouting("valid");
+    } else if (isKnownGarment) {
+      setCategoryRouting("not-configurable");
+      setRequestedGarmentLabel(
+        garmentsList.find((g) => g.slug === rawTrim)?.label
+          ?? rawTrim.charAt(0).toUpperCase() + rawTrim.slice(1),
+      );
+    } else {
+      setCategoryRouting("none");
+    }
+    const validUrlCategory = isConfigurable && isKnownGarment;
     const cat: StepCategory = validUrlCategory ? raw : "suit";
     // Sebastian (the concierge) can pass ?tier=signature etc. We honour it
     // even when it overrides the user's prior saved state, so that picking
@@ -460,11 +482,50 @@ function CustomizeInner() {
     (phase === "spec" && safeStepIdx === 0 && !hasTiers && !selectedFabric);
   const copy = CATEGORY_COPY[category];
 
-  // No category in the URL → show the home-style picker tiles so the
-  // visitor explicitly chooses what to make. This was the user's brief:
-  // "give them the options for everything" (mirror of the home page).
-  if (ready && !hasUrlCategory) {
+  // No category in the URL (or an unknown one) → show the home-style
+  // picker tiles so the visitor explicitly chooses what to make.
+  if (ready && categoryRouting === "none") {
     return <DesignYoursPicker />;
+  }
+
+  // Known garment, but no customizer steps configured for it yet. Do NOT
+  // silently fall through to the suit flow — show a clean empty state
+  // with a Book a Fitting CTA so the customer can still buy. Admin: add
+  // this garment to a step's applies_to on /admin to unlock customization.
+  if (ready && categoryRouting === "not-configurable") {
+    return (
+      <div className="pt-32 md:pt-40 pb-24 min-h-[70vh] container-editorial">
+        <Link
+          href="/customize"
+          className="inline-flex items-center gap-2 text-eyebrow text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors mb-8"
+        >
+          <ArrowLeft size={14} strokeWidth={1.5} /> Design Yours
+        </Link>
+        <span className="text-eyebrow text-[var(--color-burgundy-700)]">{requestedGarmentLabel}</span>
+        <h1 className="text-display text-[clamp(2rem,4vw,3.25rem)] mt-3 leading-tight max-w-2xl">
+          The online customizer for {requestedGarmentLabel.toLowerCase()} commissions isn&rsquo;t open yet.
+        </h1>
+        <p className="mt-5 max-w-xl text-[1rem] text-[var(--color-charcoal-700)] leading-relaxed">
+          The atelier is still building the options for this garment. In the meantime, book a
+          fitting and the master tailor will take you through cloth, cut, and measurements in
+          person at the house.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link
+            href="/book"
+            className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-6 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors"
+          >
+            Book a fitting <ArrowRight size={14} strokeWidth={1.5} />
+          </Link>
+          <Link
+            href="/contact"
+            className="text-eyebrow inline-flex items-center gap-2 border border-[var(--color-burgundy-700)] text-[var(--color-burgundy-700)] px-6 py-4 hover:bg-[var(--color-burgundy-700)] hover:text-[var(--color-ivory-100)] transition-colors"
+          >
+            Contact the atelier
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   // The big "Design Your Own" hero only makes sense at the very start
