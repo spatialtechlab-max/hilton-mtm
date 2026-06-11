@@ -1,17 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import type { HeroSlideRow } from "@/lib/heroSlidesServer";
+import { listActiveHeroSlides } from "@/lib/heroSlides";
 
 /**
- * Slide-left hero carousel. Advances every 4 seconds. Reduced-motion
- * users get a no-animation crossfade so the page never imposes a moving
- * banner on people who've opted out.
+ * Slide-left hero carousel. Advances every 4 s.
  *
- * The slides are rendered side-by-side inside a track that translates
- * horizontally. The track is twice as long as the viewport so the
- * outgoing and incoming slides cover the full width during the slide.
+ * The track contains every slide laid out side-by-side, plus a clone of
+ * the first slide pinned at the end. Each tick translates the track by
+ * one slide-width to the left. When the index hits the clone position
+ * we snap back to 0 with the transition disabled, which produces a
+ * seamless infinite loop without a visible jump.
+ *
+ * SSR primes the initial slide list (so the first paint isn't an empty
+ * black box), but the component also re-fetches the list on mount. That
+ * way newly uploaded slides take effect immediately without waiting for
+ * the page's ISR cache (60 s) to expire.
  */
 const INTERVAL_MS = 4000;
 const TRANSITION_MS = 900;
@@ -21,70 +27,108 @@ export function HeroRotator({ slides, fallbackSrc, fallbackAlt }: {
   fallbackSrc: string;
   fallbackAlt: string;
 }) {
-  const effective = slides.length > 0
-    ? slides
-    : [{ id: "fallback", image_url: fallbackSrc, alt: fallbackAlt, position: 0, active: true }];
-
-  const [idx, setIdx] = useState(0);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [list, setList] = useState<HeroSlideRow[]>(slides);
 
   useEffect(() => {
-    if (effective.length < 2) return;
-    timer.current = setInterval(() => {
-      setIdx((i) => (i + 1) % effective.length);
-    }, INTERVAL_MS);
-    return () => { if (timer.current) clearInterval(timer.current); };
-  }, [effective.length]);
+    let cancelled = false;
+    (async () => {
+      const fresh = await listActiveHeroSlides();
+      if (cancelled) return;
+      // If the SSR list and the live list disagree, prefer the live one.
+      const ssrIds = slides.map((s) => s.id).join(",");
+      const freshIds = fresh.map((s) => s.id).join(",");
+      if (ssrIds !== freshIds) {
+        setList(fresh.map((s) => ({
+          id: s.id, image_url: s.image_url, alt: s.alt,
+          position: s.position, active: s.active,
+        })));
+      }
+    })();
+    return () => { cancelled = true; };
+    // We intentionally only run this once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Two cells: the current slide, and the next one queued to the right.
-  // When idx advances, the track translates by -100% which slides the
-  // current slide out left and brings the next slide in from the right.
-  const current = effective[idx];
-  const next    = effective[(idx + 1) % effective.length];
+  const effective = list.length > 0
+    ? list
+    : [{ id: "fallback", image_url: fallbackSrc, alt: fallbackAlt, position: 0, active: true } as HeroSlideRow];
+
+  const N = effective.length;
+  const totalCells = N + 1; // includes clone of slide[0] at the end
+
+  const [idx, setIdx] = useState(0);
+  const [animated, setAnimated] = useState(true);
+
+  // Tick: advance idx every INTERVAL_MS.
+  useEffect(() => {
+    if (N < 2) return;
+    const id = setInterval(() => {
+      setAnimated(true);
+      setIdx((i) => i + 1);
+    }, INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [N]);
+
+  // When we've animated onto the clone (idx === N), snap back to 0 with
+  // animation disabled so the jump is invisible. Then re-enable.
+  useEffect(() => {
+    if (idx !== N) return;
+    const tSnap = setTimeout(() => {
+      setAnimated(false);
+      setIdx(0);
+    }, TRANSITION_MS + 30);
+    return () => clearTimeout(tSnap);
+  }, [idx, N]);
+
+  // After a snap-back, the next render has animated=false. Re-enable in
+  // the next frame so the following tick animates normally again.
+  useEffect(() => {
+    if (animated) return;
+    const r = requestAnimationFrame(() => setAnimated(true));
+    return () => cancelAnimationFrame(r);
+  }, [animated]);
+
+  // Each cell is 100% of the viewport; track is totalCells * 100% wide.
+  const cellPct = 100 / totalCells;
+  const translatePct = idx * cellPct;
 
   return (
     <div className="absolute inset-0 overflow-hidden">
       <div
-        key={current.id}
-        className="absolute inset-0 flex w-[200%] hero-slide-track"
-        style={{ ["--hero-transition" as string]: `${TRANSITION_MS}ms` }}
+        className="absolute inset-0 flex h-full"
+        style={{
+          width: `${totalCells * 100}%`,
+          transform: `translateX(-${translatePct}%)`,
+          transition: animated && N > 1 ? `transform ${TRANSITION_MS}ms cubic-bezier(0.7, 0, 0.2, 1)` : "none",
+          willChange: "transform",
+        }}
       >
-        <div className="relative w-1/2 h-full">
-          <Image
-            src={current.image_url}
-            alt={current.alt ?? ""}
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover object-center"
-            unoptimized={current.image_url.includes("erp.hiltontailoringhouse.com")}
-          />
-        </div>
-        <div className="relative w-1/2 h-full">
-          <Image
-            src={next.image_url}
-            alt={next.alt ?? ""}
-            fill
-            sizes="100vw"
-            className="object-cover object-center"
-            unoptimized={next.image_url.includes("erp.hiltontailoringhouse.com")}
-          />
-        </div>
+        {effective.map((slide, i) => (
+          <div key={slide.id} className="relative h-full" style={{ width: `${cellPct}%` }}>
+            <Image
+              src={slide.image_url}
+              alt={slide.alt ?? ""}
+              fill
+              priority={i === 0}
+              sizes="100vw"
+              className="object-cover object-center"
+              unoptimized={slide.image_url.includes("erp.hiltontailoringhouse.com")}
+            />
+          </div>
+        ))}
+        {N > 1 && (
+          <div key={`${effective[0].id}-clone`} className="relative h-full" style={{ width: `${cellPct}%` }}>
+            <Image
+              src={effective[0].image_url}
+              alt={effective[0].alt ?? ""}
+              fill
+              sizes="100vw"
+              className="object-cover object-center"
+              unoptimized={effective[0].image_url.includes("erp.hiltontailoringhouse.com")}
+            />
+          </div>
+        )}
       </div>
-
-      <style jsx>{`
-        .hero-slide-track {
-          animation: heroSlide var(--hero-transition) cubic-bezier(0.7, 0, 0.2, 1) ${INTERVAL_MS - TRANSITION_MS}ms forwards;
-          will-change: transform;
-        }
-        @keyframes heroSlide {
-          from { transform: translateX(0%); }
-          to   { transform: translateX(-50%); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .hero-slide-track { animation: none; transform: translateX(0%); }
-        }
-      `}</style>
     </div>
   );
 }
