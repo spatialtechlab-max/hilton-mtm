@@ -1401,6 +1401,16 @@ function TierPicker({
         const priceLabel = tierPriceFor(category, t.slug, { essentialOverride, settings });
         const leadLabel = settings[`tier.lead.${t.slug}`] ?? t.lead;
         const fittingsLabel = settings[`tier.fittings.${t.slug}`] ?? t.fittings;
+        // Editorial copy overrides — name, tagline, and the bullet list.
+        // The features setting is a single string with one bullet per
+        // line; empty lines are filtered out so the atelier can leave
+        // blank lines while drafting.
+        const nameLabel    = settings[`tier.name.${t.slug}`] ?? t.name;
+        const taglineLabel = settings[`tier.tagline.${t.slug}`] ?? t.tagline;
+        const featuresRaw  = settings[`tier.features.${t.slug}`];
+        const featuresList = (featuresRaw === undefined
+          ? t.features
+          : featuresRaw.split("\n").map((s) => s.trim()).filter(Boolean));
         return (
           <button
             key={t.slug}
@@ -1422,16 +1432,16 @@ function TierPicker({
                 <Check size={14} strokeWidth={2} />
               </span>
             )}
-            <div className="text-eyebrow text-[var(--color-burgundy-700)]">{t.tagline}</div>
+            <div className="text-eyebrow text-[var(--color-burgundy-700)]">{taglineLabel}</div>
             <h3 className="text-display text-[clamp(2rem,3.2vw,3rem)] mt-3 text-[var(--color-charcoal-900)]">
-              {t.name}
+              {nameLabel}
             </h3>
             <div className="text-display text-[1.85rem] mt-2 text-[var(--color-burgundy-700)]">{priceLabel}</div>
             <div className="mt-3 text-[0.85rem] text-[var(--color-charcoal-500)]">
               {leadLabel} · {fittingsLabel}
             </div>
             <ul className="mt-6 space-y-2 text-[0.9rem] text-[var(--color-charcoal-800)] leading-relaxed">
-              {t.features.map((f) => (
+              {featuresList.map((f) => (
                 <li key={f} className="flex gap-2.5">
                   <span aria-hidden className="text-[var(--color-burgundy-700)] shrink-0">·</span>
                   <span>{f}</span>

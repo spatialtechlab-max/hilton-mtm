@@ -21,8 +21,9 @@ export type SettingDef = {
   label: string;
   description?: string;
   defaultValue: string;
-  /** Optional hint for the admin input — "currency" formats nicely. */
-  kind?: "text" | "currency" | "duration";
+  /** Optional hint for the admin input — "currency" formats nicely.
+   *  "multiline" renders a textarea (used for bullet-point lists). */
+  kind?: "text" | "currency" | "duration" | "multiline";
 };
 
 export const SETTINGS: SettingDef[] = [
@@ -80,6 +81,21 @@ export const SETTINGS: SettingDef[] = [
   { key: "tier.fittings.essential", group: "Tier copy", label: "Essentials · Fittings", defaultValue: "Single fitting" },
   { key: "tier.fittings.signature", group: "Tier copy", label: "Signature · Fittings", defaultValue: "Two fittings" },
   { key: "tier.fittings.bespoke",   group: "Tier copy", label: "Full Bespoke · Fittings", defaultValue: "Three fittings + atelier visit" },
+
+  // Tier headline copy — name, tagline (the small burgundy eyebrow line
+  // above the name), and the bullet-point feature list shown on each
+  // package card.
+  { key: "tier.name.essential", group: "Tier copy", label: "Essentials · Name", description: "The headline shown on the tier card.", defaultValue: "Essentials" },
+  { key: "tier.name.signature", group: "Tier copy", label: "Signature · Name", description: "The headline shown on the tier card.", defaultValue: "Signature" },
+  { key: "tier.name.bespoke",   group: "Tier copy", label: "Full Bespoke · Name", description: "The headline shown on the tier card.", defaultValue: "Full Bespoke" },
+
+  { key: "tier.tagline.essential", group: "Tier copy", label: "Essentials · Tagline", description: "Small burgundy line shown above the name.", defaultValue: "The refined foundation of our made-to-measure tailoring." },
+  { key: "tier.tagline.signature", group: "Tier copy", label: "Signature · Tagline", description: "Small burgundy line shown above the name.", defaultValue: "The impeccable Hilton house standard." },
+  { key: "tier.tagline.bespoke",   group: "Tier copy", label: "Full Bespoke · Tagline", description: "Small burgundy line shown above the name.", defaultValue: "The pinnacle of our art, entirely hand-cut and hand-stitched." },
+
+  { key: "tier.features.essential", group: "Tier copy", label: "Essentials · Bullet points", description: "One bullet per line. Empty lines are ignored.", kind: "multiline", defaultValue: "Made-to-measure pattern from your numbers\nChoice from our trusted fabric library\nOne basted fitting before delivery\nHand-pressed, delivered in canvas" },
+  { key: "tier.features.signature", group: "Tier copy", label: "Signature · Bullet points", description: "One bullet per line. Empty lines are ignored.", kind: "multiline", defaultValue: "Bespoke pattern drawn for one body\nChoice from the full cloth library\nTwo basted fittings + a final\nHand-finished lapel, pockets, sleeves\nPattern kept on file for life" },
+  { key: "tier.features.bespoke",   group: "Tier copy", label: "Full Bespoke · Bullet points", description: "One bullet per line. Empty lines are ignored.", kind: "multiline", defaultValue: "Entirely hand-cut on the bench\nHand-padded canvas, no fusing\nThree fittings with dedicated personal sessions\nHand-rolled silks and accessories included\nLifetime alterations" },
 ];
 
 export function defaultFor(key: string): string {

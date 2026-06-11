@@ -136,15 +136,25 @@ export default function AdminSettingsPage() {
                       <p className="text-[0.7rem] text-[var(--color-charcoal-400)] mt-1 tabular-nums">{def.key}</p>
                     </div>
                     <div className="md:col-span-5">
-                      <input
-                        type="text"
-                        value={draftVal}
-                        onChange={(e) => setDraft((d) => ({ ...d, [def.key]: e.target.value }))}
-                        placeholder={def.defaultValue}
-                        className="w-full px-3 py-2.5 border border-black/15 bg-[var(--color-ivory-100)] focus:outline-none focus:border-[var(--color-burgundy-700)] text-[0.9rem]"
-                      />
+                      {def.kind === "multiline" ? (
+                        <textarea
+                          value={draftVal}
+                          onChange={(e) => setDraft((d) => ({ ...d, [def.key]: e.target.value }))}
+                          placeholder={def.defaultValue}
+                          rows={Math.min(8, Math.max(3, draftVal.split("\n").length + 1))}
+                          className="w-full px-3 py-2.5 border border-black/15 bg-[var(--color-ivory-100)] focus:outline-none focus:border-[var(--color-burgundy-700)] text-[0.9rem] font-mono resize-y"
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          value={draftVal}
+                          onChange={(e) => setDraft((d) => ({ ...d, [def.key]: e.target.value }))}
+                          placeholder={def.defaultValue}
+                          className="w-full px-3 py-2.5 border border-black/15 bg-[var(--color-ivory-100)] focus:outline-none focus:border-[var(--color-burgundy-700)] text-[0.9rem]"
+                        />
+                      )}
                       <p className="text-[0.68rem] text-[var(--color-charcoal-400)] mt-1">
-                        Default · {def.defaultValue}
+                        {def.kind === "multiline" ? "One bullet per line" : `Default · ${def.defaultValue}`}
                       </p>
                     </div>
                     <div className="md:col-span-3 flex items-center justify-end gap-2">

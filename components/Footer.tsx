@@ -114,7 +114,7 @@ export function Footer() {
           <span className="text-eyebrow text-[0.7rem] text-[var(--color-charcoal-700)]">
             Powered by{" "}
             <a
-              href="https://antimatterlabs.io"
+              href="https://antimatterlabs.ai"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)] transition-colors"
