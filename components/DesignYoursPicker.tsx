@@ -53,7 +53,7 @@ const TILE_ASSETS: Record<string, { image: string; alt: string }> = {
 // outside this set still gets a cover slot (so the admin can upload a
 // custom tile photo from /admin/garments) but it routes straight into
 // the customizer rather than a non-existent library page.
-const HAS_LIBRARY_PAGE = new Set(["suit", "jacket", "shirt", "trouser"]);
+const HAS_LIBRARY_PAGE = new Set(["suit", "jacket", "shirt", "trouser", "chinos"]);
 
 function tileFor(g: Garment, featured: boolean): Tile {
   const assets = TILE_ASSETS[g.slug];

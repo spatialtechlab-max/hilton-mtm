@@ -407,12 +407,34 @@ const jackets: Library = {
   sections: [],
 };
 
+/* ──────────────────────── CHINOS (ERP-backed) ──────────────────────── */
+
+// Chinos sit alongside trousers but pull their own ERP categoryName
+// (CHINO PANTS) so the library is cleanly separated from worsted /
+// flannel formal trousers. Same editorial treatment.
+const chinos: Library = {
+  slug: "chinos",
+  eyebrow: "The Chinos Library",
+  title: "Chinos.",
+  intro:
+    "Cotton-rich chinos cut to a wearable house silhouette — soft khakis, steel greys, and the seasonal warmer tones. Trousers for the days the suit comes off.",
+  heroImage: trousers.heroImage,
+  heroAlt: "Tailored chinos on the form",
+  stats: [
+    { label: "Cuts",      value: "Slim · Tailored · Classic" },
+    { label: "Cloths",    value: "Cotton · cotton blends" },
+    { label: "Lead time", value: "2–3 weeks" },
+  ],
+  sections: [],
+};
+
 export const libraries: Record<string, Library> = {
   tailoring,
   suits,
   jackets,
   shirts,
   trousers,
+  chinos,
   cloths,
   shoes,
   ties,
