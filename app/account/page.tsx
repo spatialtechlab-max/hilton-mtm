@@ -15,6 +15,9 @@ import { ProfileForm } from "@/components/ProfileForm";
 import { isAdmin } from "@/lib/admin";
 import { computeOrderTotals } from "@/lib/checkoutFees";
 import { listFreeShippingCountries, isFreeShippingCountry, type FreeShippingCountry } from "@/lib/shippingZones";
+import { fetchMyMeasurements, countSavedMeasurements } from "@/lib/measurements";
+import { listMyAddresses, type Address } from "@/lib/addresses";
+import { allMeasurements } from "@/lib/customizer";
 import {
   fetchProfile, isProfileComplete, listMyOrders, ORDER_STATUS_LABEL,
   type Profile, type Order,
@@ -125,19 +128,25 @@ function AccountDashboard({ user, onSignOut }: { user: User; onSignOut: () => vo
   const [orders, setOrders]   = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [freeCountries, setFreeCountries] = useState<FreeShippingCountry[]>([]);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [savedMeasurementsCount, setSavedMeasurementsCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [p, os, fc] = await Promise.all([
+      const [p, os, fc, addr, meas] = await Promise.all([
         fetchProfile(user.id),
         listMyOrders(),
         listFreeShippingCountries(),
+        listMyAddresses(),
+        fetchMyMeasurements(),
       ]);
       if (cancelled) return;
       setProfile(p);
       setOrders(os);
       setFreeCountries(fc);
+      setAddresses(addr);
+      setSavedMeasurementsCount(countSavedMeasurements(meas?.values));
       setLoading(false);
     }
     load();
@@ -181,6 +190,84 @@ function AccountDashboard({ user, onSignOut }: { user: User; onSignOut: () => vo
               />
             </div>
           )}
+
+          {/* Profile completion bar — shows three sections (contact,
+              address, measurements) so the customer can complete their
+              file once and skip data entry on every future order. */}
+          {!needsProfile && !loading && (() => {
+            const contactComplete = isProfileComplete(profile);
+            const addressComplete = addresses.length > 0;
+            const measurementsComplete = savedMeasurementsCount >= allMeasurements.length;
+            const measurementsStarted = savedMeasurementsCount > 0;
+            const items = [
+              { key: "contact",      label: "Contact & address on file", done: contactComplete, href: "/account/addresses", icon: Mail },
+              { key: "address",      label: "At least one saved address", done: addressComplete, href: "/account/addresses", icon: MapPin },
+              { key: "measurements", label: measurementsComplete
+                ? "Tape-measure flow complete"
+                : measurementsStarted
+                  ? `Measurements ${savedMeasurementsCount} of ${allMeasurements.length}`
+                  : "Take your measurements",
+                done: measurementsComplete, href: "/account/measurements", icon: Ruler },
+            ];
+            const doneCount = items.filter((i) => i.done).length;
+            const pct = Math.round((doneCount / items.length) * 100);
+            return (
+              <section className="mt-10 border border-black/10 p-6 lg:p-8 bg-[var(--color-ivory-100)]">
+                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-5">
+                  <div>
+                    <span className="text-eyebrow text-[var(--color-burgundy-700)]">Your profile</span>
+                    <h2 className="text-display text-[1.4rem] mt-1.5 leading-tight">
+                      {pct === 100 ? "Profile complete." : "Complete your profile."}
+                    </h2>
+                    <p className="text-[0.85rem] text-[var(--color-charcoal-500)] mt-1.5 max-w-xl">
+                      Finish these once and every future commission pre-fills your details. You can still edit per order.
+                    </p>
+                  </div>
+                  <div className="md:text-right">
+                    <div className="text-display text-[1.75rem] text-[var(--color-burgundy-700)] tabular-nums">{pct}%</div>
+                    <div className="text-eyebrow text-[0.6rem] text-[var(--color-charcoal-500)]">{doneCount} of {items.length} done</div>
+                  </div>
+                </div>
+                <div className="h-1.5 bg-[var(--color-ivory-200)] overflow-hidden mb-6">
+                  <div
+                    className="h-full bg-[var(--color-burgundy-700)] transition-all duration-500"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <ul className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {items.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <li key={item.key}>
+                        <Link
+                          href={item.href}
+                          className={`block border p-4 transition-colors ${
+                            item.done
+                              ? "border-[var(--color-burgundy-700)]/30 bg-[var(--color-ivory-200)]"
+                              : "border-black/15 bg-white hover:border-[var(--color-burgundy-700)]"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span className={`mt-0.5 ${item.done ? "text-[var(--color-burgundy-700)]" : "text-[var(--color-charcoal-500)]"}`}>
+                              <Icon size={16} strokeWidth={1.5} />
+                            </span>
+                            <div className="min-w-0">
+                              <div className="text-[0.85rem] text-[var(--color-charcoal-900)] leading-tight">
+                                {item.label}
+                              </div>
+                              <div className="text-eyebrow text-[0.6rem] mt-1.5 text-[var(--color-charcoal-500)]">
+                                {item.done ? "Done · edit" : "Open"}
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            );
+          })()}
 
           {/* Primary action */}
           {!needsProfile && (

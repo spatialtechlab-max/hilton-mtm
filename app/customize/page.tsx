@@ -25,6 +25,7 @@ import { mergeLiveAndStatic } from "@/lib/liveConfigMerge";
 import { fetchAllSettings, defaultFor } from "@/lib/settings";
 import { findProduct } from "@/lib/libraries";
 import { fetchGarments } from "@/lib/garments";
+import { fetchMyMeasurements } from "@/lib/measurements";
 import { buildSpecPdf } from "@/lib/specSheet";
 import { AuthForm } from "@/components/AuthForm";
 import { useAuth } from "@/components/AuthProvider";
@@ -101,6 +102,7 @@ function CustomizeInner() {
   const [selections,   setSelections]   = useState<Selections>(defaultSelections);
   const [measurements, setMeasurements] = useState<MeasurementValues>(defaultMeasurements);
   const [unit,         setUnit]         = useState<MeasurementUnit>("cm");
+  const [savedMeasurements, setSavedMeasurements] = useState<MeasurementValues | null>(null);
   const [stepIdx, setStepIdx]       = useState(0);
   const [phase, setPhase]           = useState<Phase>("fabric");
   const [tier, setTier]             = useState<string>("signature");
@@ -197,6 +199,35 @@ function CustomizeInner() {
       .catch(() => { /* keep default */ });
     return () => { cancelled = true; };
   }, []);
+
+  // Pre-fill saved measurements when the customer is signed in. The
+  // customizer keeps a per-category localStorage cache, but saved
+  // measurements take priority — they're the customer's authoritative
+  // tape on file. The customer can still override per-order; we just
+  // seed the inputs.
+  useEffect(() => {
+    if (!user) { setSavedMeasurements(null); return; }
+    let cancelled = false;
+    fetchMyMeasurements().then((row) => {
+      if (cancelled) return;
+      if (row?.values) {
+        setSavedMeasurements(row.values);
+        // Seed live measurements with the saved values, but only for
+        // slots the customer hasn't typed into yet. This way refreshes
+        // and re-loads don't blow away the customer's in-progress
+        // overrides for this commission.
+        setMeasurements((prev) => {
+          const next = { ...prev };
+          for (const [slug, v] of Object.entries(row.values)) {
+            if (!next[slug] || next[slug].trim() === "") next[slug] = String(v);
+          }
+          return next;
+        });
+        if (row.unit === "cm" || row.unit === "in") setUnit(row.unit);
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [user]);
 
   // One-time init: read ?category from the URL, then restore that category's saved state.
   // Entry rule: if the URL pre-selects a SKU (came from a PDP "Customise" CTA),
