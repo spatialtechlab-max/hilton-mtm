@@ -186,6 +186,12 @@ export default function AdminPage() {
             <ImageIcon size={14} strokeWidth={1.5} /> Media
           </Link>
           <Link
+            href="/admin/hero"
+            className="text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)] text-[var(--color-charcoal-900)] px-5 py-3 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
+          >
+            <ImageIcon size={14} strokeWidth={1.5} /> Hero
+          </Link>
+          <Link
             href="/admin/fabrics"
             className="text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)] text-[var(--color-charcoal-900)] px-5 py-3 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
           >

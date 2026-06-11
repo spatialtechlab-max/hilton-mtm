@@ -9,26 +9,30 @@ import { Partners } from "@/components/Partners";
 import { AtelierStrip } from "@/components/AtelierStrip";
 import { ShowroomFeature } from "@/components/ShowroomFeature";
 import { PlaceholderBadge, isPlaceholder } from "@/components/PlaceholderBadge";
-import { MediaImage } from "@/components/MediaImage";
 import { MEDIA_SLOTS } from "@/lib/mediaSlots";
+import { fetchActiveHeroSlidesServer } from "@/lib/heroSlidesServer";
+import { fetchMediaSlotServer } from "@/lib/mediaServer";
+import { HeroRotator } from "@/components/HeroRotator";
 
 const HOME_HERO = MEDIA_SLOTS.find((s) => s.key === "home.hero")!;
 
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Pull the rotating-hero list at request time (60s ISR). If the atelier
+  // hasn't uploaded any slides yet, fall back to the single home.hero
+  // media slot so the page never ships with an empty banner.
+  const [slides, heroSlot] = await Promise.all([
+    fetchActiveHeroSlidesServer(),
+    fetchMediaSlotServer(HOME_HERO.key),
+  ]);
+  const fallbackSrc = heroSlot?.url ?? HOME_HERO.fallback;
+  const fallbackAlt = heroSlot?.alt ?? HOME_HERO.fallbackAlt;
+
   return (
     <>
       {/* ─────────────────────────── HERO ─────────────────────────── */}
       <section className="relative h-[100svh] min-h-[680px] w-full overflow-hidden">
-        <MediaImage
-          slot={HOME_HERO.key}
-          fallback={HOME_HERO.fallback}
-          fallbackAlt={HOME_HERO.fallbackAlt}
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-center"
-        />
+        <HeroRotator slides={slides} fallbackSrc={fallbackSrc} fallbackAlt={fallbackAlt} />
         {/* Cinematic overlay: darker top-left so the headline reads on it, light center for the image */}
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-charcoal-900)]/80 via-[var(--color-charcoal-900)]/35 to-[var(--color-charcoal-900)]/85" />
         <div className="absolute inset-0 bg-[var(--color-charcoal-900)]/15" />
