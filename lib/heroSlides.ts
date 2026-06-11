@@ -13,6 +13,12 @@ export type HeroSlide = {
   updated_at: string;
 };
 
+/** House policy: at most this many slides in the rotating hero banner.
+ *  Anything past this and the rotation starts to feel like a slideshow
+ *  rather than a hero. The admin UI hides the Add button once the count
+ *  hits this number, and createHeroSlide() also enforces it as a guard. */
+export const MAX_HERO_SLIDES = 6;
+
 /** Public list — used by the homepage. Only returns active rows, sorted. */
 export async function listActiveHeroSlides(): Promise<HeroSlide[]> {
   const { data, error } = await supabase
@@ -38,9 +44,18 @@ export async function listAllHeroSlides(): Promise<HeroSlide[]> {
 }
 
 /** Upload a hero image to the editorial bucket, then insert a row. The
- *  new slide goes to the bottom of the list. */
+ *  new slide goes to the bottom of the list. Blocked once the list has
+ *  reached MAX_HERO_SLIDES; UI hides the Add button before this fires,
+ *  but the guard keeps the constraint honest in case the button is
+ *  reached by other means. */
 export async function createHeroSlide(file: File, alt: string): Promise<{ data: HeroSlide | null; error: string | null }> {
   try {
+    const { count } = await supabase
+      .from("mtm_hero_slides")
+      .select("id", { count: "exact", head: true });
+    if ((count ?? 0) >= MAX_HERO_SLIDES) {
+      return { data: null, error: `You can have up to ${MAX_HERO_SLIDES} hero slides. Remove one before adding another.` };
+    }
     const image_url = await uploadEditorialImage(file);
     // Find the highest position + 1 so new slides land at the end.
     const { data: tail } = await supabase
