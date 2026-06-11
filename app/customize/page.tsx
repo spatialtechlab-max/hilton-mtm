@@ -532,7 +532,7 @@ function CustomizeInner() {
         >
           <ArrowLeft size={14} strokeWidth={1.5} /> Design Yours
         </Link>
-        <span className="text-eyebrow text-[var(--color-burgundy-700)]">{requestedGarmentLabel}</span>
+        <div className="text-eyebrow text-[var(--color-burgundy-700)]">{requestedGarmentLabel}</div>
         <h1 className="text-display text-[clamp(2rem,4vw,3.25rem)] mt-3 leading-tight max-w-2xl">
           The online customizer for {requestedGarmentLabel.toLowerCase()} commissions isn&rsquo;t open yet.
         </h1>
