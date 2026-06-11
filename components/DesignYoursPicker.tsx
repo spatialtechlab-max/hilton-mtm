@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Reveal, SplitReveal } from "./Reveal";
-import { fetchGarments, type Garment } from "@/lib/garments";
+import { fetchGarments, libraryCoverSlotForGarment, librarySlugForGarment, type Garment } from "@/lib/garments";
 import { fetchAllMediaSlots } from "@/lib/media";
 import { MEDIA_SLOTS } from "@/lib/mediaSlots";
 
@@ -49,44 +49,33 @@ const GENERIC_TILE = {
   alt: "The Hilton atelier at work",
 };
 
-// Map each garment slug to the matching library slug so Design Yours
-// routes into the same browse → PDP → Customise flow that the
-// Made to Measure nav uses. Anything not in the map falls back to
-// /library/<garment-slug> if the slug already exists, or the
-// customizer landing.
-const LIBRARY_FOR_GARMENT: Record<string, string> = {
-  suit: "suits",
-  jacket: "jackets",
-  shirt: "shirts",
-  trouser: "trousers",
-};
+// Garments that map onto an existing /library/<slug> route. Anything
+// outside this set still gets a cover slot (so the admin can upload a
+// custom tile photo from /admin/garments) but it routes straight into
+// the customizer rather than a non-existent library page.
+const HAS_LIBRARY_PAGE = new Set(["suit", "jacket", "shirt", "trouser"]);
 
 function tileFor(g: Garment, featured: boolean): Tile {
   const assets = TILE_ASSETS[g.slug] ?? GENERIC_TILE;
-  const librarySlug = LIBRARY_FOR_GARMENT[g.slug] ?? g.slug;
-  // The garments that map onto a real library page read their tile
-  // photo from that library's cover slot — so editing the cover in
-  // /admin/media updates BOTH the library hero and the Design Yours
-  // tile in one place. When no admin override exists yet, the tile
-  // must fall back to the SAME image the library page uses, not the
-  // legacy /atelier/* swatch — otherwise the picker and the library
-  // hero render two different photos for the same garment.
-  const hasLibrary = g.slug in LIBRARY_FOR_GARMENT;
-  const slotKey = hasLibrary ? `library.${librarySlug}.cover` : "";
-  const slotFallback = slotKey
-    ? MEDIA_SLOTS.find((s) => s.key === slotKey)?.fallback
-    : undefined;
+  const librarySlug = librarySlugForGarment(g.slug);
+  // Every garment now has a cover slot (library.<plural>.cover). For
+  // built-ins the slot already exists in MEDIA_SLOTS with a curated
+  // fallback; for custom garments (chinos / overcoat / tuxedo) there's
+  // no registry fallback but the slot key is still the one the admin
+  // writes to from /admin/garments, so an uploaded cover shows up here.
+  const slotKey = libraryCoverSlotForGarment(g.slug);
+  const slotFallback = MEDIA_SLOTS.find((s) => s.key === slotKey)?.fallback;
+  const hasLibraryPage = HAS_LIBRARY_PAGE.has(g.slug);
   return {
     category: g.tile_eyebrow || (featured ? "Bespoke commission" : "Made to measure"),
     title: `Design a ${g.label.toLowerCase()}`,
-    href: `/library/${librarySlug}`,
+    href: hasLibraryPage ? `/library/${librarySlug}` : `/customize?category=${g.slug}`,
     // Priority: per-garment override from /admin/garments → the
     // registry fallback for the matching library cover → the legacy
-    // hardcoded asset (last resort, only hits for chinos / overcoat
-    // when no per-garment image is set).
+    // hardcoded asset (last resort).
     image: g.tile_image || slotFallback || assets.image,
     alt: assets.alt,
-    slot: hasLibrary ? slotKey : undefined,
+    slot: slotKey,
     fit: "cover",
   };
 }
