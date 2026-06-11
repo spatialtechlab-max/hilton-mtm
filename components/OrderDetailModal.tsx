@@ -16,6 +16,7 @@ import {
   type StatusHistoryEntry,
 } from "@/lib/orders";
 import { computeOrderTotals, VAT_RATE } from "@/lib/checkoutFees";
+import { listFreeShippingCountries, isFreeShippingCountry, type FreeShippingCountry } from "@/lib/shippingZones";
 
 const fmt = (n: number) =>
   `BHD ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
@@ -50,6 +51,16 @@ export function OrderDetailModal({
   const [sentMessage, setSentMessage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [freeCountries, setFreeCountries] = useState<FreeShippingCountry[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const list = await listFreeShippingCountries();
+      if (!cancelled) setFreeCountries(list);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // (Re)load when the modal opens on a new order. Clear state when closed.
   useEffect(() => {
@@ -366,7 +377,8 @@ export function OrderDetailModal({
                     <div className="border border-black/10 p-5">
                       <h3 className="text-eyebrow text-[var(--color-charcoal-500)]">Total</h3>
                       {(() => {
-                        const t = computeOrderTotals(Number(order.subtotal));
+                        const freeShipping = isFreeShippingCountry(order.shipping_address?.country, freeCountries);
+                        const t = computeOrderTotals(Number(order.subtotal), { freeShipping });
                         const gross = Number(order.subtotal) + Number(order.discount_amount ?? 0);
                         return (
                           <div className="mt-2 space-y-1 text-[0.82rem]">
@@ -386,7 +398,11 @@ export function OrderDetailModal({
                             </div>
                             <div className="flex justify-between text-[var(--color-charcoal-500)]">
                               <span>Shipping</span>
-                              <span className="tabular-nums">{fmt(t.shipping)}</span>
+                              {freeShipping ? (
+                                <span className="text-eyebrow text-[var(--color-burgundy-700)]">Free</span>
+                              ) : (
+                                <span className="tabular-nums">{fmt(t.shipping)}</span>
+                              )}
                             </div>
                             <p className="text-display text-[1.5rem] mt-2 text-[var(--color-burgundy-700)] tabular-nums">
                               {fmt(t.grandTotal)}

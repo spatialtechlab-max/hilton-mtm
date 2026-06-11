@@ -13,6 +13,7 @@ import { createOrderFromCart, fetchProfile, isProfileComplete, type Profile } fr
 import { listMyAddresses, upsertAddress, MAX_ADDRESSES, type Address, type AddressInput } from "@/lib/addresses";
 import { uploadOrderPhoto, ORDER_VIEWS, ORDER_VIEW_LABEL, type OrderView } from "@/lib/orderMedia";
 import { computeOrderTotals, VAT_RATE } from "@/lib/checkoutFees";
+import { listFreeShippingCountries, isFreeShippingCountry, type FreeShippingCountry } from "@/lib/shippingZones";
 import { supabase } from "@/lib/supabase";
 
 const fmt = (n: number) =>
@@ -82,6 +83,19 @@ export default function CartPage() {
 
   const selectedAddr = addresses.find((a) => a.id === selectedAddrId) ?? null;
 
+  // Free-shipping list: SELECT is public so we fetch on mount regardless of
+  // sign-in state. Used to zero the shipping fee when the selected address
+  // (or, if none, the profile country) sits on the admin's list.
+  const [freeCountries, setFreeCountries] = useState<FreeShippingCountry[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const list = await listFreeShippingCountries();
+      if (!cancelled) setFreeCountries(list);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // Body-measurement photos: one optional File per labeled view. Kept in
   // local state until the order is placed — we don't know the orderId
   // until createOrderFromCart returns. After the insert, placeOrder
@@ -116,7 +130,9 @@ export default function CartPage() {
   const itemsAfterDiscount = applied
     ? Math.max(0, Math.round((subtotal - applied.amount) * 100) / 100)
     : subtotal;
-  const { vat, shipping, grandTotal } = computeOrderTotals(itemsAfterDiscount);
+  const shipCountry = selectedAddr?.country ?? null;
+  const freeShipping = isFreeShippingCountry(shipCountry, freeCountries);
+  const { vat, shipping, grandTotal } = computeOrderTotals(itemsAfterDiscount, { freeShipping });
 
   async function applyDiscount() {
     setDiscountError(null);
@@ -521,7 +537,11 @@ export default function CartPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[var(--color-charcoal-500)]">Shipping</span>
-                  <span className="text-[var(--color-charcoal-900)] tabular-nums">{fmt(shipping)}</span>
+                  {freeShipping ? (
+                    <span className="text-eyebrow text-[var(--color-burgundy-700)]">Free{shipCountry ? ` to ${shipCountry}` : ""}</span>
+                  ) : (
+                    <span className="text-[var(--color-charcoal-900)] tabular-nums">{fmt(shipping)}</span>
+                  )}
                 </div>
               </div>
 

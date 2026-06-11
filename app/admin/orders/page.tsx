@@ -6,6 +6,7 @@ import { ArrowLeft, Package, Search, Users } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import { computeOrderTotals } from "@/lib/checkoutFees";
+import { listFreeShippingCountries, isFreeShippingCountry, type FreeShippingCountry } from "@/lib/shippingZones";
 import { listAllOrders, ORDER_STATUS_LABEL, ORDER_STATUSES, type Order, type OrderStatus } from "@/lib/orders";
 import { supabase } from "@/lib/supabase";
 import { OrderDetailModal } from "@/components/OrderDetailModal";
@@ -19,6 +20,7 @@ export default function AdminOrdersPage() {
   const [filter, setFilter] = useState<OrderStatus | "all">("all");
   const [q, setQ]           = useState("");
   const [loadingData, setLoadingData] = useState(true);
+  const [freeCountries, setFreeCountries] = useState<FreeShippingCountry[]>([]);
   // Selected order number drives the modal. Null = closed.
   const [openOrder, setOpenOrder] = useState<string | null>(null);
 
@@ -31,8 +33,8 @@ export default function AdminOrdersPage() {
     if (!admin) return;
     let cancelled = false;
     async function load() {
-      const all = await listAllOrders();
-      if (!cancelled) { setOrders(all); setLoadingData(false); }
+      const [all, fc] = await Promise.all([listAllOrders(), listFreeShippingCountries()]);
+      if (!cancelled) { setOrders(all); setFreeCountries(fc); setLoadingData(false); }
     }
     load();
 
@@ -67,7 +69,10 @@ export default function AdminOrdersPage() {
   }, {});
   const totalRevenue = orders
     .filter((o) => o.status !== "cancelled")
-    .reduce((s, o) => s + computeOrderTotals(Number(o.subtotal)).grandTotal, 0);
+    .reduce((s, o) => {
+      const freeShipping = isFreeShippingCountry(o.shipping_address?.country, freeCountries);
+      return s + computeOrderTotals(Number(o.subtotal), { freeShipping }).grandTotal;
+    }, 0);
 
   // Unique customers count
   const uniqueCustomers = new Set(orders.map((o) => o.user_id)).size;
@@ -189,7 +194,7 @@ export default function AdminOrdersPage() {
                   <td className="py-3 px-3 text-[0.82rem] text-[var(--color-charcoal-500)] hidden md:table-cell">
                     {new Date(o.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                   </td>
-                  <td className="py-3 px-3 text-right text-[0.9rem] text-[var(--color-charcoal-900)] tabular-nums">{fmt(computeOrderTotals(Number(o.subtotal)).grandTotal)}</td>
+                  <td className="py-3 px-3 text-right text-[0.9rem] text-[var(--color-charcoal-900)] tabular-nums">{fmt(computeOrderTotals(Number(o.subtotal), { freeShipping: isFreeShippingCountry(o.shipping_address?.country, freeCountries) }).grandTotal)}</td>
                 </tr>
               ))}
             </tbody>

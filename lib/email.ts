@@ -244,7 +244,7 @@ export async function sendOrderConfirmationEmail(args: {
         </tr>
         <tr>
           <td style="padding:4px 0;font-family:Arial,sans-serif;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(0,0,0,0.55)">Shipping</td>
-          <td align="right" style="padding:4px 0;font-family:Georgia,serif;font-size:15px;color:${CHARCOAL}">${formatBhd(shippingAmount)}</td>
+          <td align="right" style="padding:4px 0;font-family:Georgia,serif;font-size:15px;color:${shippingAmount === 0 ? BURGUNDY : CHARCOAL}">${shippingAmount === 0 ? "Free" : formatBhd(shippingAmount)}</td>
         </tr>
         <tr>
           <td style="padding:12px 0 0;border-top:1px solid rgba(0,0,0,0.08);font-family:Arial,sans-serif;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:rgba(0,0,0,0.7)">Total</td>

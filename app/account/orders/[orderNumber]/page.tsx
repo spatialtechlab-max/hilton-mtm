@@ -11,6 +11,7 @@ import {
 } from "@/lib/orders";
 import { OrderPhotosGrid } from "@/components/OrderPhotosGrid";
 import { computeOrderTotals, VAT_RATE } from "@/lib/checkoutFees";
+import { listFreeShippingCountries, isFreeShippingCountry, type FreeShippingCountry } from "@/lib/shippingZones";
 import { supabase } from "@/lib/supabase";
 
 const fmt = (n: number) => `BHD ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
@@ -23,6 +24,16 @@ export default function OrderDetailPage() {
   const [items, setItems]     = useState<OrderItem[]>([]);
   const [history, setHistory] = useState<StatusHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [freeCountries, setFreeCountries] = useState<FreeShippingCountry[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const list = await listFreeShippingCountries();
+      if (!cancelled) setFreeCountries(list);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,7 +92,7 @@ export default function OrderDetailPage() {
             </h1>
             <p className="mt-3 text-[0.9rem] text-[var(--color-charcoal-500)]">
               Placed {new Date(order.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
-              {" · "}{fmt(computeOrderTotals(order.subtotal).grandTotal)}
+              {" · "}{fmt(computeOrderTotals(order.subtotal, { freeShipping: isFreeShippingCountry(order.shipping_address.country, freeCountries) }).grandTotal)}
             </p>
           </div>
 
@@ -210,31 +221,43 @@ export default function OrderDetailPage() {
 
               <div className="border border-black/10 p-6">
                 <h3 className="text-eyebrow text-[var(--color-charcoal-500)]">Total</h3>
-                <div className="mt-2 space-y-1 text-[0.85rem]">
-                  <div className="flex justify-between text-[var(--color-charcoal-500)]">
-                    <span>Items</span>
-                    <span className="tabular-nums">
-                      {fmt(order.subtotal + (order.discount_amount ?? 0))}
-                    </span>
-                  </div>
-                  {order.discount_code && order.discount_amount ? (
-                    <div className="flex justify-between text-[var(--color-burgundy-700)]">
-                      <span>{order.discount_code} · {order.discount_percent}% off</span>
-                      <span className="tabular-nums">− {fmt(order.discount_amount)}</span>
-                    </div>
-                  ) : null}
-                  <div className="flex justify-between text-[var(--color-charcoal-500)]">
-                    <span>VAT ({Math.round(VAT_RATE * 100)}%)</span>
-                    <span className="tabular-nums">{fmt(computeOrderTotals(order.subtotal).vat)}</span>
-                  </div>
-                  <div className="flex justify-between text-[var(--color-charcoal-500)]">
-                    <span>Shipping</span>
-                    <span className="tabular-nums">{fmt(computeOrderTotals(order.subtotal).shipping)}</span>
-                  </div>
-                </div>
-                <p className="text-display text-[1.75rem] mt-2 text-[var(--color-burgundy-700)] tabular-nums">
-                  {fmt(computeOrderTotals(order.subtotal).grandTotal)}
-                </p>
+                {(() => {
+                  const freeShipping = isFreeShippingCountry(order.shipping_address.country, freeCountries);
+                  const totals = computeOrderTotals(order.subtotal, { freeShipping });
+                  return (
+                    <>
+                      <div className="mt-2 space-y-1 text-[0.85rem]">
+                        <div className="flex justify-between text-[var(--color-charcoal-500)]">
+                          <span>Items</span>
+                          <span className="tabular-nums">
+                            {fmt(order.subtotal + (order.discount_amount ?? 0))}
+                          </span>
+                        </div>
+                        {order.discount_code && order.discount_amount ? (
+                          <div className="flex justify-between text-[var(--color-burgundy-700)]">
+                            <span>{order.discount_code} · {order.discount_percent}% off</span>
+                            <span className="tabular-nums">− {fmt(order.discount_amount)}</span>
+                          </div>
+                        ) : null}
+                        <div className="flex justify-between text-[var(--color-charcoal-500)]">
+                          <span>VAT ({Math.round(VAT_RATE * 100)}%)</span>
+                          <span className="tabular-nums">{fmt(totals.vat)}</span>
+                        </div>
+                        <div className="flex justify-between text-[var(--color-charcoal-500)]">
+                          <span>Shipping</span>
+                          {freeShipping ? (
+                            <span className="text-eyebrow text-[var(--color-burgundy-700)]">Free</span>
+                          ) : (
+                            <span className="tabular-nums">{fmt(totals.shipping)}</span>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-display text-[1.75rem] mt-2 text-[var(--color-burgundy-700)] tabular-nums">
+                        {fmt(totals.grandTotal)}
+                      </p>
+                    </>
+                  );
+                })()}
               </div>
 
               {history.length > 0 && (

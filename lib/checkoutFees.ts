@@ -25,11 +25,17 @@ export type OrderTotals = {
   grandTotal: number;
 };
 
-/** Given the items total (post-discount), return the full breakdown. */
-export function computeOrderTotals(itemsTotalAfterDiscount: number): OrderTotals {
+/** Given the items total (post-discount), return the full breakdown.
+ *  `freeShipping` zeroes the shipping fee — the cart and order pages
+ *  pass `true` when the customer's destination country is on the admin's
+ *  free-shipping list. */
+export function computeOrderTotals(
+  itemsTotalAfterDiscount: number,
+  options?: { freeShipping?: boolean },
+): OrderTotals {
   const itemsTotal = Math.max(0, round2(itemsTotalAfterDiscount));
   const vat        = round2(itemsTotal * VAT_RATE);
-  const shipping   = SHIPPING_FEE;
+  const shipping   = options?.freeShipping ? 0 : SHIPPING_FEE;
   const grandTotal = round2(itemsTotal + vat + shipping);
   return { itemsTotal, vat, shipping, grandTotal };
 }

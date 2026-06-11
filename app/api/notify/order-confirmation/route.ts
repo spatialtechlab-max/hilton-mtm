@@ -36,8 +36,26 @@ export async function POST(req: Request) {
   const { data: items } = await sb.from("mtm_order_items").select("*").eq("order_id", orderId);
   type Item = { name: string; type_label: string; qty: number; price_num: number; image?: string | null };
 
-  const subtotal = Number((order as { subtotal: number }).subtotal ?? 0);
-  const totals   = computeOrderTotals(subtotal);
+  const subtotal     = Number((order as { subtotal: number }).subtotal ?? 0);
+  const shipCountry  = (order as { shipping_address?: { country?: string } }).shipping_address?.country ?? null;
+
+  // Server-side check against the admin's free-shipping list. We use the
+  // service-role here so the cron-style email path doesn't depend on the
+  // caller's auth for the SELECT (the SELECT policy is public anyway, but
+  // belt-and-braces).
+  const SVC = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  let freeShipping = false;
+  if (SVC) {
+    const svc = createClient(SUPA_URL, SVC);
+    const { data: free } = await svc
+      .from("mtm_free_shipping_countries")
+      .select("country");
+    const norm = (s: string | null | undefined) => (s ?? "").trim().toLowerCase();
+    const target = norm(shipCountry);
+    freeShipping = !!free?.some((r: { country: string }) => norm(r.country) === target) && !!target;
+  }
+
+  const totals = computeOrderTotals(subtotal, { freeShipping });
 
   const result = await sendOrderConfirmationEmail({
     to: (order as { customer_email: string }).customer_email,

@@ -9,6 +9,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { OrderPhotosGrid } from "@/components/OrderPhotosGrid";
 import { isAdmin } from "@/lib/admin";
 import { computeOrderTotals, VAT_RATE } from "@/lib/checkoutFees";
+import { listFreeShippingCountries, isFreeShippingCountry, type FreeShippingCountry } from "@/lib/shippingZones";
 import {
   fetchOrderByNumber, ORDER_STATUS_LABEL, ORDER_STATUSES,
   type Order, type OrderItem, type StatusHistoryEntry, type OrderStatus,
@@ -44,6 +45,16 @@ export default function AdminOrderDetailPage() {
   const [dispatching, setDispatching] = useState(false);
   const [dispatchNotice, setDispatchNotice] = useState<string | null>(null);
   const [dispatchError, setDispatchError]   = useState<string | null>(null);
+
+  const [freeCountries, setFreeCountries] = useState<FreeShippingCountry[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const list = await listFreeShippingCountries();
+      if (!cancelled) setFreeCountries(list);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!admin) return;
@@ -137,7 +148,7 @@ export default function AdminOrderDetailPage() {
           {order.order_number}
         </h1>
         <p className="mt-3 text-[0.9rem] text-[var(--color-charcoal-500)]">
-          Placed {new Date(order.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · {fmt(computeOrderTotals(Number(order.subtotal)).grandTotal)}
+          Placed {new Date(order.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · {fmt(computeOrderTotals(Number(order.subtotal), { freeShipping: isFreeShippingCountry(order.shipping_address.country, freeCountries) }).grandTotal)}
         </p>
       </header>
 
@@ -316,7 +327,8 @@ export default function AdminOrderDetailPage() {
           <div className="border border-black/10 p-6">
             <h3 className="text-eyebrow text-[var(--color-charcoal-500)]">Total</h3>
             {(() => {
-              const t = computeOrderTotals(Number(order.subtotal));
+              const freeShipping = isFreeShippingCountry(order.shipping_address.country, freeCountries);
+              const t = computeOrderTotals(Number(order.subtotal), { freeShipping });
               const gross = Number(order.subtotal) + Number(order.discount_amount ?? 0);
               return (
                 <>
@@ -337,7 +349,11 @@ export default function AdminOrderDetailPage() {
                     </div>
                     <div className="flex justify-between text-[var(--color-charcoal-500)]">
                       <span>Shipping</span>
-                      <span className="tabular-nums">{fmt(t.shipping)}</span>
+                      {freeShipping ? (
+                        <span className="text-eyebrow text-[var(--color-burgundy-700)]">Free · {order.shipping_address.country}</span>
+                      ) : (
+                        <span className="tabular-nums">{fmt(t.shipping)}</span>
+                      )}
                     </div>
                   </div>
                   <p className="text-display text-[1.75rem] mt-2 text-[var(--color-burgundy-700)] tabular-nums">
