@@ -18,9 +18,15 @@ export const revalidate = 300; // 5 minutes
 export async function GET() {
   const items = await fetchErpItems();
   const set = new Set<string>();
+  // Per-category active-item counts, so the admin garments table can show
+  // how many live ERP products sit under each garment's categories.
+  const counts: Record<string, number> = {};
   for (const it of items) {
     const cat = (it.categoryName || "").trim().toUpperCase();
-    if (cat) set.add(cat);
+    if (cat) {
+      set.add(cat);
+      counts[cat] = (counts[cat] ?? 0) + 1;
+    }
   }
-  return NextResponse.json({ categories: Array.from(set).sort() });
+  return NextResponse.json({ categories: Array.from(set).sort(), counts });
 }

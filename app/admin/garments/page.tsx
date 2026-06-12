@@ -38,6 +38,10 @@ export default function AdminGarmentsPage() {
   // slot the homepage Categories tile and library hero already read,
   // so an upload here shows on all three surfaces.
   const [covers, setCovers] = useState<Record<string, MediaOverride>>({});
+  // Live ERP active-item count per categoryName (uppercased). Lets each
+  // garment row show how many products the ERP currently carries under
+  // its mapped categories.
+  const [erpCounts, setErpCounts] = useState<Record<string, number>>({});
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -84,12 +88,17 @@ export default function AdminGarmentsPage() {
     setLoadingData(true);
     setError(null);
     try {
-      const [g, m] = await Promise.all([
+      const [g, m, counts] = await Promise.all([
         fetchGarments(),
         fetchAllMediaSlots().catch(() => ({} as Record<string, MediaOverride>)),
+        fetch("/api/erp-categories", { cache: "no-store" })
+          .then((r) => r.json())
+          .then((d) => (d?.counts ?? {}) as Record<string, number>)
+          .catch(() => ({} as Record<string, number>)),
       ]);
       setGarments(g);
       setCovers(m);
+      setErpCounts(counts);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load garments.");
     } finally {
@@ -269,6 +278,11 @@ export default function AdminGarmentsPage() {
             // and editable here instead of an empty box.
             const defaultIntro = libraries[librarySlugForGarment(g.slug)]?.intro ?? "";
             const introValue = g.description ?? defaultIntro;
+            // Live ERP products under this garment's mapped categories.
+            const erpCount = (g.erp_categories ?? []).reduce(
+              (n, cat) => n + (erpCounts[(cat || "").trim().toUpperCase()] ?? 0),
+              0,
+            );
             return (
             <li key={g.slug} className="grid grid-cols-12 gap-3 items-center py-4 px-2">
               {/* Cover thumbnail + upload — writes to the unified
@@ -337,7 +351,11 @@ export default function AdminGarmentsPage() {
                   className="w-12 bg-transparent border-b border-transparent hover:border-black/20 focus:border-[var(--color-burgundy-700)] focus:outline-none tabular-nums text-right"
                 />
               </div>
-              <div className="col-span-12 sm:col-span-4 flex items-center justify-end gap-3">
+              <div className="col-span-6 sm:col-span-2 flex flex-col items-start sm:items-center justify-center">
+                <span className="text-[1.1rem] text-display tabular-nums text-[var(--color-charcoal-900)] leading-none">{erpCount}</span>
+                <span className="text-[0.58rem] tracking-[0.15em] uppercase text-[var(--color-charcoal-400)] mt-1">in ERP</span>
+              </div>
+              <div className="col-span-6 sm:col-span-2 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => patch(g.slug, { active: !g.active })}
