@@ -293,6 +293,18 @@ export default function AdminPage() {
 
           {/* Main — step cards in a masonry column layout (no height gaps) */}
           <div className="columns-1 xl:columns-2 gap-5 [&>*]:mb-5">
+            {filter !== "all" && visible.length === 0 && (
+              <div className="break-inside-avoid border border-dashed border-black/15 bg-[var(--color-ivory-200)] p-6">
+                <p className="text-display text-[1.3rem] text-[var(--color-charcoal-900)]">
+                  No steps shown for {filterTabs.find((t) => t.key === filter)?.label ?? filter} yet
+                </p>
+                <p className="mt-2 text-[0.85rem] text-[var(--color-charcoal-600)] leading-relaxed">
+                  Open <button type="button" onClick={() => setFilter("all")} className="text-[var(--color-burgundy-700)] underline">All steps</button> and
+                  toggle this garment on for each step you want in its customizer. Every step has a
+                  per-garment visibility row in its header.
+                </p>
+              </div>
+            )}
             {filter === "all" && disabledSteps.length > 0 && (
               <div className="break-inside-avoid border border-dashed border-black/15 bg-[var(--color-ivory-200)] p-5">
                 <p className="text-eyebrow text-[var(--color-charcoal-500)] mb-3">
@@ -329,10 +341,17 @@ export default function AdminPage() {
                   <span className="text-display text-[1.2rem] text-[var(--color-charcoal-900)]">{s.title}</span>
                   <Badge>{s.kind}</Badge>
                   <TierPicker slug={s.slug} tier={s.tier} onChanged={load} />
-                  <span className="basis-full text-[0.7rem] text-[var(--color-charcoal-400)]">
-                    {s.applies_to.join(" · ")}
-                    {s.requires_slug && `  ·  shows if ${s.requires_slug}=${s.requires_value}`}
-                  </span>
+                  <AppliesToEditor
+                    slug={s.slug}
+                    appliesTo={s.applies_to}
+                    garments={garments}
+                    onChanged={load}
+                  />
+                  {s.requires_slug && (
+                    <span className="basis-full text-[0.7rem] text-[var(--color-charcoal-400)]">
+                      shows if {s.requires_slug}={s.requires_value}
+                    </span>
+                  )}
                   {s.kind === "diagram" && (
                     <span className="basis-full text-[0.75rem] font-medium text-[var(--color-burgundy-700)]">
                       Diagram size · 800 × 1000 px · 4:5 portrait · PNG with transparent background
@@ -396,6 +415,62 @@ function TierPicker({
         );
       })}
     </span>
+  );
+}
+
+/* ── Applies-to editor (which garments show this step in their customizer) ──
+   This is the per-garment visible/hidden control. A step only appears in a
+   garment's flow when its slug is in applies_to. Toggling a chip on adds the
+   slug; toggling off removes it. That's how the atelier turns chinos /
+   overcoat / tuxedo into real customizers without a code change. */
+function AppliesToEditor({
+  slug, appliesTo, garments, onChanged,
+}: {
+  slug: string;
+  appliesTo: string[];
+  garments: Garment[];
+  onChanged: () => Promise<void> | void;
+}) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const live = garments.filter((g) => g.active);
+
+  async function toggle(garmentSlug: string) {
+    if (busy) return;
+    const on = appliesTo.includes(garmentSlug);
+    const next = on
+      ? appliesTo.filter((x) => x !== garmentSlug)
+      : [...appliesTo, garmentSlug];
+    setBusy(garmentSlug);
+    try { await updateStep(slug, { applies_to: next }); await onChanged(); }
+    finally { setBusy(null); }
+  }
+
+  return (
+    <div className="basis-full">
+      <span className="text-eyebrow text-[0.58rem] text-[var(--color-charcoal-400)]">Visible for</span>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {live.map((g) => {
+          const on = appliesTo.includes(g.slug);
+          return (
+            <button
+              key={g.slug}
+              type="button"
+              onClick={() => toggle(g.slug)}
+              disabled={busy !== null}
+              title={on ? `Hide this step from ${g.label}` : `Show this step in ${g.label}`}
+              className={`text-eyebrow text-[0.6rem] inline-flex items-center gap-1 px-2.5 py-1 border transition-colors ${
+                on
+                  ? "bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] border-[var(--color-burgundy-700)]"
+                  : "text-[var(--color-charcoal-500)] border-black/15 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)]"
+              } ${busy === g.slug ? "opacity-50" : ""}`}
+            >
+              {on ? <Eye size={11} strokeWidth={1.5} /> : <EyeOff size={11} strokeWidth={1.5} />}
+              {g.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

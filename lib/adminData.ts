@@ -53,7 +53,7 @@ export async function updateOption(id: string, patch: OptionPatch): Promise<void
   if (error) throw error;
 }
 
-export type StepPatch = Partial<Pick<DbStep, "tier" | "active" | "title">>;
+export type StepPatch = Partial<Pick<DbStep, "tier" | "active" | "title" | "applies_to">>;
 
 export async function updateStep(slug: string, patch: StepPatch): Promise<void> {
   const { error } = await supabase

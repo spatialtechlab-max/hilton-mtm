@@ -7,6 +7,9 @@ out
 .vercel
 .turbo
 
+# Project handbook with credentials — gitignored so secrets don't leave the laptop.
+CLAUDE.md
+
 # Local backups of original product photos (before bg removal).
 # Re-download from hiltonmtm.com if needed.
 public/products/*-bak/
