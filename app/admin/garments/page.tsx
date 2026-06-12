@@ -377,6 +377,22 @@ export default function AdminGarmentsPage() {
                   <Trash2 size={14} strokeWidth={1.5} />
                 </button>
               </div>
+              {/* Library description — the long copy under the library
+                  hero on /library/<slug>. Empty = the storefront keeps
+                  the existing default copy. Saves on blur so the
+                  atelier doesn't have to hunt for a Save button. */}
+              <div className="col-span-12 mt-1">
+                <label className="block">
+                  <span className="text-eyebrow text-[0.6rem] text-[var(--color-charcoal-500)]">Library description</span>
+                  <textarea
+                    rows={Math.min(5, Math.max(2, (g.description ?? "").split("\n").length + 1))}
+                    value={g.description ?? ""}
+                    onChange={(e) => patch(g.slug, { description: e.target.value })}
+                    placeholder="Shown under the library title — e.g. 'Two- and three-piece commissions cut from the mills we trust…'. Leave blank to keep the storefront default."
+                    className="mt-1.5 w-full bg-white border border-black/10 hover:border-black/25 focus:border-[var(--color-burgundy-700)] focus:outline-none px-3 py-2 text-[0.85rem] leading-relaxed resize-y"
+                  />
+                </label>
+              </div>
             </li>
             );
           })}

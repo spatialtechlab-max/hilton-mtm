@@ -28,6 +28,26 @@ const GARMENT_FOR_LIBRARY_SLUG: Record<string, string> = {
   trousers: "trouser",
 };
 
+/** Fetch the atelier-edited library description for a garment row. Null
+ *  when missing — caller falls back to the hardcoded library intro. */
+async function fetchGarmentDescription(slug: string): Promise<string | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  try {
+    const sb = createClient(url, key);
+    const { data, error } = await sb
+      .from("mtm_garments")
+      .select("description")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (error || !data) return null;
+    return (data as { description: string | null }).description ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function libraryIsActive(slug: string): Promise<boolean> {
   const garmentSlug = GARMENT_FOR_LIBRARY_SLUG[slug];
   if (!garmentSlug) return true; // accessory library — always visible
@@ -61,13 +81,13 @@ async function dynamicLibraryFromGarment(slug: string): Promise<{ lib: Library; 
     const sb = createClient(url, key);
     const { data, error } = await sb
       .from("mtm_garments")
-      .select("slug,label,active,erp_categories,tile_image,season_note")
+      .select("slug,label,active,erp_categories,tile_image,description")
       .eq("slug", slug)
       .maybeSingle();
     if (error || !data) return null;
     const row = data as {
       slug: string; label: string; active: boolean; erp_categories: string[] | null;
-      tile_image: string | null; season_note: string | null;
+      tile_image: string | null; description: string | null;
     };
     if (!row.active) return null;
     const erpCategories = (row.erp_categories ?? []).filter(Boolean);
@@ -76,18 +96,14 @@ async function dynamicLibraryFromGarment(slug: string): Promise<{ lib: Library; 
     // garment row doesn't have a tile_image. The atelier can override via
     // /admin/garments → cover upload.
     const hero = row.tile_image || libraries.trousers?.heroImage || "/products/no-image.svg";
-    // House-toned default intro. The atelier can override per garment by
-    // editing the row's season_note in /admin/garments — anything that
-    // isn't the auto-sync stamp is treated as real editorial copy and
-    // surfaces here. Stays customer-facing, never mentions the ERP or
-    // any internal plumbing.
-    const isAutoStamp = /^Auto-synced from ERP category "[^"]+"\.?$/.test(row.season_note ?? "");
-    const editorialIntro = !isAutoStamp && row.season_note ? row.season_note : "";
     const lib: Library = {
       slug: row.slug,
       eyebrow: `The ${row.label} Library`,
       title: `${row.label}.`,
-      intro: editorialIntro
+      // Editor's description from /admin/garments takes priority. If
+      // empty, fall back to a house-toned default that never mentions
+      // the ERP or any internal plumbing.
+      intro: (row.description?.trim())
         || `Tailored ${row.label.toLowerCase()} from the Hilton bench. Browse the active pieces, then book the cut that suits the way you wear them.`,
       heroImage: hero,
       heroAlt: row.label,
@@ -157,7 +173,19 @@ export default async function LibraryPage({
   // still sees the row in /admin/garments so they can decide whether
   // to keep it Hidden or clean up.
   if (dynamicCategories !== undefined && sections.length === 0) notFound();
-  const lib = { ...baseLib, sections };
+
+  // Editor-managed description override. The hardcoded `libraries`
+  // config still ships a default intro for the built-in plural slugs
+  // (suits, jackets, shirts, trousers); the atelier can rewrite it from
+  // /admin/garments by editing the matching singular garment row's
+  // description field. Non-empty values win.
+  const garmentSlugForIntro = GARMENT_FOR_LIBRARY_SLUG[slug] ?? slug;
+  const editorIntro = await fetchGarmentDescription(garmentSlugForIntro);
+  const lib = {
+    ...baseLib,
+    sections,
+    intro: editorIntro?.trim() || baseLib.intro,
+  };
   const noErpData = erpBacked && sections.length === 0;
 
   const totalItems = lib.sections.reduce((n, s) => n + s.items.length, 0);
