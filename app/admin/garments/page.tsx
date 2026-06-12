@@ -3,14 +3,15 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, Eye, EyeOff, ArrowUpDown, Upload, RotateCcw, RefreshCw, Check } from "lucide-react";
+import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, Upload, RotateCcw, RefreshCw, Check } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import {
-  fetchGarments, upsertGarment, deleteGarment, toSlug,
-  libraryCoverSlotForGarment,
+  fetchGarments, upsertGarment, toSlug,
+  libraryCoverSlotForGarment, librarySlugForGarment,
   type Garment,
 } from "@/lib/garments";
+import { libraries } from "@/lib/libraries";
 import {
   fetchAllMediaSlots, upsertMediaSlot, deleteMediaSlot, uploadEditorialImage,
   type MediaOverride,
@@ -162,15 +163,6 @@ export default function AdminGarmentsPage() {
     setGarments((arr) => arr.map((g) => (g.slug === slug ? { ...g, ...partial } : g)));
   }
 
-  async function remove(slug: string) {
-    if (!confirm(`Remove garment "${slug}"? Steps tagged with this slug stay in the DB but won't render anywhere.`)) return;
-    setBusy(slug);
-    const { error: e } = await deleteGarment(slug);
-    setBusy(null);
-    if (e) { setError(e); return; }
-    setGarments((arr) => arr.filter((g) => g.slug !== slug));
-  }
-
   if (loading || admin === null) return <Shell><p className="text-eyebrow text-[var(--color-charcoal-500)]">Loading…</p></Shell>;
   if (!user)  return <Shell><p>Sign in required.</p></Shell>;
   if (!admin) return <Shell><p>Not authorised.</p></Shell>;
@@ -200,9 +192,6 @@ export default function AdminGarmentsPage() {
             </button>
             <Link href="/admin" className="text-eyebrow inline-flex items-center gap-2 border border-black/15 px-4 py-2.5 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors">
               Customizer options
-            </Link>
-            <Link href="/admin/fabrics" className="text-eyebrow inline-flex items-center gap-2 border border-black/15 px-4 py-2.5 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors">
-              Fabrics
             </Link>
             <Link href="/admin/orders" className="text-eyebrow inline-flex items-center gap-2 border border-black/15 px-4 py-2.5 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors">
               Orders
@@ -240,19 +229,11 @@ export default function AdminGarmentsPage() {
             placeholder="Season note (e.g. Autumn / Winter only)"
             className="sm:col-span-4 px-3 py-2.5 border border-black/15 bg-[var(--color-ivory-100)] focus:outline-none focus:border-[var(--color-burgundy-700)] text-[0.9rem]"
           />
-          <label className="sm:col-span-2 inline-flex items-center gap-2 text-[0.85rem] text-[var(--color-charcoal-700)]">
-            <input
-              type="checkbox"
-              checked={draftTiers}
-              onChange={(e) => setDraftTiers(e.target.checked)}
-            />
-            Has tiers
-          </label>
           <button
             type="button"
             onClick={add}
             disabled={!draftLabel.trim() || busy !== null}
-            className="sm:col-span-2 text-eyebrow inline-flex items-center justify-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-4 py-2.5 hover:bg-[var(--color-burgundy-800)] transition-colors disabled:opacity-50"
+            className="sm:col-span-4 text-eyebrow inline-flex items-center justify-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-4 py-2.5 hover:bg-[var(--color-burgundy-800)] transition-colors disabled:opacity-50"
           >
             <Plus size={13} strokeWidth={1.5} /> Add
           </button>
@@ -282,6 +263,12 @@ export default function AdminGarmentsPage() {
         <ul className="border-y border-black/10 divide-y divide-black/10">
           {garments.map((g) => {
             const cover = covers[libraryCoverSlotForGarment(g.slug)];
+            // The storefront default intro (from lib/libraries.ts) for this
+            // garment's library. Shown in the textarea when the atelier
+            // hasn't written its own copy yet, so the live text is visible
+            // and editable here instead of an empty box.
+            const defaultIntro = libraries[librarySlugForGarment(g.slug)]?.intro ?? "";
+            const introValue = g.description ?? defaultIntro;
             return (
             <li key={g.slug} className="grid grid-cols-12 gap-3 items-center py-4 px-2">
               {/* Cover thumbnail + upload — writes to the unified
@@ -350,31 +337,13 @@ export default function AdminGarmentsPage() {
                   className="w-12 bg-transparent border-b border-transparent hover:border-black/20 focus:border-[var(--color-burgundy-700)] focus:outline-none tabular-nums text-right"
                 />
               </div>
-              <div className="col-span-6 sm:col-span-1">
-                <label className="inline-flex items-center gap-2 text-[0.78rem] text-[var(--color-charcoal-700)]">
-                  <input
-                    type="checkbox"
-                    checked={g.has_tiers}
-                    onChange={(e) => patch(g.slug, { has_tiers: e.target.checked })}
-                  /> Tiers
-                </label>
-              </div>
-              <div className="col-span-6 sm:col-span-3 flex items-center justify-end gap-3">
+              <div className="col-span-12 sm:col-span-4 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => patch(g.slug, { active: !g.active })}
                   className="text-eyebrow inline-flex items-center gap-1.5 px-3 py-1.5 border border-black/15 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
                 >
                   {g.active ? <><Eye size={12} strokeWidth={1.5} /> Live</> : <><EyeOff size={12} strokeWidth={1.5} /> Hidden</>}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => remove(g.slug)}
-                  disabled={busy === g.slug}
-                  aria-label={`Delete ${g.label}`}
-                  className="text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors disabled:opacity-40"
-                >
-                  <Trash2 size={14} strokeWidth={1.5} />
                 </button>
               </div>
               {/* Library description — the long copy under the library
@@ -383,12 +352,17 @@ export default function AdminGarmentsPage() {
                   atelier doesn't have to hunt for a Save button. */}
               <div className="col-span-12 mt-1">
                 <label className="block">
-                  <span className="text-eyebrow text-[0.6rem] text-[var(--color-charcoal-500)]">Library description</span>
+                  <span className="text-eyebrow text-[0.6rem] text-[var(--color-charcoal-500)]">
+                    Library description
+                    <span className="ml-2 normal-case tracking-normal text-[var(--color-charcoal-400)]">
+                      {g.description == null ? "showing storefront default — edit to override" : "custom override (live)"}
+                    </span>
+                  </span>
                   <textarea
-                    rows={Math.min(5, Math.max(2, (g.description ?? "").split("\n").length + 1))}
-                    value={g.description ?? ""}
+                    rows={Math.min(6, Math.max(2, introValue.split("\n").length + 1))}
+                    value={introValue}
                     onChange={(e) => patch(g.slug, { description: e.target.value })}
-                    placeholder="Shown under the library title — e.g. 'Two- and three-piece commissions cut from the mills we trust…'. Leave blank to keep the storefront default."
+                    placeholder="Shown under the library title on /library/<slug>."
                     className="mt-1.5 w-full bg-white border border-black/10 hover:border-black/25 focus:border-[var(--color-burgundy-700)] focus:outline-none px-3 py-2 text-[0.85rem] leading-relaxed resize-y"
                   />
                 </label>
@@ -402,10 +376,8 @@ export default function AdminGarmentsPage() {
       <p className="mt-8 text-[0.78rem] text-[var(--color-charcoal-500)] leading-relaxed max-w-2xl">
         <strong className="text-[var(--color-charcoal-900)]">Position</strong> controls the order across the Design Yours
         landing tiles and the customizer sidebar (lower number = earlier).
-        <strong className="text-[var(--color-charcoal-900)]"> Has tiers</strong> turns on the Essentials / Signature / Bespoke
-        picker (suit + jacket use this; shirts + trousers don't).
         <strong className="text-[var(--color-charcoal-900)]"> Hidden</strong> keeps the slug + step assignments alive but
-        removes the garment from the storefront — handy for seasonal rotations.
+        removes the garment from the storefront, and from Customization options. Handy for seasonal rotations.
       </p>
     </Shell>
   );
