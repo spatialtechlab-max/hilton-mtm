@@ -121,8 +121,12 @@ export async function fetchLiveSteps(): Promise<LiveConfigPayload | null> {
 /** Steps shown for a category + tier + current selections (with inheritance + conditionals). */
 export function visibleLiveSteps(
   all: LiveStep[], cat: StepCategory, tierSlug: string, selections: Selections,
+  /** Data-driven tiers flag from the mtm_garments row (has_tiers). When
+   *  provided it wins over the static categoryHasTiers fallback, so the
+   *  atelier's per-garment toggle decides — no hardcoded garment list. */
+  tieredOverride?: boolean,
 ): LiveStep[] {
-  const tiered = categoryHasTiers(cat);
+  const tiered = tieredOverride ?? categoryHasTiers(cat);
   const maxRank = tierRank(tierSlug);
   // Custom garments (overcoat, tuxedo, chinos…) that the atelier hasn't
   // assigned any step to yet inherit the full step set, so they open as

@@ -758,6 +758,25 @@ function priceToNumber(v: string | number | null | undefined): number {
 /** Shown wherever a tier has no configured price. Customer-facing. */
 export const PRICE_NOT_AVAILABLE = "Price not available";
 
+/** Resolve a tier copy field (name / tagline / lead / fittings / features)
+ *  with per-garment override semantics:
+ *    1. `tier.<field>.<tier>.<garment>`  — set in the generated
+ *       "Tier copy — <Garment>" group on /admin/settings
+ *    2. `tier.<field>.<tier>`            — the shared Tier copy group
+ *    3. undefined                        — caller falls back to the
+ *       hardcoded default from the `tiers` array
+ *  Garments are never hardcoded here; whatever slug the atelier makes
+ *  Live resolves the same way. */
+export function tierCopy(
+  settings: Record<string, string> | undefined,
+  field: "name" | "tagline" | "lead" | "fittings" | "features",
+  tierSlug: string,
+  garment: string,
+): string | undefined {
+  return settings?.[`tier.${field}.${tierSlug}.${garment}`]
+    ?? settings?.[`tier.${field}.${tierSlug}`];
+}
+
 /**
  * Resolution chain for the tier price shown on the customizer:
  *

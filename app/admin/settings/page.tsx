@@ -28,6 +28,36 @@ function tierPriceDefsFor(g: Garment): SettingDef[] {
   }));
 }
 
+// Per-garment tier copy. Generated for EVERY Live garment whose Tiers
+// toggle is on (suit, jacket, overcoat, chinos… — whatever the atelier
+// hits Live). Each field overrides the shared "Tier copy" group for
+// that garment only; blank = use the shared value.
+const TIER_SLUGS = [
+  { slug: "essential", name: "Essentials" },
+  { slug: "signature", name: "Signature" },
+  { slug: "bespoke",   name: "Full Bespoke" },
+] as const;
+
+function tierCopyDefsFor(g: Garment): SettingDef[] {
+  const fields = [
+    { field: "name",     label: "Name",          kind: "text" as const,      hint: "The headline shown on the tier card." },
+    { field: "tagline",  label: "Tagline",       kind: "text" as const,      hint: "Small burgundy line shown above the name." },
+    { field: "lead",     label: "Lead time",     kind: "duration" as const,  hint: "" },
+    { field: "fittings", label: "Fittings",      kind: "text" as const,      hint: "" },
+    { field: "features", label: "Bullet points", kind: "multiline" as const, hint: "One bullet per line. Empty lines are ignored." },
+  ];
+  return TIER_SLUGS.flatMap((t) =>
+    fields.map((f) => ({
+      key: `tier.${f.field}.${t.slug}.${g.slug}`,
+      group: `Tier copy — ${g.label}`,
+      label: `${t.name} · ${f.label}`,
+      description: `${f.hint ? `${f.hint} ` : ""}Leave blank to use the shared Tier copy value.`,
+      defaultValue: "",
+      kind: f.kind,
+    })),
+  );
+}
+
 /**
  * Atelier-managed editorial copy + pricing. Every value declared in
  * SETTINGS shows up here as a row; admin edits it inline and saves.
@@ -89,11 +119,16 @@ export default function AdminSettingsPage() {
   if (!user)  return <Shell><p>Sign in required.</p></Shell>;
   if (!admin) return <Shell><p>Not authorised.</p></Shell>;
 
-  // Registry rows + a generated Pricing group for every Live garment
-  // that isn't hand-declared (the dynamic ERP-synced ones).
-  const dynamicDefs = garments
-    .filter((g) => !CORE_PRICED.has(g.slug))
-    .flatMap(tierPriceDefsFor);
+  // Registry rows + generated groups, all driven by what the atelier has
+  // made Live with the Tiers toggle on — nothing garment-specific in code:
+  //   Pricing — <Garment>   (Signature / Full Bespoke upgrade amounts;
+  //                          core four are hand-declared in the registry)
+  //   Tier copy — <Garment> (per-garment override of the shared Tier copy)
+  const tiered = garments.filter((g) => g.has_tiers);
+  const dynamicDefs = [
+    ...tiered.filter((g) => !CORE_PRICED.has(g.slug)).flatMap(tierPriceDefsFor),
+    ...tiered.flatMap(tierCopyDefsFor),
+  ];
   const grouped: Record<string, SettingDef[]> = {};
   for (const def of [...SETTINGS, ...dynamicDefs]) {
     if (!grouped[def.group]) grouped[def.group] = [];

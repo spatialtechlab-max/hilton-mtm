@@ -15,7 +15,7 @@ import {
   defaultMeasurements,
   type MeasurementValues, type MeasurementUnit, type Measurement, type MeasurementGroup,
   type StepCategory, measurementGroupsForCategory,
-  categoryHasTiers, tierPriceFor,
+  categoryHasTiers, tierPriceFor, tierCopy,
 } from "@/lib/customizer";
 import {
   type LiveStep, staticLiveSteps, fetchLiveSteps, visibleLiveSteps,
@@ -123,7 +123,7 @@ function CustomizeInner() {
   // configured we say so plainly with a Book a Fitting CTA.
   const [categoryRouting, setCategoryRouting] = useState<"valid" | "not-configurable" | "none">("none");
   const [requestedGarmentLabel, setRequestedGarmentLabel] = useState<string>("");
-  const [garmentsList, setGarmentsList] = useState<{ slug: string; label: string }[]>([]);
+  const [garmentsList, setGarmentsList] = useState<{ slug: string; label: string; has_tiers: boolean }[]>([]);
   const { user } = useAuth();
   const router = useRouter();
   // useSearchParams gives us a reactive value that re-runs the URL-reading
@@ -133,11 +133,15 @@ function CustomizeInner() {
   const searchParams = useSearchParams();
 
   const storageKey = `hilton-customizer-${category}`;
-  const hasTiers   = categoryHasTiers(category);
+  // Tiers are data-driven: the mtm_garments row's has_tiers toggle decides
+  // per garment (that's why shoes show no tier picker). The static
+  // categoryHasTiers is only the fallback while the table loads.
+  const hasTiers   = garmentsList.find((g) => g.slug === category)?.has_tiers
+    ?? categoryHasTiers(category);
   const tierObj    = tiers.find((t) => t.slug === tier) ?? tiers[1];
 
   // Category- and tier-aware config from the live DB config (waistcoat sub-steps conditional)
-  const activeSteps        = useMemo(() => visibleLiveSteps(allSteps, category, tier, selections), [allSteps, category, tier, selections]);
+  const activeSteps        = useMemo(() => visibleLiveSteps(allSteps, category, tier, selections, hasTiers), [allSteps, category, tier, selections, hasTiers]);
   const activeGroups       = useMemo(() => measurementGroupsForCategory(category), [category]);
   const activeMeasurements = useMemo(() => activeGroups.flatMap((g) => g.items), [activeGroups]);
 
@@ -151,7 +155,9 @@ function CustomizeInner() {
   // Full Bespoke keep their configured baseline (admin-editable later).
   const product           = useMemo(() => (sku ? findProduct(sku) : null), [sku]);
   const essentialOverride = selectedFabric?.priceNum ?? null;
-  const basePrice  = parsePrice(tierPriceFor(category, tier, { essentialOverride, settings }));
+  // Garments without tiers price at the cloth itself (essential), so a
+  // tier-less garment never quotes a Signature/Bespoke number.
+  const basePrice  = parsePrice(tierPriceFor(category, hasTiers ? tier : "essential", { essentialOverride, settings }));
   const surcharge  = useMemo(() => surchargeTotal(activeSteps, selections), [activeSteps, selections]);
   const grandTotal = basePrice + surcharge;
 
@@ -194,7 +200,7 @@ function CustomizeInner() {
       .then((rows) => {
         if (cancelled) return;
         setActiveGarmentSlugs(new Set(rows.map((r) => r.slug)));
-        setGarmentsList(rows.map((r) => ({ slug: r.slug, label: r.label })));
+        setGarmentsList(rows.map((r) => ({ slug: r.slug, label: r.label, has_tiers: r.has_tiers })));
       })
       .catch(() => { /* keep default */ });
     return () => { cancelled = true; };
@@ -1496,15 +1502,16 @@ function TierPicker({
       {tiers.map((t) => {
         const active = t.slug === tier;
         const priceLabel = tierPriceFor(category, t.slug, { essentialOverride, settings });
-        const leadLabel = settings[`tier.lead.${t.slug}`] ?? t.lead;
-        const fittingsLabel = settings[`tier.fittings.${t.slug}`] ?? t.fittings;
-        // Editorial copy overrides — name, tagline, and the bullet list.
-        // The features setting is a single string with one bullet per
-        // line; empty lines are filtered out so the atelier can leave
-        // blank lines while drafting.
-        const nameLabel    = settings[`tier.name.${t.slug}`] ?? t.name;
-        const taglineLabel = settings[`tier.tagline.${t.slug}`] ?? t.tagline;
-        const featuresRaw  = settings[`tier.features.${t.slug}`];
+        // Editorial copy — resolved per garment first (the generated
+        // "Tier copy — <Garment>" settings group), then the shared Tier
+        // copy group, then the hardcoded default. The features setting is
+        // a single string with one bullet per line; empty lines are
+        // filtered out so the atelier can leave blank lines while drafting.
+        const leadLabel     = tierCopy(settings, "lead", t.slug, category) ?? t.lead;
+        const fittingsLabel = tierCopy(settings, "fittings", t.slug, category) ?? t.fittings;
+        const nameLabel     = tierCopy(settings, "name", t.slug, category) ?? t.name;
+        const taglineLabel  = tierCopy(settings, "tagline", t.slug, category) ?? t.tagline;
+        const featuresRaw   = tierCopy(settings, "features", t.slug, category);
         const featuresList = (featuresRaw === undefined
           ? t.features
           : featuresRaw.split("\n").map((s) => s.trim()).filter(Boolean));
@@ -1855,7 +1862,7 @@ function SummaryPanel({
               <div className="text-display text-[2.25rem] text-[var(--color-charcoal-900)] leading-none">{tierObj.name}</div>
               <div className="text-display text-[1.5rem] text-[var(--color-burgundy-700)] mt-1">{tierPriceFor(category, tier, { essentialOverride, settings })}</div>
               <div className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">
-                {settings[`tier.lead.${tier}`] ?? tierObj.lead} · {settings[`tier.fittings.${tier}`] ?? tierObj.fittings}
+                {tierCopy(settings, "lead", tier, category) ?? tierObj.lead} · {tierCopy(settings, "fittings", tier, category) ?? tierObj.fittings}
               </div>
             </div>
             <EditButton onClick={onEditTier} label="Edit tier" />
@@ -2035,7 +2042,7 @@ function AuthPanel({
           </div>
           {hasTiers && (
             <div className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">
-              {settings[`tier.lead.${tier}`] ?? tierObj.lead} · {settings[`tier.fittings.${tier}`] ?? tierObj.fittings}
+              {tierCopy(settings, "lead", tier, category) ?? tierObj.lead} · {tierCopy(settings, "fittings", tier, category) ?? tierObj.fittings}
             </div>
           )}
 
@@ -2122,7 +2129,7 @@ function CartPanel({
           </div>
           {hasTiers && (
             <div className="text-[0.8rem] text-[var(--color-charcoal-500)] mt-1">
-              {settings[`tier.lead.${tier}`] ?? tierObj.lead} · {settings[`tier.fittings.${tier}`] ?? tierObj.fittings}
+              {tierCopy(settings, "lead", tier, category) ?? tierObj.lead} · {tierCopy(settings, "fittings", tier, category) ?? tierObj.fittings}
             </div>
           )}
         </div>

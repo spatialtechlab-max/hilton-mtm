@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, Upload, RotateCcw, RefreshCw, Check } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, ArrowUpDown, Upload, RotateCcw, RefreshCw, Check } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import {
-  fetchGarments, upsertGarment, toSlug,
+  fetchGarments, upsertGarment,
   libraryCoverSlotForGarment, librarySlugForGarment,
   type Garment,
 } from "@/lib/garments";
@@ -45,11 +45,6 @@ export default function AdminGarmentsPage() {
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-
-  // New-garment form state
-  const [draftLabel, setDraftLabel] = useState("");
-  const [draftSeason, setDraftSeason] = useState("");
-  const [draftTiers, setDraftTiers] = useState(false);
 
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ added: number; message: string } | null>(null);
@@ -144,24 +139,6 @@ export default function AdminGarmentsPage() {
     syncFromErp({ silent: true }).then(() => load());
   }, [admin]);
 
-  async function add() {
-    const label = draftLabel.trim();
-    if (!label) return;
-    const slug = toSlug(label);
-    const nextPos = Math.max(0, ...garments.map((g) => g.position)) + 10;
-    setBusy(slug);
-    const { error: e } = await upsertGarment({
-      slug, label, position: nextPos,
-      season_note: draftSeason.trim(),
-      has_tiers: draftTiers,
-      active: true,
-    });
-    setBusy(null);
-    if (e) { setError(e); return; }
-    setDraftLabel(""); setDraftSeason(""); setDraftTiers(false);
-    await load();
-  }
-
   async function patch(slug: string, partial: Partial<Garment>) {
     const current = garments.find((g) => g.slug === slug);
     if (!current) return;
@@ -184,9 +161,9 @@ export default function AdminGarmentsPage() {
             <span className="text-eyebrow text-[var(--color-burgundy-700)]">Admin · Garments</span>
             <h1 className="text-display text-[clamp(2rem,4vw,3rem)] mt-2 leading-tight">Atelier offerings</h1>
             <p className="mt-3 text-[0.9rem] text-[var(--color-charcoal-500)] max-w-2xl">
-              Add, disable, or seasonally rotate the garments the storefront commissions. After adding a new
-              garment here, open <Link href="/admin" className="underline">customization options</Link> and tick the
-              new slug into each step that should appear in its flow.
+              Garments come straight from the ERP: add a category there, hit Sync, and the new row appears
+              here as Hidden. Flip it Live to open its shelf and customizer, then curate its steps in
+              <Link href="/admin" className="underline ml-1">customization options</Link>.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -217,42 +194,6 @@ export default function AdminGarmentsPage() {
           </p>
         )}
       </header>
-
-      {/* Add row */}
-      <div className="border border-black/10 bg-[var(--color-ivory-200)] p-5 mb-8">
-        <p className="text-eyebrow text-[var(--color-charcoal-500)] mb-3 inline-flex items-center gap-2">
-          <Plus size={14} strokeWidth={1.5} /> Add a garment
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-          <input
-            type="text"
-            value={draftLabel}
-            onChange={(e) => setDraftLabel(e.target.value)}
-            placeholder="Garment name (e.g. Overcoat, Chino Pants, Tuxedo)"
-            className="sm:col-span-4 px-3 py-2.5 border border-black/15 bg-[var(--color-ivory-100)] focus:outline-none focus:border-[var(--color-burgundy-700)] text-[0.9rem]"
-          />
-          <input
-            type="text"
-            value={draftSeason}
-            onChange={(e) => setDraftSeason(e.target.value)}
-            placeholder="Season note (e.g. Autumn / Winter only)"
-            className="sm:col-span-4 px-3 py-2.5 border border-black/15 bg-[var(--color-ivory-100)] focus:outline-none focus:border-[var(--color-burgundy-700)] text-[0.9rem]"
-          />
-          <button
-            type="button"
-            onClick={add}
-            disabled={!draftLabel.trim() || busy !== null}
-            className="sm:col-span-4 text-eyebrow inline-flex items-center justify-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-4 py-2.5 hover:bg-[var(--color-burgundy-800)] transition-colors disabled:opacity-50"
-          >
-            <Plus size={13} strokeWidth={1.5} /> Add
-          </button>
-        </div>
-        {draftLabel && (
-          <p className="text-[0.75rem] text-[var(--color-charcoal-500)] mt-2">
-            slug → <code className="text-[0.78rem]">{toSlug(draftLabel)}</code>
-          </p>
-        )}
-      </div>
 
       {error && (
         <p className="mb-4 text-[0.85rem] text-[var(--color-burgundy-700)] bg-[var(--color-burgundy-50)] border border-[var(--color-burgundy-700)]/20 px-3 py-2">
@@ -356,6 +297,18 @@ export default function AdminGarmentsPage() {
                 <span className="text-[0.58rem] tracking-[0.15em] uppercase text-[var(--color-charcoal-400)] mt-1">in ERP</span>
               </div>
               <div className="col-span-6 sm:col-span-2 flex items-center justify-end gap-3">
+                {/* Drives everything tier-related for this garment: the
+                    Essentials / Signature / Bespoke picker on the
+                    storefront, plus its generated Pricing and Tier copy
+                    groups in /admin/settings. Off = a flat made-to-measure
+                    flow (shoes, belts, ties). */}
+                <label className="inline-flex items-center gap-1.5 text-[0.7rem] tracking-[0.1em] uppercase text-[var(--color-charcoal-600)]" title="Show the Essentials / Signature / Full Bespoke picker for this garment">
+                  <input
+                    type="checkbox"
+                    checked={g.has_tiers}
+                    onChange={(e) => patch(g.slug, { has_tiers: e.target.checked })}
+                  /> Tiers
+                </label>
                 <button
                   type="button"
                   onClick={() => patch(g.slug, { active: !g.active })}
@@ -394,6 +347,8 @@ export default function AdminGarmentsPage() {
       <p className="mt-8 text-[0.78rem] text-[var(--color-charcoal-500)] leading-relaxed max-w-2xl">
         <strong className="text-[var(--color-charcoal-900)]">Position</strong> controls the order across the Design Yours
         landing tiles and the customizer sidebar (lower number = earlier).
+        <strong className="text-[var(--color-charcoal-900)]"> Tiers</strong> shows the Essentials / Signature / Full Bespoke
+        picker for that garment and unlocks its Pricing + Tier copy groups in Settings; off = a flat made-to-measure flow.
         <strong className="text-[var(--color-charcoal-900)]"> Hidden</strong> keeps the slug + step assignments alive but
         removes the garment from the storefront, and from Customization options. Handy for seasonal rotations.
       </p>
