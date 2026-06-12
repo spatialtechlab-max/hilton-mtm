@@ -649,6 +649,15 @@ export function isCustomizeCategory(v: string | null | undefined): v is StepCate
   return v === "suit" || v === "jacket" || v === "shirt" || v === "trouser";
 }
 
+/** The four built-in garments with hand-tuned step/measurement maps.
+ *  Anything else (overcoat, tuxedo, chinos, chino-pants and whatever
+ *  the atelier syncs from the ERP next) is a "custom" garment: it
+ *  inherits the full step + measurement set so the client can curate
+ *  it from /admin without a code change. */
+export function isCoreCategory(v: string | null | undefined): boolean {
+  return isCustomizeCategory(v);
+}
+
 export function stepsForCategory(cat: StepCategory): Step[] {
   return steps.filter((s) => (STEP_CATEGORIES[s.slug] ?? ["suit"]).includes(cat));
 }
@@ -677,7 +686,9 @@ export function measurementGroupsForCategory(cat: StepCategory): MeasurementGrou
     .map((g) => ({
       ...g,
       items: g.items.filter(
-        (m) => (MEASUREMENT_CATEGORIES[m.slug] ?? ["suit", "jacket", "shirt", "trouser"]).includes(cat),
+        // Custom (non-core) garments inherit every measurement so the
+        // client gets a complete tape; core garments keep their tuned set.
+        (m) => !isCoreCategory(cat) || (MEASUREMENT_CATEGORIES[m.slug] ?? ["suit", "jacket", "shirt", "trouser"]).includes(cat),
       ),
     }))
     .filter((g) => g.items.length > 0);
@@ -690,7 +701,10 @@ export function measurementGroupsForCategory(cat: StepCategory): MeasurementGrou
  * tier-like upgrades via the dedicated cuff-tier step.)
  */
 export function categoryHasTiers(cat: StepCategory): boolean {
-  return cat === "suit" || cat === "jacket";
+  // Suit + jacket use tiers; shirts + trousers don't. Custom garments
+  // (overcoat, tuxedo, chinos…) get the Essential / Signature / Bespoke
+  // picker too, so the client can sort each step into a tier from admin.
+  return cat === "suit" || cat === "jacket" || !isCoreCategory(cat);
 }
 
 /**
@@ -765,17 +779,22 @@ export function tierPriceFor(
   },
 ): string {
   const slug = (tierSlug as TierLevel) in TIER_RANK ? (tierSlug as TierLevel) : "signature";
+  // Custom garments have no static price table — they always price off
+  // the chosen fabric (Essential) plus the admin's Settings delta
+  // (Signature / Bespoke). Fall back to the suit scale only as a last
+  // resort so a number is never undefined.
+  const table = TIER_PRICE_BY_CATEGORY[cat] ?? TIER_PRICE_BY_CATEGORY.suit;
   const essentialNum = priceToNumber(opts?.essentialOverride ?? null);
   if (slug === "essential") {
     if (essentialNum > 0) return formatBhd(essentialNum);
-    return TIER_PRICE_BY_CATEGORY[cat].essential;
+    return table.essential;
   }
   const upgrade = opts?.settings?.[`tier.price.${cat}.${slug}`];
   const upgradeNum = priceToNumber(upgrade);
   if (essentialNum > 0 && upgradeNum > 0) return formatBhd(essentialNum + upgradeNum);
   if (essentialNum > 0) return formatBhd(essentialNum);
   if (upgradeNum > 0) return formatBhd(upgradeNum);
-  return TIER_PRICE_BY_CATEGORY[cat][slug];
+  return table[slug];
 }
 
 /* ───────────────── Admin seed (static config → DB) ───────────────── */

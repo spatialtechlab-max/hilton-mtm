@@ -307,15 +307,20 @@ function toFabric(item: ErpItem) {
  * are filtered out here so a new ERP category can never auto-surface
  * without the atelier explicitly enabling it in /admin/garments.
  */
-async function fetchActiveGarmentSlugs(): Promise<Set<string> | null> {
+async function fetchActiveGarmentErp(): Promise<Map<string, string[]> | null> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
   try {
     const sb = createClient(url, key);
-    const { data, error } = await sb.from("mtm_garments").select("slug,active");
+    const { data, error } = await sb.from("mtm_garments").select("slug,active,erp_categories");
     if (error || !data) return null;
-    return new Set((data as { slug: string; active: boolean }[]).filter((g) => g.active).map((g) => g.slug));
+    const rows = data as { slug: string; active: boolean; erp_categories: string[] | null }[];
+    // Active garments only → slug ⇒ its mapped ERP categoryName list.
+    // This is the dynamic source of truth so a garment the atelier
+    // synced from the ERP (overcoat, tuxedo, chino pants…) pulls its
+    // own cloths without a hardcoded entry in this file.
+    return new Map(rows.filter((g) => g.active).map((g) => [g.slug, g.erp_categories ?? []]));
   } catch {
     return null;
   }
@@ -325,12 +330,11 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const category = (searchParams.get("category") || "suit").toLowerCase();
   const includeDisabled = searchParams.get("includeDisabled") === "1";
-  const wanted = ERP_CATEGORIES_FOR_GARMENT[category] ?? [];
 
   const [items, disabled, activeGarments] = await Promise.all([
     fetchErpItems(),
     fetchDisabledSkus(),
-    fetchActiveGarmentSlugs(),
+    fetchActiveGarmentErp(),
   ]);
 
   // Gate by mtm_garments: if the atelier has hidden this garment in
@@ -342,6 +346,13 @@ export async function GET(req: Request) {
   if (activeGarments && !activeGarments.has(category)) {
     return NextResponse.json({ fabrics: [], category, gated: true });
   }
+
+  // Categories this garment pulls cloth from. Prefer the garment row's
+  // erp_categories (dynamic, set by the ERP sync) so overcoat/tuxedo/
+  // chino-pants resolve their own cloths; fall back to the hardcoded
+  // core map when the row has none (or the table is unreachable).
+  const dynamicCats = (activeGarments?.get(category) ?? []).map((c) => c.toUpperCase());
+  const wanted = dynamicCats.length > 0 ? dynamicCats : (ERP_CATEGORIES_FOR_GARMENT[category] ?? []);
 
   const fabrics = items
     .filter((i) => wanted.includes(i.categoryName.toUpperCase()))

@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from "./supabase";
 import {
-  getSeedConfig, tierRank, categoryHasTiers,
+  getSeedConfig, tierRank, categoryHasTiers, isCoreCategory,
   type StepCategory, type TierLevel, type StepKind, type Selections,
 } from "./customizer";
 
@@ -124,8 +124,15 @@ export function visibleLiveSteps(
 ): LiveStep[] {
   const tiered = categoryHasTiers(cat);
   const maxRank = tierRank(tierSlug);
+  // Custom garments (overcoat, tuxedo, chinos…) that the atelier hasn't
+  // assigned any step to yet inherit the full step set, so they open as
+  // a complete customizer out of the box. Once the client ticks even one
+  // step for the garment in /admin, that explicit selection takes over.
+  const nonCore = !isCoreCategory(cat);
+  const hasExplicit = nonCore && all.some((s) => s.appliesTo.includes(cat));
   return all.filter((s) => {
-    if (!s.appliesTo.includes(cat)) return false;
+    const applies = s.appliesTo.includes(cat) || (nonCore && !hasExplicit);
+    if (!applies) return false;
     if (tiered && s.tier && tierRank(s.tier) > maxRank) return false;
     if (s.requiresSlug && selections[s.requiresSlug] !== s.requiresValue) return false;
     return true;

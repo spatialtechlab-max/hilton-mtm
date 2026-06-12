@@ -15,7 +15,7 @@ import {
   defaultMeasurements,
   type MeasurementValues, type MeasurementUnit, type Measurement, type MeasurementGroup,
   type StepCategory, measurementGroupsForCategory,
-  categoryHasTiers, isCustomizeCategory, tierPriceFor,
+  categoryHasTiers, tierPriceFor,
 } from "@/lib/customizer";
 import {
   type LiveStep, staticLiveSteps, fetchLiveSteps, visibleLiveSteps,
@@ -247,21 +247,20 @@ function CustomizeInner() {
     // not-yet-configured garment (show "book a fitting" empty state), or
     // no/invalid category (show the picker).
     const rawTrim = (raw ?? "").trim();
-    const isConfigurable = isCustomizeCategory(raw);
-    const isKnownGarment = rawTrim && activeGarmentSlugs.has(rawTrim);
-    if (isConfigurable && isKnownGarment) {
-      setCategoryRouting("valid");
-    } else if (isKnownGarment) {
-      setCategoryRouting("not-configurable");
+    // Every Live garment is configurable now: core garments (suit / jacket
+    // / shirt / trouser) use their tuned flow, custom garments (overcoat,
+    // tuxedo, chinos…) inherit the full step + measurement set. A category
+    // that isn't a Live garment falls through to the Design Yours picker.
+    const isKnownGarment = !!rawTrim && activeGarmentSlugs.has(rawTrim);
+    setCategoryRouting(isKnownGarment ? "valid" : "none");
+    if (isKnownGarment) {
       setRequestedGarmentLabel(
         garmentsList.find((g) => g.slug === rawTrim)?.label
           ?? rawTrim.charAt(0).toUpperCase() + rawTrim.slice(1),
       );
-    } else {
-      setCategoryRouting("none");
     }
-    const validUrlCategory = isConfigurable && isKnownGarment;
-    const cat: StepCategory = validUrlCategory ? raw : "suit";
+    const validUrlCategory = isKnownGarment;
+    const cat: StepCategory = (validUrlCategory ? rawTrim : "suit") as StepCategory;
     // Sebastian (the concierge) can pass ?tier=signature etc. We honour it
     // even when it overrides the user's prior saved state, so that picking
     // "Bespoke" in chat truly arrives in the bespoke flow.
@@ -511,7 +510,13 @@ function CustomizeInner() {
     phase === "fabric" ||
     (phase === "tier" && !selectedFabric) ||
     (phase === "spec" && safeStepIdx === 0 && !hasTiers && !selectedFabric);
-  const copy = CATEGORY_COPY[category];
+  // Custom garments (overcoat, tuxedo, chinos…) have no hand-written
+  // header copy, so fall back to a label-driven line built from the
+  // garment name the atelier set in /admin/garments.
+  const copy = CATEGORY_COPY[category] ?? {
+    h1: `Your ${(requestedGarmentLabel || category).toLowerCase()}, made to measure.`,
+    intro: "Choose your cloth, then the cut and detail of the garment and your measurements. At the end, take your specification with you.",
+  };
 
   // No category in the URL (or an unknown one) → show the home-style
   // picker tiles so the visitor explicitly chooses what to make.
