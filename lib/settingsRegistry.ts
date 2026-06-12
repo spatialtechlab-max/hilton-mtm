@@ -10,14 +10,10 @@
 
 export type SettingDef = {
   key: string;
-  group:
-    | "PDP"
-    | "Pricing — Suit"
-    | "Pricing — Jacket"
-    | "Pricing — Shirt"
-    | "Pricing — Trouser"
-    | "Tier copy"
-    | "Shipping";
+  // Free-form: the registry ships the known groups, and /admin/settings
+  // also GENERATES "Pricing — <Garment>" groups for every Live garment
+  // synced from the ERP, so the group list can't stay a closed union.
+  group: string;
   label: string;
   description?: string;
   defaultValue: string;

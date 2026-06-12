@@ -755,6 +755,9 @@ function priceToNumber(v: string | number | null | undefined): number {
   return m ? Number(m[0]) : 0;
 }
 
+/** Shown wherever a tier has no configured price. Customer-facing. */
+export const PRICE_NOT_AVAILABLE = "Price not available";
+
 /**
  * Resolution chain for the tier price shown on the customizer:
  *
@@ -779,18 +782,29 @@ export function tierPriceFor(
   },
 ): string {
   const slug = (tierSlug as TierLevel) in TIER_RANK ? (tierSlug as TierLevel) : "signature";
-  // Custom garments have no static price table — they always price off
-  // the chosen fabric (Essential) plus the admin's Settings delta
-  // (Signature / Bespoke). Fall back to the suit scale only as a last
-  // resort so a number is never undefined.
-  const table = TIER_PRICE_BY_CATEGORY[cat] ?? TIER_PRICE_BY_CATEGORY.suit;
   const essentialNum = priceToNumber(opts?.essentialOverride ?? null);
+  const upgrade = opts?.settings?.[`tier.price.${cat}.${slug}`];
+  const upgradeNum = priceToNumber(upgrade);
+
+  // Custom garments (overcoat, tuxedo, chinos…) have no static price
+  // table and we never assume one. Essential is the chosen cloth's
+  // price; Signature / Full Bespoke exist only once the atelier sets
+  // the upgrade amount in /admin/settings. Anything unset reads
+  // "Not available" — transparent over invented numbers.
+  if (!isCoreCategory(cat)) {
+    if (slug === "essential") {
+      return essentialNum > 0 ? formatBhd(essentialNum) : PRICE_NOT_AVAILABLE;
+    }
+    if (upgradeNum > 0 && essentialNum > 0) return formatBhd(essentialNum + upgradeNum);
+    if (upgradeNum > 0) return formatBhd(upgradeNum);
+    return PRICE_NOT_AVAILABLE;
+  }
+
+  const table = TIER_PRICE_BY_CATEGORY[cat];
   if (slug === "essential") {
     if (essentialNum > 0) return formatBhd(essentialNum);
     return table.essential;
   }
-  const upgrade = opts?.settings?.[`tier.price.${cat}.${slug}`];
-  const upgradeNum = priceToNumber(upgrade);
   if (essentialNum > 0 && upgradeNum > 0) return formatBhd(essentialNum + upgradeNum);
   if (essentialNum > 0) return formatBhd(essentialNum);
   if (upgradeNum > 0) return formatBhd(upgradeNum);

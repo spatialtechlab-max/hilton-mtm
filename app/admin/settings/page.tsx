@@ -9,6 +9,24 @@ import {
   SETTINGS, fetchAllSettings, upsertSetting, deleteSetting,
   type SettingDef,
 } from "@/lib/settings";
+import { fetchGarments, type Garment } from "@/lib/garments";
+
+// Garments whose tier-price rows are hand-declared in the registry.
+// Everything else Live (overcoat, tuxedo, chinos…) gets its rows
+// generated below, so the atelier can price any garment's Signature /
+// Full Bespoke upgrade without a code change.
+const CORE_PRICED = new Set(["suit", "jacket", "shirt", "trouser"]);
+
+function tierPriceDefsFor(g: Garment): SettingDef[] {
+  return (["signature", "bespoke"] as const).map((tier) => ({
+    key: `tier.price.${g.slug}.${tier}`,
+    group: `Pricing — ${g.label}`,
+    label: `${g.label} · ${tier === "signature" ? "Signature" : "Full Bespoke"} upgrade`,
+    description: `Added to the fabric price to make the ${tier === "signature" ? "Signature" : "Full Bespoke"} commission total. Until set, the storefront shows "Price not available" for this tier.`,
+    defaultValue: "",
+    kind: "currency",
+  }));
+}
 
 /**
  * Atelier-managed editorial copy + pricing. Every value declared in
@@ -21,6 +39,7 @@ export default function AdminSettingsPage() {
   const [admin, setAdmin] = useState<boolean | null>(null);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [garments, setGarments] = useState<Garment[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,8 +51,12 @@ export default function AdminSettingsPage() {
   async function load() {
     setLoadingData(true);
     try {
-      const map = await fetchAllSettings();
+      const [map, g] = await Promise.all([
+        fetchAllSettings(),
+        fetchGarments({ activeOnly: true }).catch(() => [] as Garment[]),
+      ]);
       setOverrides(map);
+      setGarments(g);
       setDraft({});
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't load settings.");
@@ -66,8 +89,13 @@ export default function AdminSettingsPage() {
   if (!user)  return <Shell><p>Sign in required.</p></Shell>;
   if (!admin) return <Shell><p>Not authorised.</p></Shell>;
 
+  // Registry rows + a generated Pricing group for every Live garment
+  // that isn't hand-declared (the dynamic ERP-synced ones).
+  const dynamicDefs = garments
+    .filter((g) => !CORE_PRICED.has(g.slug))
+    .flatMap(tierPriceDefsFor);
   const grouped: Record<string, SettingDef[]> = {};
-  for (const def of SETTINGS) {
+  for (const def of [...SETTINGS, ...dynamicDefs]) {
     if (!grouped[def.group]) grouped[def.group] = [];
     grouped[def.group].push(def);
   }
@@ -151,7 +179,7 @@ export default function AdminSettingsPage() {
                         />
                       )}
                       <p className="text-[0.68rem] text-[var(--color-charcoal-400)] mt-1">
-                        {def.kind === "multiline" ? "One bullet per line" : `Default · ${def.defaultValue}`}
+                        {def.kind === "multiline" ? "One bullet per line" : `Default · ${def.defaultValue || "not set (storefront shows 'Price not available')"}`}
                       </p>
                     </div>
                     <div className="md:col-span-3 flex items-center justify-end gap-2">
