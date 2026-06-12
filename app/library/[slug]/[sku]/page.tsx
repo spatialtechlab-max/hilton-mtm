@@ -9,9 +9,10 @@ import { AddToCartButton } from "@/components/AddToCartButton";
 import { PlaceholderBadge, isPlaceholder } from "@/components/PlaceholderBadge";
 import {
   findProduct, productGallery, allProductParams, libraries,
-  type CustomizeCategory, type ProductHit,
+  type CustomizeCategory, type ProductHit, type Library,
 } from "@/lib/libraries";
 import { fetchErpItems, sectionsFromErp, isErpBacked } from "@/lib/erp";
+import { createClient } from "@supabase/supabase-js";
 
 /** Map an ERP categoryName onto the customizer's garment slug, so every
  *  ERP-backed PDP gets the Customise CTA driving into the right flow.
@@ -35,21 +36,71 @@ async function resolveProduct(slug: string, sku: string): Promise<ProductHit | n
   const staticHit = findProduct(sku);
   if (staticHit && staticHit.library.slug === slug) return staticHit;
 
-  if (!isErpBacked(slug)) return null;
-  const lib = libraries[slug];
-  if (!lib) return null;
-  const sections = sectionsFromErp(slug, await fetchErpItems());
-  for (const section of sections) {
-    const item = section.items.find((it) => it.sku === sku);
-    if (item) {
-      // ERP items inherit their customise category from the ERP
-      // categoryName so each PDP exposes the right configurator flow
-      // (SUITING → suit, SHIRTING → shirt, etc.).
-      const customize = customizeForErpType(item.type);
-      return { item, library: { ...lib, sections }, section, customize };
+  if (isErpBacked(slug) && libraries[slug]) {
+    const lib = libraries[slug];
+    const sections = sectionsFromErp(slug, await fetchErpItems());
+    for (const section of sections) {
+      const item = section.items.find((it) => it.sku === sku);
+      if (item) {
+        // ERP items inherit their customise category from the ERP
+        // categoryName so each PDP exposes the right configurator flow
+        // (SUITING → suit, SHIRTING → shirt, etc.).
+        const customize = customizeForErpType(item.type);
+        return { item, library: { ...lib, sections }, section, customize };
+      }
     }
+    return null;
   }
-  return null;
+
+  // Dynamic path — everything is data-driven, same contract as the
+  // /library/[slug] list page: a Live mtm_garments row with
+  // erp_categories resolves its own PDPs, no code edit ever. The
+  // Customise CTA drives into that garment's own customizer flow
+  // (the customizer accepts any Live garment slug now).
+  return dynamicGarmentHit(slug, sku);
+}
+
+async function dynamicGarmentHit(slug: string, sku: string): Promise<ProductHit | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  try {
+    const sb = createClient(url, key);
+    const { data, error } = await sb
+      .from("mtm_garments")
+      .select("slug,label,active,erp_categories,description")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (error || !data) return null;
+    const row = data as {
+      slug: string; label: string; active: boolean;
+      erp_categories: string[] | null; description: string | null;
+    };
+    if (!row.active) return null;
+    const erpCategories = (row.erp_categories ?? []).filter(Boolean);
+    if (erpCategories.length === 0) return null;
+    const sections = sectionsFromErp(slug, await fetchErpItems(), erpCategories);
+    for (const section of sections) {
+      const item = section.items.find((it) => it.sku === sku);
+      if (item) {
+        const lib: Library = {
+          slug: row.slug,
+          eyebrow: `The ${row.label} Library`,
+          title: `${row.label}.`,
+          intro: row.description?.trim() || "",
+          heroImage: "",
+          heroAlt: row.label,
+          stats: [],
+          sections,
+        };
+        // The garment's own slug IS its customizer category.
+        return { item, library: lib, section, customize: row.slug as CustomizeCategory };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export function generateStaticParams() {
@@ -189,7 +240,7 @@ export default async function ProductPage({
                     }
                     className="w-full text-eyebrow inline-flex items-center justify-center gap-3 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-8 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors"
                   >
-                    <Sparkles size={16} strokeWidth={1.5} /> {CUSTOMIZE_LABEL[customize]}
+                    <Sparkles size={16} strokeWidth={1.5} /> {CUSTOMIZE_LABEL[customize] ?? `Customise this ${library.title.replace(/\.$/, "").toLowerCase()}`}
                     <ArrowRight size={16} strokeWidth={1.5} />
                   </Link>
                 ) : (
