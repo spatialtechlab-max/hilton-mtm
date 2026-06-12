@@ -272,9 +272,16 @@ export function sectionsFromErp(slug: string, items: ErpItem[], overrideCategori
     ?? [];
   if (wanted.length === 0) return [];
   const wantedUpper = wanted.map((c) => c.toUpperCase());
+  // Built-in libraries (suits / jackets) are photo-led, so they require an
+  // on-form garment shot. Dynamic garments synced from the ERP (overcoat,
+  // tuxedo, chino pants…) frequently arrive before photography — gating
+  // them on a photo would 404 the whole shelf even though the products
+  // exist. For those we show the items with a placeholder, matching the
+  // customizer fabric picker, rather than hide a real, in-stock garment.
+  const requireShot = overrideCategories === undefined;
   const filtered = items
     .filter((i) => wantedUpper.includes(i.categoryName.toUpperCase()))
-    .filter(hasGarmentShot);
+    .filter((i) => !requireShot || hasGarmentShot(i));
   if (filtered.length === 0) return [];
 
   // Group by brand for a clean sub-section header. Decode entities first
