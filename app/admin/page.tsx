@@ -488,7 +488,7 @@ export default function AdminPage() {
                       {optCount === 0 && (
                         <div className="px-5 py-3 text-[0.8rem] text-[var(--color-charcoal-400)] italic">No options yet</div>
                       )}
-                      <AddOption stepSlug={s.slug} stepKind={s.kind} onAdded={load} />
+                      <AddOption stepSlug={s.slug} stepKind={s.kind} existingValues={(optionsByStep[s.slug] ?? []).map((o) => o.value)} onAdded={load} />
                     </div>
                   </>
                 )}
@@ -922,7 +922,6 @@ function OptionRow({
         {option.label}
         {!option.active && <em className="text-[0.7rem] text-[var(--color-charcoal-400)] ml-2 not-italic">· hidden</em>}
       </span>
-      <code className="text-[0.72rem] text-[var(--color-charcoal-400)] hidden sm:inline">{option.value}</code>
       {confirmDel ? (
         <span className="inline-flex items-center gap-2">
           <button onClick={remove} disabled={busy} className="text-[0.72rem] tracking-wide uppercase text-[var(--color-burgundy-700)]">Confirm</button>
@@ -953,14 +952,14 @@ function OptionRow({
 
 /* ── Add option ── */
 function AddOption({
-  stepSlug, stepKind, onAdded,
+  stepSlug, stepKind, existingValues, onAdded,
 }: {
   stepSlug: string;
   stepKind: string;
+  existingValues: string[];
   onAdded: () => Promise<void> | void;
 }) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState("");
   const [label, setLabel] = useState("");
   const [color, setColor] = useState("");
   // Image picked by the admin. We alpha-key it client-side BEFORE upload
@@ -986,20 +985,27 @@ function AddOption({
   }
 
   async function add() {
-    if (!value.trim() || !label.trim()) { setErr("Value and label are required."); return; }
+    if (!label.trim()) { setErr("Give the option a label."); return; }
+    // The internal value is auto-generated from the label (slugified +
+    // de-duped within this step) — the atelier never types a code.
+    const existing = new Set(existingValues);
+    const base = toSlug(label) || "option";
+    let value = base;
+    let n = 2;
+    while (existing.has(value)) { value = `${base}-${n}`; n++; }
     setBusy(true); setErr(null);
     try {
       let image_url: string | null = null;
       if (file) image_url = await uploadOptionImage(file);
       await insertOption({
         step_slug: stepSlug,
-        value: value.trim(),
+        value,
         label: label.trim(),
         color: stepKind === "swatch" ? (color.trim() || null) : null,
         image_url,
       });
       setOpen(false);
-      setValue(""); setLabel(""); setColor("");
+      setLabel(""); setColor("");
       setFile(null); setPreview(null);
       await onAdded();
     } catch (e) {
@@ -1019,8 +1025,7 @@ function AddOption({
   return (
     <div className="px-5 py-4 bg-[var(--color-ivory-200)]/60 space-y-3">
       <div className="flex flex-wrap items-end gap-4">
-        <Field label="Value"><input value={value} onChange={(e) => setValue(e.target.value)} placeholder="peak" className={inputCls + " w-40"} /></Field>
-        <Field label="Label"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Peak lapel" className={inputCls + " w-56"} /></Field>
+        <Field label="Label (what the customer sees)"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Full lining" className={inputCls + " w-72"} /></Field>
         {stepKind === "swatch" && (
           <Field label="Colour (hex)"><input value={color} onChange={(e) => setColor(e.target.value)} placeholder="#6e2639" className={inputCls + " w-32"} /></Field>
         )}
