@@ -18,14 +18,25 @@ import { createClient } from "@supabase/supabase-js";
  * the storefront is gated by the matching garment's active flag in
  * mtm_garments — so the atelier can hide e.g. /library/shirts from
  * /admin/garments when shirting cloth runs out, without touching code.
- * Library slugs NOT in this map (cloths, shoes, ties, belts, tailoring)
- * are accessory / editorial libraries and aren't gated.
+ *
+ * Every static library that has a matching garment row is gated here, so
+ * a Hidden garment is unreachable by direct URL too (e.g. /library/shoes
+ * 404s when Shoes is Hidden) — the same Live/Hidden notation the homepage
+ * tiles and the Design Yours picker follow. Note the singular/plural and
+ * slug shapes: garment `shoes` (already plural) vs `tie` / `belt`.
+ * Dynamic ERP garments (overcoat, chino-pants, …) take the
+ * dynamicLibraryFromGarment() path, which already checks `active`, so
+ * they don't need an entry here. Only cloths + tailoring (no garment)
+ * stay ungated.
  */
 const GARMENT_FOR_LIBRARY_SLUG: Record<string, string> = {
   suits: "suit",
   jackets: "jacket",
   shirts: "shirt",
   trousers: "trouser",
+  shoes: "shoes",
+  ties: "tie",
+  belts: "belt",
 };
 
 /** Fetch the atelier-edited library description for a garment row. Null
