@@ -63,6 +63,47 @@ export async function updateStep(slug: string, patch: StepPatch): Promise<void> 
   if (error) throw error;
 }
 
+/** Create a brand-new step (module). The atelier names it, picks the kind
+ *  + tier + which garments it shows for; options are added afterward via
+ *  insertOption. */
+export async function insertStep(row: {
+  slug: string;
+  title: string;
+  kind: string;
+  tier: string | null;
+  applies_to: string[];
+  sort_order?: number;
+}): Promise<DbStep> {
+  const { data, error } = await supabase
+    .from("mtm_steps")
+    .insert({
+      slug: row.slug,
+      title: row.title,
+      eyebrow: null,
+      subtitle: null,
+      description: null,
+      kind: row.kind,
+      applies_to: row.applies_to,
+      tier: row.tier,
+      requires_slug: null,
+      requires_value: null,
+      sort_order: row.sort_order ?? 999,
+      active: true,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as DbStep;
+}
+
+/** Delete a step and (cascade) its options. Used to remove a module the
+ *  atelier created. */
+export async function deleteStep(slug: string): Promise<void> {
+  await supabase.from("mtm_options").delete().eq("step_slug", slug);
+  const { error } = await supabase.from("mtm_steps").delete().eq("slug", slug);
+  if (error) throw error;
+}
+
 /* ── Per-garment step order ──────────────────────────────────────────
    The customizer sequence ("what comes after what") is controlled per
    garment, stored in mtm_settings under `step.order.<garment>` as a JSON

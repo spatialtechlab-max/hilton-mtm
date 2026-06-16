@@ -8,10 +8,10 @@ import { isAdmin } from "@/lib/admin";
 import {
   fetchSteps, fetchOptions, seedFromConfig,
   updateOption, insertOption, deleteOption, uploadOptionImage,
-  updateStep, fetchStepOrders, saveStepOrder, applyStepOrder,
+  updateStep, insertStep, deleteStep, fetchStepOrders, saveStepOrder, applyStepOrder,
   type DbStep, type DbOption,
 } from "@/lib/adminData";
-import { fetchGarments, type Garment } from "@/lib/garments";
+import { fetchGarments, toSlug, type Garment } from "@/lib/garments";
 import { alphaKeyToPng } from "@/lib/imageKey";
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -51,6 +51,8 @@ export default function AdminPage() {
   // atelier opens a step to see/edit its options. Expand all / Collapse
   // all toggle every visible card at once.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // Slug of the step awaiting a delete confirmation (inline, no blocking dialog).
+  const [confirmDelStep, setConfirmDelStep] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -341,6 +343,18 @@ export default function AdminPage() {
               <ChevronUp size={13} strokeWidth={2} /> Collapse all
             </button>
           </div>
+          <div className="mb-5">
+            <AddStep
+              garments={garments.filter((g) => g.active)}
+              defaultGarments={filter === "all" ? [] : [filter]}
+              nextSortOrder={Math.max(0, ...allSteps.map((s) => s.sort_order)) + 10}
+              existingSlugs={new Set(allSteps.map((s) => s.slug))}
+              onAdded={async (slug) => {
+                await load();
+                setExpanded((p) => { const n = new Set(p); n.add(slug); return n; });
+              }}
+            />
+          </div>
           <div className={filter === "all" ? "columns-1 xl:columns-2 gap-5 [&>*]:mb-5" : "flex flex-col gap-5"}>
             {filter !== "all" && orderedVisible.length > 1 && (
               <p className="text-[0.8rem] text-[var(--color-charcoal-600)] bg-[var(--color-ivory-200)] border border-black/10 px-4 py-2.5">
@@ -434,6 +448,38 @@ export default function AdminPage() {
                           Diagram size · 800 × 1000 px · 4:5 portrait · PNG with transparent background
                         </span>
                       )}
+                      {/* Delete the whole module (step + its options) */}
+                      <span className="basis-full flex items-center justify-end gap-2 pt-1">
+                        {confirmDelStep === s.slug ? (
+                          <>
+                            <span className="text-[0.72rem] text-[var(--color-charcoal-600)] mr-auto">
+                              Delete the whole &ldquo;{s.title}&rdquo; module and its {optCount} option{optCount === 1 ? "" : "s"}?
+                            </span>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                setBusy(true);
+                                try { await deleteStep(s.slug); setConfirmDelStep(null); await load(); }
+                                catch (e) { setError(e instanceof Error ? e.message : "Couldn't delete the module."); }
+                                finally { setBusy(false); }
+                              }}
+                              disabled={busy}
+                              className="text-[0.72rem] tracking-wide uppercase text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)]"
+                            >
+                              Delete module
+                            </button>
+                            <button type="button" onClick={() => setConfirmDelStep(null)} className="text-[0.72rem] tracking-wide uppercase text-[var(--color-charcoal-400)]">Cancel</button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDelStep(s.slug)}
+                            className="text-eyebrow inline-flex items-center gap-1.5 text-[var(--color-charcoal-400)] hover:text-[var(--color-burgundy-700)] transition-colors"
+                          >
+                            <Trash2 size={12} strokeWidth={1.5} /> Delete module
+                          </button>
+                        )}
+                      </span>
                     </div>
                     <div className="divide-y divide-black/5">
                       {(optionsByStep[s.slug] ?? []).map((o) => (
@@ -551,6 +597,129 @@ function AppliesToEditor({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/* ── Create a new step / module ──────────────────────────────────────
+   Lets the atelier add a whole new customizer module (like "Suspend your
+   style" or "To belt or not"), not just options inside an existing one.
+   They name it, pick the kind + tier + which garments it shows for; the
+   options are added afterward with the per-step "Add option". */
+function AddStep({
+  garments, defaultGarments, nextSortOrder, existingSlugs, onAdded,
+}: {
+  garments: Garment[];
+  defaultGarments: string[];
+  nextSortOrder: number;
+  existingSlugs: Set<string>;
+  onAdded: (slug: string) => void | Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [kind, setKind] = useState("diagram");
+  const [tier, setTier] = useState("essential");
+  const [appliesTo, setAppliesTo] = useState<string[]>(defaultGarments);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  function toggleG(slug: string) {
+    setAppliesTo((a) => (a.includes(slug) ? a.filter((x) => x !== slug) : [...a, slug]));
+  }
+
+  async function add() {
+    if (!title.trim()) { setErr("Give the module a name."); return; }
+    if (appliesTo.length === 0) { setErr("Pick at least one garment this module shows for."); return; }
+    let slug = toSlug(title) || "module";
+    if (existingSlugs.has(slug)) {
+      let n = 2;
+      while (existingSlugs.has(`${slug}-${n}`)) n++;
+      slug = `${slug}-${n}`;
+    }
+    setBusy(true); setErr(null);
+    try {
+      await insertStep({ slug, title: title.trim(), kind, tier, applies_to: appliesTo, sort_order: nextSortOrder });
+      setTitle(""); setKind("diagram"); setTier("essential"); setAppliesTo(defaultGarments); setOpen(false);
+      await onAdded(slug);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Couldn't create the module.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => { setAppliesTo(defaultGarments); setOpen(true); }}
+        className="w-full text-eyebrow inline-flex items-center justify-center gap-2 border border-dashed border-[var(--color-burgundy-700)]/40 text-[var(--color-burgundy-700)] px-4 py-3 hover:bg-[var(--color-burgundy-50)] transition-colors"
+      >
+        <Plus size={14} strokeWidth={1.5} /> Add a new module
+      </button>
+    );
+  }
+  return (
+    <div className="border border-[var(--color-burgundy-700)]/30 bg-[var(--color-ivory-200)] p-5">
+      <p className="text-eyebrow text-[var(--color-charcoal-500)] mb-4 inline-flex items-center gap-2">
+        <Plus size={14} strokeWidth={1.5} /> New module
+      </p>
+      <div className="flex flex-wrap items-end gap-4">
+        <Field label="Module name">
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Suspend your style" className={inputCls + " w-64"} />
+        </Field>
+        <Field label="Kind">
+          <select value={kind} onChange={(e) => setKind(e.target.value)} className={inputCls + " w-40"}>
+            <option value="diagram">Diagram</option>
+            <option value="swatch">Swatch (colour)</option>
+            <option value="gallery">Gallery (image)</option>
+            <option value="choice">Choice (text)</option>
+          </select>
+        </Field>
+        <Field label="Tier">
+          <select value={tier} onChange={(e) => setTier(e.target.value)} className={inputCls + " w-40"}>
+            <option value="essential">Essential</option>
+            <option value="signature">Signature</option>
+            <option value="bespoke">Full Bespoke</option>
+          </select>
+        </Field>
+      </div>
+      <div className="mt-4">
+        <span className="text-eyebrow text-[0.6rem] text-[var(--color-charcoal-500)]">Visible for</span>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {garments.map((g) => {
+            const on = appliesTo.includes(g.slug);
+            return (
+              <button
+                key={g.slug}
+                type="button"
+                onClick={() => toggleG(g.slug)}
+                className={`text-eyebrow text-[0.6rem] inline-flex items-center gap-1 px-2.5 py-1 border transition-colors ${
+                  on
+                    ? "bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] border-[var(--color-burgundy-700)]"
+                    : "text-[var(--color-charcoal-500)] border-black/15 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)]"
+                }`}
+              >
+                {on ? <Eye size={11} strokeWidth={1.5} /> : <EyeOff size={11} strokeWidth={1.5} />}
+                {g.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {title.trim() && (
+        <p className="text-[0.72rem] text-[var(--color-charcoal-500)] mt-2">slug → <code className="text-[0.76rem]">{toSlug(title) || "module"}</code></p>
+      )}
+      {err && <p className="text-[0.8rem] text-[var(--color-burgundy-700)] mt-2">{err}</p>}
+      <div className="flex gap-2 pt-4">
+        <button onClick={add} disabled={busy} className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-4 py-2.5 hover:bg-[var(--color-burgundy-800)] disabled:opacity-60">
+          <Plus size={13} strokeWidth={1.5} /> {busy ? "Creating…" : "Create module"}
+        </button>
+        <button onClick={() => { setOpen(false); setErr(null); }} className="text-eyebrow inline-flex items-center gap-2 border border-black/20 px-4 py-2.5 hover:border-[var(--color-burgundy-700)]">Cancel</button>
+      </div>
+      <p className="text-[0.72rem] text-[var(--color-charcoal-500)] mt-3 leading-relaxed">
+        The module starts empty. After creating it, open it and use <strong>Add option</strong> to add its choices (like &ldquo;With belt loops&rdquo; / &ldquo;Without belt loops&rdquo;).
+      </p>
     </div>
   );
 }
