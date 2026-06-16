@@ -74,7 +74,11 @@ function tileFor(g: Garment, featured: boolean): Tile {
       ? `/library/${g.slug}`
       : `/customize?category=${g.slug}`;
   return {
-    category: g.tile_eyebrow || (featured ? "Bespoke commission" : "Made to measure"),
+    // One consistent eyebrow across every tile. Previously each garment
+    // showed its own tile_eyebrow ("Two-piece commission", "Standalone",
+    // "Shirting"…) while accessories fell back to "Made to measure", so the
+    // grid read inconsistently. The atelier wants them unified.
+    category: "Made to measure",
     title: `Design a ${g.label.toLowerCase()}`,
     href,
     image,
