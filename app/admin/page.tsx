@@ -425,6 +425,37 @@ export default function AdminPage() {
                       {optCount} option{optCount === 1 ? "" : "s"}
                     </span>
                   </button>
+                  {/* Delete the whole module — available right in the header,
+                      so it can be removed without expanding it. */}
+                  {confirmDelStep === s.slug ? (
+                    <span className="inline-flex items-center gap-2 shrink-0 pl-1">
+                      <span className="text-[0.7rem] text-[var(--color-charcoal-600)] hidden sm:inline">Delete this module?</span>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setBusy(true);
+                          try { await deleteStep(s.slug); setConfirmDelStep(null); await load(); }
+                          catch (e) { setError(e instanceof Error ? e.message : "Couldn't delete the module."); }
+                          finally { setBusy(false); }
+                        }}
+                        disabled={busy}
+                        className="text-[0.7rem] tracking-wide uppercase text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)]"
+                      >
+                        Delete
+                      </button>
+                      <button type="button" onClick={() => setConfirmDelStep(null)} className="text-[0.7rem] tracking-wide uppercase text-[var(--color-charcoal-400)]">Cancel</button>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelStep(s.slug)}
+                      aria-label="Delete module"
+                      title="Delete this module"
+                      className="shrink-0 p-1.5 text-[var(--color-charcoal-400)] hover:text-[var(--color-burgundy-700)] transition-colors"
+                    >
+                      <Trash2 size={15} strokeWidth={1.5} />
+                    </button>
+                  )}
                 </div>
 
                 {isOpen && (
@@ -448,38 +479,6 @@ export default function AdminPage() {
                           Diagram size · 800 × 1000 px · 4:5 portrait · PNG with transparent background
                         </span>
                       )}
-                      {/* Delete the whole module (step + its options) */}
-                      <span className="basis-full flex items-center justify-end gap-2 pt-1">
-                        {confirmDelStep === s.slug ? (
-                          <>
-                            <span className="text-[0.72rem] text-[var(--color-charcoal-600)] mr-auto">
-                              Delete the whole &ldquo;{s.title}&rdquo; module and its {optCount} option{optCount === 1 ? "" : "s"}?
-                            </span>
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                setBusy(true);
-                                try { await deleteStep(s.slug); setConfirmDelStep(null); await load(); }
-                                catch (e) { setError(e instanceof Error ? e.message : "Couldn't delete the module."); }
-                                finally { setBusy(false); }
-                              }}
-                              disabled={busy}
-                              className="text-[0.72rem] tracking-wide uppercase text-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-800)]"
-                            >
-                              Delete module
-                            </button>
-                            <button type="button" onClick={() => setConfirmDelStep(null)} className="text-[0.72rem] tracking-wide uppercase text-[var(--color-charcoal-400)]">Cancel</button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDelStep(s.slug)}
-                            className="text-eyebrow inline-flex items-center gap-1.5 text-[var(--color-charcoal-400)] hover:text-[var(--color-burgundy-700)] transition-colors"
-                          >
-                            <Trash2 size={12} strokeWidth={1.5} /> Delete module
-                          </button>
-                        )}
-                      </span>
                     </div>
                     <div className="divide-y divide-black/5">
                       {(optionsByStep[s.slug] ?? []).map((o) => (

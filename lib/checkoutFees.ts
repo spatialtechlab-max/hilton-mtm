@@ -1,7 +1,7 @@
 /**
  * Fixed checkout fees applied to every order:
  *   - VAT: 10% of the items total (after any discount has been applied).
- *   - Shipping: a flat 3 BHD per order.
+ *   - Shipping: a flat 15 BHD per order.
  *
  * Both are computed at display time rather than persisted to the order row
  * — they're regulated/fixed amounts that shouldn't drift per order, so the
@@ -11,7 +11,7 @@
  */
 
 export const VAT_RATE = 0.10;
-export const SHIPPING_FEE = 3;
+export const SHIPPING_FEE = 15;
 
 /** Round to two decimal places without floating-point drift. */
 function round2(n: number): number {

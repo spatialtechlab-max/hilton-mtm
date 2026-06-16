@@ -358,7 +358,7 @@ function AccountDashboard({ user, onSignOut }: { user: User; onSignOut: () => vo
                 icon={<Ruler size={18} strokeWidth={1.5} />}
                 title="Saved measurements"
                 body="Your numbers, kept on file so every future order fits the same."
-                cta={{ href: "/customize", label: "Add measurements" }}
+                cta={{ href: "/account/measurements", label: "Add measurements" }}
               />
               <DashCard
                 icon={<CalendarClock size={18} strokeWidth={1.5} />}

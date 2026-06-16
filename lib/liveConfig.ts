@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from "./supabase";
 import {
-  getSeedConfig, tierRank, categoryHasTiers, isCoreCategory,
+  getSeedConfig, isCoreCategory,
   type StepCategory, type TierLevel, type StepKind, type Selections,
 } from "./customizer";
 
@@ -118,16 +118,19 @@ export async function fetchLiveSteps(): Promise<LiveConfigPayload | null> {
   }
 }
 
-/** Steps shown for a category + tier + current selections (with inheritance + conditionals). */
+/** Steps shown for a category + current selections (with inheritance + conditionals).
+ *
+ *  Tier governs PRICE, not which modules appear. Every module the atelier
+ *  assigned to a garment shows at every tier, so the customizer's
+ *  "Step X of N" total matches the admin's module count for that garment
+ *  (no more "admin says 22, customer sees 21"). The atelier controls
+ *  per-step visibility through applies_to (the garment chips), not tier.
+ *  `_tierSlug` / `_tieredOverride` are kept in the signature for callers
+ *  but no longer filter the step set. */
 export function visibleLiveSteps(
-  all: LiveStep[], cat: StepCategory, tierSlug: string, selections: Selections,
-  /** Data-driven tiers flag from the mtm_garments row (has_tiers). When
-   *  provided it wins over the static categoryHasTiers fallback, so the
-   *  atelier's per-garment toggle decides — no hardcoded garment list. */
-  tieredOverride?: boolean,
+  all: LiveStep[], cat: StepCategory, _tierSlug: string, selections: Selections,
+  _tieredOverride?: boolean,
 ): LiveStep[] {
-  const tiered = tieredOverride ?? categoryHasTiers(cat);
-  const maxRank = tierRank(tierSlug);
   // Custom garments (overcoat, tuxedo, chinos…) that the atelier hasn't
   // assigned any step to yet inherit the full step set, so they open as
   // a complete customizer out of the box. Once the client ticks even one
@@ -137,7 +140,6 @@ export function visibleLiveSteps(
   return all.filter((s) => {
     const applies = s.appliesTo.includes(cat) || (nonCore && !hasExplicit);
     if (!applies) return false;
-    if (tiered && s.tier && tierRank(s.tier) > maxRank) return false;
     if (s.requiresSlug && selections[s.requiresSlug] !== s.requiresValue) return false;
     return true;
   });

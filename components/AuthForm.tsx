@@ -73,7 +73,13 @@ export function AuthForm({
     if (!email.trim()) { setError("Enter your email above first."); return; }
     if (!isSupabaseConfigured) { setError("Authentication isn't configured yet."); return; }
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: redirect });
+    // Send the reset link to the dedicated set-a-new-password page, NOT the
+    // current page. The client auto-exchanges the recovery token in the URL,
+    // so pointing it at /account would just sign the user straight in with no
+    // chance to choose a new password.
+    const resetRedirect =
+      typeof window !== "undefined" ? `${window.location.origin}/account/reset` : undefined;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: resetRedirect });
     setLoading(false);
     if (error) { setError(error.message); return; }
     setNotice("Check your email for a password reset link.");
