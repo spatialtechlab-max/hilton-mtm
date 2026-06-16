@@ -313,7 +313,7 @@ export function sectionsFromErp(slug: string, items: ErpItem[], overrideCategori
 // SUIUS) — so a misspelled category in the ERP never makes a cloth or
 // accessory go invisible on the storefront.
 export const ERP_CATEGORIES_FOR_SLUG: Record<
-  | "ties" | "belts" | "cloths" | "shirts" | "trousers" | "chinos" | "shoes"
+  | "ties" | "belts" | "cloths" | "shirts" | "trousers" | "shoes"
   | "tailoring" | "suits" | "jackets"
   | "wallets" | "pocket-squares" | "cufflinks" | "bow-ties"
   | "overcoats" | "waistcoats",
@@ -324,7 +324,6 @@ export const ERP_CATEGORIES_FOR_SLUG: Record<
   cloths:           ["SUITING", "SUITINGS", "SUITS", "SUIES", "SUIUS", "JACKETING", "BLAZER"],
   shirts:           ["SHIRTING", "SHIIRTING", "SHIRTS"],
   trousers:         ["PANTS"],
-  chinos:           ["CHINO PANTS"],
   shoes:            ["SHOES"],
   // Tailoring stays as a combined view (suits + jackets) for any old
   // links / nav that still point at it. The new dedicated /library/suits
@@ -341,7 +340,7 @@ export const ERP_CATEGORIES_FOR_SLUG: Record<
 };
 
 export const ERP_BACKED_SLUGS = [
-  "ties", "belts", "cloths", "shirts", "trousers", "chinos", "shoes",
+  "ties", "belts", "cloths", "shirts", "trousers", "shoes",
   "tailoring", "suits", "jackets",
   "wallets", "pocket-squares", "cufflinks", "bow-ties", "overcoats", "waistcoats",
 ] as const;
