@@ -46,6 +46,11 @@ export default function AdminPage() {
   const [garments, setGarments] = useState<Garment[]>([]);
   // Per-garment step order (settings key step.order.<garment>).
   const [stepOrders, setStepOrders] = useState<Record<string, string[]>>({});
+  // Which step cards are expanded (their options dropped down). Collapsed
+  // by default so the list reads as a compact set of step titles; the
+  // atelier opens a step to see/edit its options. Expand all / Collapse
+  // all toggle every visible card at once.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -142,6 +147,14 @@ export default function AdminPage() {
   // saved order ("what comes after what" in the customer flow). All-steps
   // view keeps the global sort_order masonry.
   const orderedVisible = filter === "all" ? visible : applyStepOrder(visible, stepOrders[filter]);
+
+  const toggleExpand = (slug: string) => setExpanded((prev) => {
+    const next = new Set(prev);
+    if (next.has(slug)) next.delete(slug); else next.add(slug);
+    return next;
+  });
+  const expandAll = () => setExpanded(new Set(orderedVisible.map((s) => s.slug)));
+  const collapseAll = () => setExpanded(new Set());
 
   async function moveStep(slug: string, dir: -1 | 1) {
     if (filter === "all" || busy) return;
@@ -306,6 +319,28 @@ export default function AdminPage() {
 
           {/* Main — masonry for "all steps"; a single ordered column per
               garment so the atelier can see and set the customer sequence. */}
+          <div>
+          {/* Expand / Collapse all — top-right, so the long option lists
+              stay tucked away until the atelier opens a step. */}
+          <div className="flex items-center justify-end gap-3 mb-5">
+            <span className="text-eyebrow text-[0.62rem] text-[var(--color-charcoal-400)] mr-auto tabular-nums">
+              {expanded.size}/{orderedVisible.length} open
+            </span>
+            <button
+              type="button"
+              onClick={expandAll}
+              className="text-eyebrow inline-flex items-center gap-1.5 border border-black/15 px-3 py-1.5 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
+            >
+              <ChevronDown size={13} strokeWidth={2} /> Expand all
+            </button>
+            <button
+              type="button"
+              onClick={collapseAll}
+              className="text-eyebrow inline-flex items-center gap-1.5 border border-black/15 px-3 py-1.5 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
+            >
+              <ChevronUp size={13} strokeWidth={2} /> Collapse all
+            </button>
+          </div>
           <div className={filter === "all" ? "columns-1 xl:columns-2 gap-5 [&>*]:mb-5" : "flex flex-col gap-5"}>
             {filter !== "all" && orderedVisible.length > 1 && (
               <p className="text-[0.8rem] text-[var(--color-charcoal-600)] bg-[var(--color-ivory-200)] border border-black/10 px-4 py-2.5">
@@ -326,12 +361,16 @@ export default function AdminPage() {
                 </p>
               </div>
             )}
-            {orderedVisible.map((s, i) => (
+            {orderedVisible.map((s, i) => {
+              const isOpen = expanded.has(s.slug);
+              const optCount = (optionsByStep[s.slug] ?? []).length;
+              return (
               <div key={s.slug} className="break-inside-avoid border border-black/10 bg-[var(--color-ivory-100)]">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-4 border-b border-black/10">
+                {/* Summary row — always visible. Click the title to drop the options down. */}
+                <div className="flex items-center gap-2 px-4 py-3">
                   {filter !== "all" && (
-                    <span className="inline-flex items-center gap-1.5 mr-1">
-                      <span className="text-display text-[1.1rem] tabular-nums text-[var(--color-burgundy-700)] w-6 text-center">{i + 1}</span>
+                    <span className="inline-flex items-center gap-1 mr-1 shrink-0">
+                      <span className="text-display text-[1.05rem] tabular-nums text-[var(--color-burgundy-700)] w-5 text-center">{i + 1}</span>
                       <span className="inline-flex flex-col">
                         <button
                           type="button"
@@ -341,7 +380,7 @@ export default function AdminPage() {
                           title="Move earlier in the flow"
                           className="text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
                         >
-                          <ChevronUp size={15} strokeWidth={2} />
+                          <ChevronUp size={14} strokeWidth={2} />
                         </button>
                         <button
                           type="button"
@@ -351,42 +390,66 @@ export default function AdminPage() {
                           title="Move later in the flow"
                           className="text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
                         >
-                          <ChevronDown size={15} strokeWidth={2} />
+                          <ChevronDown size={14} strokeWidth={2} />
                         </button>
                       </span>
                     </span>
                   )}
-                  <span className="text-display text-[1.2rem] text-[var(--color-charcoal-900)]">{s.title}</span>
-                  <Badge>{s.kind}</Badge>
-                  <TierPicker slug={s.slug} tier={s.tier} onChanged={load} />
-                  <AppliesToEditor
-                    slug={s.slug}
-                    appliesTo={s.applies_to}
-                    garments={garments}
-                    onChanged={load}
-                  />
-                  {s.requires_slug && (
-                    <span className="basis-full text-[0.7rem] text-[var(--color-charcoal-400)]">
-                      shows if {s.requires_slug}={s.requires_value}
+                  <button
+                    type="button"
+                    onClick={() => toggleExpand(s.slug)}
+                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                  >
+                    <ChevronDown
+                      size={16}
+                      strokeWidth={2}
+                      className={`shrink-0 text-[var(--color-charcoal-400)] transition-transform ${isOpen ? "" : "-rotate-90"}`}
+                    />
+                    <span className="text-display text-[1.2rem] text-[var(--color-charcoal-900)] truncate">{s.title}</span>
+                    <Badge>{s.kind}</Badge>
+                    <span className="text-[0.72rem] text-[var(--color-charcoal-400)] shrink-0 ml-auto whitespace-nowrap">
+                      {optCount} option{optCount === 1 ? "" : "s"}
                     </span>
-                  )}
-                  {s.kind === "diagram" && (
-                    <span className="basis-full text-[0.75rem] font-medium text-[var(--color-burgundy-700)]">
-                      Diagram size · 800 × 1000 px · 4:5 portrait · PNG with transparent background
-                    </span>
-                  )}
+                  </button>
                 </div>
-                <div className="divide-y divide-black/5">
-                  {(optionsByStep[s.slug] ?? []).map((o) => (
-                    <OptionRow key={o.id} option={o} stepSlug={s.slug} stepKind={s.kind} onChanged={load} />
-                  ))}
-                  {(optionsByStep[s.slug] ?? []).length === 0 && (
-                    <div className="px-5 py-3 text-[0.8rem] text-[var(--color-charcoal-400)] italic">No options yet</div>
-                  )}
-                  <AddOption stepSlug={s.slug} stepKind={s.kind} onAdded={load} />
-                </div>
+
+                {isOpen && (
+                  <>
+                    {/* Tier, per-garment visibility, hints */}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 pb-4 border-b border-black/10">
+                      <TierPicker slug={s.slug} tier={s.tier} onChanged={load} />
+                      <AppliesToEditor
+                        slug={s.slug}
+                        appliesTo={s.applies_to}
+                        garments={garments}
+                        onChanged={load}
+                      />
+                      {s.requires_slug && (
+                        <span className="basis-full text-[0.7rem] text-[var(--color-charcoal-400)]">
+                          shows if {s.requires_slug}={s.requires_value}
+                        </span>
+                      )}
+                      {s.kind === "diagram" && (
+                        <span className="basis-full text-[0.75rem] font-medium text-[var(--color-burgundy-700)]">
+                          Diagram size · 800 × 1000 px · 4:5 portrait · PNG with transparent background
+                        </span>
+                      )}
+                    </div>
+                    <div className="divide-y divide-black/5">
+                      {(optionsByStep[s.slug] ?? []).map((o) => (
+                        <OptionRow key={o.id} option={o} stepSlug={s.slug} stepKind={s.kind} onChanged={load} />
+                      ))}
+                      {optCount === 0 && (
+                        <div className="px-5 py-3 text-[0.8rem] text-[var(--color-charcoal-400)] italic">No options yet</div>
+                      )}
+                      <AddOption stepSlug={s.slug} stepKind={s.kind} onAdded={load} />
+                    </div>
+                  </>
+                )}
               </div>
-            ))}
+              );
+            })}
+          </div>
           </div>
         </div>
       )}
