@@ -128,13 +128,12 @@ export default function AdminPage() {
     );
   }
 
-  // Admin should mirror what the customer sees — steps with active=false
-  // (the retired non-booklet inventions, or anything an atelier turns off
-  // later) belong in the disabled pile, not in the live grid or the
-  // sidebar counts.
+  // Every step is shown and live. Visibility is controlled per garment
+  // (the "Visible for" chips) and per option (the eye toggle on a row),
+  // not by a global enable/disable pile — so there's no "disabled steps"
+  // concept to manage.
   const allSteps = steps ?? [];
-  const activeSteps = allSteps.filter((s) => s.active);
-  const disabledSteps = allSteps.filter((s) => !s.active);
+  const activeSteps = allSteps;
   const stepCount = activeSteps.length;
   const notConfigured = !error && allSteps.length === 0 && !loadingData && !busy;
 
@@ -325,36 +324,6 @@ export default function AdminPage() {
                   toggle this garment on for each step you want in its customizer. Every step has a
                   per-garment visibility row in its header.
                 </p>
-              </div>
-            )}
-            {filter === "all" && disabledSteps.length > 0 && (
-              <div className="break-inside-avoid border border-dashed border-black/15 bg-[var(--color-ivory-200)] p-5">
-                <p className="text-eyebrow text-[var(--color-charcoal-500)] mb-3">
-                  Disabled steps ({disabledSteps.length})
-                </p>
-                <p className="text-[0.78rem] text-[var(--color-charcoal-600)] mb-3 leading-relaxed">
-                  Hidden from the customer customizer. Click <em>Re-enable</em> to bring one back.
-                </p>
-                <ul className="divide-y divide-black/10">
-                  {disabledSteps.map((s) => (
-                    <li key={s.slug} className="flex items-center justify-between gap-3 py-2">
-                      <div>
-                        <span className="text-[0.95rem] text-[var(--color-charcoal-900)]">{s.title}</span>
-                        <span className="ml-2 text-[0.7rem] text-[var(--color-charcoal-400)]">{s.slug}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          await updateStep(s.slug, { active: true });
-                          await load();
-                        }}
-                        className="text-eyebrow inline-flex items-center gap-1.5 border border-black/15 px-3 py-1.5 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
-                      >
-                        <Eye size={12} strokeWidth={1.5} /> Re-enable
-                      </button>
-                    </li>
-                  ))}
-                </ul>
               </div>
             )}
             {orderedVisible.map((s, i) => (
