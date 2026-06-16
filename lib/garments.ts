@@ -52,6 +52,33 @@ export async function fetchGarments(opts: { activeOnly?: boolean } = {}): Promis
   return opts.activeOnly ? rows.filter((g) => g.active) : rows;
 }
 
+/**
+ * Per-garment customizer step count — how many active mtm_steps apply to
+ * each garment slug (same number the admin GARMENT sidebar shows). The
+ * storefront uses this to classify a garment: a Live garment with ZERO
+ * steps is an "accessory" (no customization — show it under the home
+ * Accessories section, straight to add-to-cart), while a garment with one
+ * or more steps is customizable (Design Yours + the customizer flow).
+ * Returns a map of slug -> count; slugs with no steps are simply absent
+ * (treat a missing key as 0).
+ */
+export async function fetchGarmentStepCounts(): Promise<Record<string, number>> {
+  const { data, error } = await supabase.from("mtm_steps").select("applies_to,active");
+  if (error || !data) return {};
+  const counts: Record<string, number> = {};
+  for (const row of data as { applies_to: string[] | null; active: boolean }[]) {
+    if (row.active === false) continue;
+    for (const slug of row.applies_to ?? []) counts[slug] = (counts[slug] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/** True when a garment has no customizer steps — i.e. it's an accessory
+ *  (tie, belt, shoes, cufflinks…) that's bought ready-made, not designed. */
+export function isAccessoryGarment(slug: string, stepCounts: Record<string, number>): boolean {
+  return (stepCounts[slug] ?? 0) === 0;
+}
+
 export async function upsertGarment(g: Partial<Garment> & { slug: string; label: string }): Promise<{ error: string | null }> {
   const { error } = await supabase
     .from("mtm_garments")

@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Reveal, SplitReveal } from "./Reveal";
-import { fetchGarments, libraryCoverSlotForGarment, librarySlugForGarment, type Garment } from "@/lib/garments";
+import { fetchGarments, fetchGarmentStepCounts, isAccessoryGarment, libraryCoverSlotForGarment, librarySlugForGarment, type Garment } from "@/lib/garments";
 import { fetchAllMediaSlots } from "@/lib/media";
 import { MEDIA_SLOTS } from "@/lib/mediaSlots";
 
@@ -103,6 +103,10 @@ export function DesignYoursPicker() {
   // check, so when SUITING disappears from the ERP the Suit tile
   // would hide too.
   const [liveErpCategories, setLiveErpCategories] = useState<Set<string> | null>(null);
+  // Per-garment customizer step counts. A garment with zero steps is an
+  // accessory (tie, shoes, cufflinks…) — it has nothing to design, so it's
+  // dropped from this picker and shown in the home Accessories section instead.
+  const [stepCounts, setStepCounts] = useState<Record<string, number> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,10 +114,12 @@ export function DesignYoursPicker() {
       fetchGarments({ activeOnly: true }),
       fetchAllMediaSlots().catch(() => ({})),
       fetch("/api/erp-categories").then((r) => r.ok ? r.json() : { categories: [] }).catch(() => ({ categories: [] })),
+      fetchGarmentStepCounts().catch(() => ({})),
     ])
-      .then(([g, m, erp]) => {
+      .then(([g, m, erp, counts]) => {
         if (cancelled) return;
         setGarments(g);
+        setStepCounts(counts as Record<string, number>);
         const map: Record<string, { url: string; alt: string }> = {};
         for (const [slot, row] of Object.entries(m as Record<string, { url?: string; alt?: string }>)) {
           if (row?.url) map[slot] = { url: row.url, alt: row.alt ?? "" };
@@ -127,6 +133,7 @@ export function DesignYoursPicker() {
         setGarments([]);
         setOverrides({});
         setLiveErpCategories(new Set());
+        setStepCounts({});
       });
     return () => { cancelled = true; };
   }, []);
@@ -134,7 +141,7 @@ export function DesignYoursPicker() {
   // First load: render nothing until garments, overrides AND the live
   // ERP category set have arrived. Prevents the flash where a garment
   // tile paints, then disappears once we learn the ERP has nothing.
-  if (!garments || !overrides || !liveErpCategories) {
+  if (!garments || !overrides || !liveErpCategories || !stepCounts) {
     return <section className="pt-32 md:pt-40 pb-20 md:pb-28 min-h-[50vh]" />;
   }
 
@@ -143,6 +150,9 @@ export function DesignYoursPicker() {
   // (those are manually-curated additions); a garment with erp_categories
   // but ZERO live items hides. Customers never see an empty shelf.
   const visibleGarments = garments.filter((g) => {
+    // Accessories (zero customizer steps) belong in the home Accessories
+    // section, not in Design Yours — there's nothing to design.
+    if (isAccessoryGarment(g.slug, stepCounts)) return false;
     const cats = g.erp_categories ?? [];
     if (cats.length === 0) return true; // manually curated — keep
     return cats.some((c) => liveErpCategories.has(c.toUpperCase()));

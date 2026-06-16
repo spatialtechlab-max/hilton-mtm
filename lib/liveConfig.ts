@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from "./supabase";
 import {
-  getSeedConfig, isCoreCategory,
+  getSeedConfig,
   type StepCategory, type TierLevel, type StepKind, type Selections,
 } from "./customizer";
 
@@ -118,28 +118,22 @@ export async function fetchLiveSteps(): Promise<LiveConfigPayload | null> {
   }
 }
 
-/** Steps shown for a category + current selections (with inheritance + conditionals).
+/** Steps shown for a category + current selections.
  *
- *  Tier governs PRICE, not which modules appear. Every module the atelier
- *  assigned to a garment shows at every tier, so the customizer's
- *  "Step X of N" total matches the admin's module count for that garment
- *  (no more "admin says 22, customer sees 21"). The atelier controls
- *  per-step visibility through applies_to (the garment chips), not tier.
- *  `_tierSlug` / `_tieredOverride` are kept in the signature for callers
- *  but no longer filter the step set. */
+ *  A step shows for a garment ONLY when that garment is in its applies_to
+ *  (the admin's per-garment chips). There's no "inherit all steps" fallback:
+ *  a garment with zero assigned steps is an accessory (tie, belt, shoes…),
+ *  not a garment that silently pulls in the whole suit module set. Tier
+ *  governs PRICE, not which modules appear, so every assigned module shows
+ *  at every tier and the customizer's "Step X of N" matches the admin's
+ *  garment count. `_tierSlug` / `_tieredOverride` are kept in the signature
+ *  for callers but no longer filter the step set. */
 export function visibleLiveSteps(
   all: LiveStep[], cat: StepCategory, _tierSlug: string, selections: Selections,
   _tieredOverride?: boolean,
 ): LiveStep[] {
-  // Custom garments (overcoat, tuxedo, chinos…) that the atelier hasn't
-  // assigned any step to yet inherit the full step set, so they open as
-  // a complete customizer out of the box. Once the client ticks even one
-  // step for the garment in /admin, that explicit selection takes over.
-  const nonCore = !isCoreCategory(cat);
-  const hasExplicit = nonCore && all.some((s) => s.appliesTo.includes(cat));
   return all.filter((s) => {
-    const applies = s.appliesTo.includes(cat) || (nonCore && !hasExplicit);
-    if (!applies) return false;
+    if (!s.appliesTo.includes(cat)) return false;
     if (s.requiresSlug && selections[s.requiresSlug] !== s.requiresValue) return false;
     return true;
   });

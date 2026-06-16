@@ -42,10 +42,11 @@ const rightTop: Tile[] = [
   { slot: "library.shirts.cover", category: "Shirting", title: "Shirts", href: "/library/shirts", garment: "shirt", fit: "cover" },
 ];
 
+// Shoes and ties moved to the dedicated <Accessories> section (any Live
+// garment with zero customizer steps renders there, straight to
+// add-to-cart). This grid is now the customizable wardrobe only.
 const bottom: Tile[] = [
   { slot: "library.trousers.cover", category: "Tailored", title: "Trousers", href: "/library/trousers", garment: "trouser", fit: "cover" },
-  { slot: "library.shoes.cover", category: "Footwear", title: "Handmade Shoes", href: "/library/shoes", garment: "shoes", fit: "contain" },
-  { slot: "library.ties.cover", category: "Accessories", title: "Ties & Silks", href: "/library/ties", garment: "tie", fit: "contain" },
 ];
 
 export function Categories() {

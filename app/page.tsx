@@ -5,6 +5,7 @@ import { Reveal, SplitReveal } from "@/components/Reveal";
 import { Button } from "@/components/Button";
 import { CtaBanner } from "@/components/CtaBanner";
 import { Categories } from "@/components/Categories";
+import { Accessories } from "@/components/Accessories";
 import { Partners } from "@/components/Partners";
 import { AtelierStrip } from "@/components/AtelierStrip";
 import { ShowroomFeature } from "@/components/ShowroomFeature";
@@ -81,8 +82,12 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* CATEGORIES — full house showcase */}
+      {/* CATEGORIES — full house showcase (customizable garments) */}
       <Categories />
+
+      {/* ACCESSORIES — Live garments with no customizer steps (ties, shoes,
+          belts, cufflinks): ready-made, straight to add-to-cart. */}
+      <Accessories />
 
       {/* ─────────────────────────── INTRODUCTION ─────────────────────────── */}
       <section id="introduction" className="py-16 md:py-24">

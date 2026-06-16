@@ -25,7 +25,7 @@ import { mergeLiveAndStatic } from "@/lib/liveConfigMerge";
 import { applyStepOrder } from "@/lib/adminData";
 import { fetchAllSettings, defaultFor } from "@/lib/settings";
 import { findProduct } from "@/lib/libraries";
-import { fetchGarments } from "@/lib/garments";
+import { fetchGarments, fetchGarmentStepCounts } from "@/lib/garments";
 import { fetchMyMeasurements } from "@/lib/measurements";
 import { buildSpecPdf } from "@/lib/specSheet";
 import { AuthForm } from "@/components/AuthForm";
@@ -326,6 +326,23 @@ function CustomizeInner() {
     // gate once /admin/garments has been read (e.g. a Hidden garment
     // arrived via a bookmarked URL).
   }, [searchParams, activeGarmentSlugs]);
+
+  // Accessory guard. A garment with zero customizer steps (tie, belt,
+  // shoes, cufflinks…) has nothing to design — if someone lands on
+  // /customize?category=<accessory> (a stale link or a hand-typed URL),
+  // send them to that garment's library, where each piece adds straight
+  // to the cart. Only runs once the category is a confirmed Live garment.
+  useEffect(() => {
+    if (categoryRouting !== "valid") return;
+    let cancelled = false;
+    fetchGarmentStepCounts()
+      .then((counts) => {
+        if (cancelled) return;
+        if ((counts[category] ?? 0) === 0) router.replace(`/library/${category}`);
+      })
+      .catch(() => { /* leave the customizer as-is on failure */ });
+    return () => { cancelled = true; };
+  }, [categoryRouting, category, router]);
 
   // Fetch fabrics whenever we land on (or return to) the fabric phase
   // OR the garment category changes. The previous version short-circuited
