@@ -19,7 +19,7 @@ import {
 } from "@/lib/customizer";
 import {
   type LiveStep, staticLiveSteps, fetchLiveSteps, visibleLiveSteps,
-  surchargeTotal, findLiveOption, parsePrice, formatBhd,
+  findLiveOption, parsePrice, formatBhd,
 } from "@/lib/liveConfig";
 import { mergeLiveAndStatic } from "@/lib/liveConfigMerge";
 import { applyStepOrder } from "@/lib/adminData";
@@ -169,8 +169,10 @@ function CustomizeInner() {
   // Garments without tiers price at the cloth itself (essential), so a
   // tier-less garment never quotes a Signature/Bespoke number.
   const basePrice  = parsePrice(tierPriceFor(category, hasTiers ? tier : "essential", { essentialOverride, settings }));
-  const surcharge  = useMemo(() => surchargeTotal(activeSteps, selections), [activeSteps, selections]);
-  const grandTotal = basePrice + surcharge;
+  // No per-option pricing — the commission price comes entirely from the
+  // tier (set in /admin/settings). Individual options never add a surcharge.
+  const surcharge: number = 0;
+  const grandTotal = basePrice;
 
   // Atelier-editable copy overrides. Fire-and-forget on mount; falls
   // back to the registry defaults if Supabase is unreachable.
@@ -1025,9 +1027,6 @@ function OptionGrid({
                 {opt.note && (
                   <div className="text-[0.7rem] text-[var(--color-charcoal-500)] mt-1.5 leading-snug">{opt.note}</div>
                 )}
-                <div className="text-eyebrow text-[0.65rem] mt-2 text-[var(--color-burgundy-700)]">
-                  {opt.surcharge && opt.surcharge > 0 ? `+ BHD ${opt.surcharge}` : "Included"}
-                </div>
               </div>
             </button>
           );
@@ -1078,9 +1077,6 @@ function OptionGrid({
               {opt.note && (
                 <div className="text-[0.7rem] text-[var(--color-charcoal-500)] mt-1 leading-snug">{opt.note}</div>
               )}
-              <div className="text-eyebrow text-[0.6rem] mt-1.5 text-[var(--color-burgundy-700)]">
-                {opt.surcharge && opt.surcharge > 0 ? `+ BHD ${opt.surcharge}` : "Included"}
-              </div>
             </div>
           </button>
         );
@@ -1905,9 +1901,6 @@ function SummaryPanel({
                 <span className="flex items-center gap-2 text-right">
                   <span className="text-[var(--color-charcoal-900)] group-hover:text-[var(--color-burgundy-700)] transition-colors">
                     {option.label}
-                    {option.surcharge > 0 && (
-                      <span className="text-[0.72rem] text-[var(--color-burgundy-700)] ml-1.5">+ {formatBhd(option.surcharge)}</span>
-                    )}
                   </span>
                   <Pencil size={11} strokeWidth={1.5} className="shrink-0 text-[var(--color-burgundy-700)] opacity-0 group-hover:opacity-100 transition-opacity" />
                 </span>

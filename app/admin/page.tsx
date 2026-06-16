@@ -315,7 +315,7 @@ export default function AdminPage() {
               </Link>
             </div>
             <p className="mt-6 text-[0.75rem] text-[var(--color-charcoal-400)] leading-relaxed hidden lg:block">
-              Hover a row to edit or delete. Surcharge is the extra cost shown to the customer.
+              Hover a row to edit or delete. Pricing is set per tier in Settings, not per option.
             </p>
           </aside>
 
@@ -761,7 +761,6 @@ function OptionRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [label, setLabel] = useState(option.label);
-  const [surcharge, setSurcharge] = useState(String(option.surcharge));
   const [color, setColor] = useState(option.color ?? "");
   const [note, setNote] = useState(option.note ?? "");
   const [active, setActive] = useState(option.active);
@@ -800,7 +799,6 @@ function OptionRow({
     try {
       await updateOption(option.id, {
         label: label.trim() || option.value,
-        surcharge: Number(surcharge) || 0,
         color: stepKind === "swatch" ? (color.trim() || null) : option.color,
         // Image is editable on every step kind — diagram, choice, gallery
         // all support an option thumbnail in the customizer row.
@@ -826,7 +824,6 @@ function OptionRow({
       <div className="px-5 py-4 bg-[var(--color-ivory-200)]/60 space-y-3">
         <div className="flex flex-wrap items-end gap-4">
           <Field label="Label"><input value={label} onChange={(e) => setLabel(e.target.value)} className={inputCls + " w-56"} /></Field>
-          <Field label="Surcharge (BHD)"><input type="number" min={0} step="1" value={surcharge} onChange={(e) => setSurcharge(e.target.value)} className={inputCls + " w-32"} /></Field>
           {stepKind === "swatch" && (
             <Field label="Colour (hex)"><input value={color} onChange={(e) => setColor(e.target.value)} placeholder="#6e2639" className={inputCls + " w-32"} /></Field>
           )}
@@ -926,9 +923,6 @@ function OptionRow({
         {!option.active && <em className="text-[0.7rem] text-[var(--color-charcoal-400)] ml-2 not-italic">· hidden</em>}
       </span>
       <code className="text-[0.72rem] text-[var(--color-charcoal-400)] hidden sm:inline">{option.value}</code>
-      <span className={`tabular-nums w-24 text-right ${option.surcharge > 0 ? "text-[var(--color-burgundy-700)]" : "text-[var(--color-charcoal-400)]"}`}>
-        {option.surcharge > 0 ? `+ BHD ${option.surcharge}` : "included"}
-      </span>
       {confirmDel ? (
         <span className="inline-flex items-center gap-2">
           <button onClick={remove} disabled={busy} className="text-[0.72rem] tracking-wide uppercase text-[var(--color-burgundy-700)]">Confirm</button>
@@ -968,7 +962,6 @@ function AddOption({
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [label, setLabel] = useState("");
-  const [surcharge, setSurcharge] = useState("0");
   const [color, setColor] = useState("");
   // Image picked by the admin. We alpha-key it client-side BEFORE upload
   // so the storefront only ever sees a transparent PNG — the white card
@@ -1002,12 +995,11 @@ function AddOption({
         step_slug: stepSlug,
         value: value.trim(),
         label: label.trim(),
-        surcharge: Number(surcharge) || 0,
         color: stepKind === "swatch" ? (color.trim() || null) : null,
         image_url,
       });
       setOpen(false);
-      setValue(""); setLabel(""); setSurcharge("0"); setColor("");
+      setValue(""); setLabel(""); setColor("");
       setFile(null); setPreview(null);
       await onAdded();
     } catch (e) {
@@ -1029,7 +1021,6 @@ function AddOption({
       <div className="flex flex-wrap items-end gap-4">
         <Field label="Value"><input value={value} onChange={(e) => setValue(e.target.value)} placeholder="peak" className={inputCls + " w-40"} /></Field>
         <Field label="Label"><input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Peak lapel" className={inputCls + " w-56"} /></Field>
-        <Field label="Surcharge (BHD)"><input type="number" min={0} step="1" value={surcharge} onChange={(e) => setSurcharge(e.target.value)} className={inputCls + " w-32"} /></Field>
         {stepKind === "swatch" && (
           <Field label="Colour (hex)"><input value={color} onChange={(e) => setColor(e.target.value)} placeholder="#6e2639" className={inputCls + " w-32"} /></Field>
         )}
