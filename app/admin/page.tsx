@@ -617,7 +617,10 @@ function AddStep({
 }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const [kind, setKind] = useState("diagram");
+  // New modules are "choice" kind: each option shows as a labelled tile,
+  // and uploading an image per option promotes it to an image tile. So the
+  // atelier never has to think about diagram/swatch/gallery.
+  const kind = "choice";
   const [tier, setTier] = useState("essential");
   const [appliesTo, setAppliesTo] = useState<string[]>(defaultGarments);
   const [busy, setBusy] = useState(false);
@@ -629,7 +632,8 @@ function AddStep({
 
   async function add() {
     if (!title.trim()) { setErr("Give the module a name."); return; }
-    if (appliesTo.length === 0) { setErr("Pick at least one garment this module shows for."); return; }
+    // Garments are optional — a module can be created with none picked and
+    // toggled on later via the per-step "Visible for" chips.
     let slug = toSlug(title) || "module";
     if (existingSlugs.has(slug)) {
       let n = 2;
@@ -639,7 +643,7 @@ function AddStep({
     setBusy(true); setErr(null);
     try {
       await insertStep({ slug, title: title.trim(), kind, tier, applies_to: appliesTo, sort_order: nextSortOrder });
-      setTitle(""); setKind("diagram"); setTier("essential"); setAppliesTo(defaultGarments); setOpen(false);
+      setTitle(""); setTier("essential"); setAppliesTo(defaultGarments); setOpen(false);
       await onAdded(slug);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Couldn't create the module.");
@@ -668,14 +672,6 @@ function AddStep({
         <Field label="Module name">
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Suspend your style" className={inputCls + " w-64"} />
         </Field>
-        <Field label="Kind">
-          <select value={kind} onChange={(e) => setKind(e.target.value)} className={inputCls + " w-40"}>
-            <option value="diagram">Diagram</option>
-            <option value="swatch">Swatch (colour)</option>
-            <option value="gallery">Gallery (image)</option>
-            <option value="choice">Choice (text)</option>
-          </select>
-        </Field>
         <Field label="Tier">
           <select value={tier} onChange={(e) => setTier(e.target.value)} className={inputCls + " w-40"}>
             <option value="essential">Essential</option>
@@ -685,7 +681,10 @@ function AddStep({
         </Field>
       </div>
       <div className="mt-4">
-        <span className="text-eyebrow text-[0.6rem] text-[var(--color-charcoal-500)]">Visible for</span>
+        <span className="text-eyebrow text-[0.6rem] text-[var(--color-charcoal-500)]">
+          Visible for
+          <span className="ml-2 normal-case tracking-normal text-[var(--color-charcoal-400)]">optional — toggle later from the step too</span>
+        </span>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {garments.map((g) => {
             const on = appliesTo.includes(g.slug);
