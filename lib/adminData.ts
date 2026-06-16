@@ -63,6 +63,57 @@ export async function updateStep(slug: string, patch: StepPatch): Promise<void> 
   if (error) throw error;
 }
 
+/* ── Per-garment step order ──────────────────────────────────────────
+   The customizer sequence ("what comes after what") is controlled per
+   garment, stored in mtm_settings under `step.order.<garment>` as a JSON
+   array of step slugs. Per-garment (not the global mtm_steps.sort_order)
+   so reordering trousers never reshuffles the suit flow. Garments with
+   no saved order fall back to sort_order. No migration — reuses the
+   existing key/value settings table. */
+
+export async function fetchStepOrders(): Promise<Record<string, string[]>> {
+  const { data, error } = await supabase
+    .from("mtm_settings")
+    .select("key,value")
+    .like("key", "step.order.%");
+  if (error || !data) return {};
+  const out: Record<string, string[]> = {};
+  for (const row of data as { key: string; value: string }[]) {
+    const garment = row.key.slice("step.order.".length);
+    try {
+      const arr = JSON.parse(row.value);
+      if (Array.isArray(arr)) out[garment] = arr.filter((x) => typeof x === "string");
+    } catch { /* ignore malformed */ }
+  }
+  return out;
+}
+
+export async function saveStepOrder(garment: string, slugs: string[]): Promise<void> {
+  const { error } = await supabase
+    .from("mtm_settings")
+    .upsert(
+      { key: `step.order.${garment}`, value: JSON.stringify(slugs), updated_at: new Date().toISOString() },
+      { onConflict: "key" },
+    );
+  if (error) throw error;
+}
+
+/** Order `steps` by a saved per-garment slug list. Steps not in the list
+ *  (newly added) keep their incoming relative order at the end. Pure +
+ *  stable so it's shared by the admin preview and the customizer. */
+export function applyStepOrder<T extends { slug: string }>(steps: T[], order: string[] | null | undefined): T[] {
+  if (!order || order.length === 0) return steps;
+  const pos = new Map(order.map((slug, i) => [slug, i]));
+  return steps
+    .map((s, i) => ({ s, i }))
+    .sort((a, b) => {
+      const pa = pos.get(a.s.slug) ?? Number.MAX_SAFE_INTEGER;
+      const pb = pos.get(b.s.slug) ?? Number.MAX_SAFE_INTEGER;
+      return pa === pb ? a.i - b.i : pa - pb;
+    })
+    .map(({ s }) => s);
+}
+
 export async function insertOption(row: {
   step_slug: string; value: string; label: string;
   note?: string | null; color?: string | null; image_url?: string | null;

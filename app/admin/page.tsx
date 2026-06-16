@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Database, RefreshCw, AlertTriangle, Lock, Pencil, Trash2, Plus, Check, X, Upload, Package, Eye, EyeOff, Shirt, Image as ImageIcon, Users, Tag, Truck } from "lucide-react";
+import { ArrowLeft, Database, RefreshCw, AlertTriangle, Lock, Pencil, Trash2, Plus, Check, X, Upload, Package, Eye, EyeOff, Shirt, Image as ImageIcon, Users, Tag, Truck, ChevronUp, ChevronDown } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import {
   fetchSteps, fetchOptions, seedFromConfig,
   updateOption, insertOption, deleteOption, uploadOptionImage,
-  updateStep,
+  updateStep, fetchStepOrders, saveStepOrder, applyStepOrder,
   type DbStep, type DbOption,
 } from "@/lib/adminData";
 import { fetchGarments, type Garment } from "@/lib/garments";
@@ -44,6 +44,8 @@ export default function AdminPage() {
   const [steps, setSteps] = useState<DbStep[] | null>(null);
   const [options, setOptions] = useState<DbOption[]>([]);
   const [garments, setGarments] = useState<Garment[]>([]);
+  // Per-garment step order (settings key step.order.<garment>).
+  const [stepOrders, setStepOrders] = useState<Record<string, string[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -53,10 +55,11 @@ export default function AdminPage() {
     setLoadingData(true);
     setError(null);
     try {
-      const [s, o, g] = await Promise.all([fetchSteps(), fetchOptions(), fetchGarments()]);
+      const [s, o, g, ord] = await Promise.all([fetchSteps(), fetchOptions(), fetchGarments(), fetchStepOrders()]);
       setSteps(s);
       setOptions(o);
       setGarments(g);
+      setStepOrders(ord);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load configuration.");
       setSteps(null);
@@ -136,6 +139,23 @@ export default function AdminPage() {
   const notConfigured = !error && allSteps.length === 0 && !loadingData && !busy;
 
   const visible = activeSteps.filter((s) => filter === "all" || s.applies_to.includes(filter));
+  // When a single garment is selected, present its steps in the atelier's
+  // saved order ("what comes after what" in the customer flow). All-steps
+  // view keeps the global sort_order masonry.
+  const orderedVisible = filter === "all" ? visible : applyStepOrder(visible, stepOrders[filter]);
+
+  async function moveStep(slug: string, dir: -1 | 1) {
+    if (filter === "all" || busy) return;
+    const order = orderedVisible.map((s) => s.slug);
+    const idx = order.indexOf(slug);
+    const j = idx + dir;
+    if (idx < 0 || j < 0 || j >= order.length) return;
+    [order[idx], order[j]] = [order[j], order[idx]];
+    setBusy(true);
+    try { await saveStepOrder(filter, order); await load(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn't save the order."); }
+    finally { setBusy(false); }
+  }
   // Counts are derived per-garment from whatever atelier has configured
   // in /admin/garments, so adding "Overcoat" there reflects here without
   // a code change.
@@ -285,8 +305,16 @@ export default function AdminPage() {
             </p>
           </aside>
 
-          {/* Main — step cards in a masonry column layout (no height gaps) */}
-          <div className="columns-1 xl:columns-2 gap-5 [&>*]:mb-5">
+          {/* Main — masonry for "all steps"; a single ordered column per
+              garment so the atelier can see and set the customer sequence. */}
+          <div className={filter === "all" ? "columns-1 xl:columns-2 gap-5 [&>*]:mb-5" : "flex flex-col gap-5"}>
+            {filter !== "all" && orderedVisible.length > 1 && (
+              <p className="text-[0.8rem] text-[var(--color-charcoal-600)] bg-[var(--color-ivory-200)] border border-black/10 px-4 py-2.5">
+                This is the order the customer sees when designing a {filterTabs.find((t) => t.key === filter)?.label.toLowerCase() ?? filter}. Use the
+                <ChevronUp size={12} strokeWidth={2} className="inline mx-0.5 -mt-0.5" /><ChevronDown size={12} strokeWidth={2} className="inline mr-0.5 -mt-0.5" />
+                arrows to change what comes after what. The order applies to this garment only.
+              </p>
+            )}
             {filter !== "all" && visible.length === 0 && (
               <div className="break-inside-avoid border border-dashed border-black/15 bg-[var(--color-ivory-200)] p-6">
                 <p className="text-display text-[1.3rem] text-[var(--color-charcoal-900)]">
@@ -329,9 +357,36 @@ export default function AdminPage() {
                 </ul>
               </div>
             )}
-            {visible.map((s) => (
+            {orderedVisible.map((s, i) => (
               <div key={s.slug} className="break-inside-avoid border border-black/10 bg-[var(--color-ivory-100)]">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-4 border-b border-black/10">
+                  {filter !== "all" && (
+                    <span className="inline-flex items-center gap-1.5 mr-1">
+                      <span className="text-display text-[1.1rem] tabular-nums text-[var(--color-burgundy-700)] w-6 text-center">{i + 1}</span>
+                      <span className="inline-flex flex-col">
+                        <button
+                          type="button"
+                          onClick={() => moveStep(s.slug, -1)}
+                          disabled={i === 0 || busy}
+                          aria-label="Move earlier"
+                          title="Move earlier in the flow"
+                          className="text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ChevronUp size={15} strokeWidth={2} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveStep(s.slug, 1)}
+                          disabled={i === orderedVisible.length - 1 || busy}
+                          aria-label="Move later"
+                          title="Move later in the flow"
+                          className="text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ChevronDown size={15} strokeWidth={2} />
+                        </button>
+                      </span>
+                    </span>
+                  )}
                   <span className="text-display text-[1.2rem] text-[var(--color-charcoal-900)]">{s.title}</span>
                   <Badge>{s.kind}</Badge>
                   <TierPicker slug={s.slug} tier={s.tier} onChanged={load} />

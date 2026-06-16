@@ -22,6 +22,7 @@ import {
   surchargeTotal, findLiveOption, parsePrice, formatBhd,
 } from "@/lib/liveConfig";
 import { mergeLiveAndStatic } from "@/lib/liveConfigMerge";
+import { applyStepOrder } from "@/lib/adminData";
 import { fetchAllSettings, defaultFor } from "@/lib/settings";
 import { findProduct } from "@/lib/libraries";
 import { fetchGarments } from "@/lib/garments";
@@ -141,7 +142,17 @@ function CustomizeInner() {
   const tierObj    = tiers.find((t) => t.slug === tier) ?? tiers[1];
 
   // Category- and tier-aware config from the live DB config (waistcoat sub-steps conditional)
-  const activeSteps        = useMemo(() => visibleLiveSteps(allSteps, category, tier, selections, hasTiers), [allSteps, category, tier, selections, hasTiers]);
+  // Steps shown for this garment + tier, then ordered by the atelier's
+  // per-garment sequence (settings key `step.order.<garment>`); garments
+  // with no saved order keep the default sort_order.
+  const activeSteps        = useMemo(() => {
+    const steps = visibleLiveSteps(allSteps, category, tier, selections, hasTiers);
+    const raw = settings[`step.order.${category}`];
+    if (!raw) return steps;
+    let order: string[] | null = null;
+    try { const p = JSON.parse(raw); if (Array.isArray(p)) order = p.filter((x) => typeof x === "string"); } catch { /* keep default */ }
+    return applyStepOrder(steps, order);
+  }, [allSteps, category, tier, selections, hasTiers, settings]);
   const activeGroups       = useMemo(() => measurementGroupsForCategory(category), [category]);
   const activeMeasurements = useMemo(() => activeGroups.flatMap((g) => g.items), [activeGroups]);
 
