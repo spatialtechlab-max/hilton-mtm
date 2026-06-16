@@ -253,9 +253,11 @@ function CustomizeInner() {
   // skip fabric pick — they already chose one. Otherwise start at "fabric".
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    // Accept both ?category= and ?garment= so inbound links from any
-    // surface (homepage tiles, library PDPs, marketing links) resolve.
-    const raw = params.get("category") ?? params.get("garment");
+    // Accept ?category=, ?garment= and ?cat= so inbound links from any
+    // surface resolve — including the cart's Edit deep-link, which uses
+    // ?cat= (older cart items already have that baked into their href, so
+    // we must keep reading it even though new links use ?category=).
+    const raw = params.get("category") ?? params.get("garment") ?? params.get("cat");
     const skuParam = params.get("sku");
     setSku(skuParam);
     // Track whether the URL carried a real category. If not, the page
@@ -436,7 +438,7 @@ function CustomizeInner() {
       // Cart Edit deep-link: include the fabric SKU + tier so the
       // customizer lands on the spec phase with the right fabric
       // pre-selected (the skip-fabric effect picks this up).
-      href: `/customize?cat=${category}&sku=${selectedFabric.sku}${hasTiers ? `&tier=${tier}` : ""}`,
+      href: `/customize?category=${category}&sku=${selectedFabric.sku}${hasTiers ? `&tier=${tier}` : ""}`,
       custom: {
         category,
         tier: hasTiers ? tier : undefined,
