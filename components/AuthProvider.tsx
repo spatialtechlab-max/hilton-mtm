@@ -42,6 +42,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearCart();
       }
 
+      // Password reset: when the customer clicks the reset link in their
+      // email, the recovery token is exchanged here and fires
+      // PASSWORD_RECOVERY. Send them to the set-a-new-password page no
+      // matter which allowed URL the link landed on — so the flow works
+      // without depending on Supabase's redirect allowlist. The recovery
+      // session persists in localStorage, so /account/reset picks it up.
+      if (event === "PASSWORD_RECOVERY" && typeof window !== "undefined") {
+        if (window.location.pathname !== "/account/reset") {
+          window.location.assign("/account/reset");
+        }
+      }
+
       // Welcome email — fires on every SIGNED_IN regardless of the path
       // the user took (password signup, OAuth, email-link confirm,
       // returning sign-in). The server route is idempotent — it stamps

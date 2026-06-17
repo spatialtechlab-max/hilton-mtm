@@ -42,7 +42,6 @@ export async function buildSpecPdf(
   extras?: SpecPdfExtras,
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  const page = pdf.addPage([A4.w, A4.h]);
 
   const serif     = await pdf.embedFont(StandardFonts.TimesRoman);
   const serifBold = await pdf.embedFont(StandardFonts.TimesRomanBold);
@@ -55,57 +54,78 @@ export async function buildSpecPdf(
     logoImage = await pdf.embedPng(logoBytes);
   } catch { /* fall back to text headers */ }
 
-  // ── Page background (subtle cream) ─────────────────────────────────────
-  page.drawRectangle({ x: 0, y: 0, width: A4.w, height: A4.h, color: IVORY_BG });
+  const colLeftX  = 70;
+  const colMidX   = A4.w / 2;
 
-  // ── Logo (transparent burgundy png from /public) ───────────────────────
-  if (logoImage) {
-    const targetH = 56;
-    const ratio = targetH / logoImage.height;
-    page.drawImage(logoImage, {
-      x: A4.w / 2 - (logoImage.width * ratio) / 2,
-      y: A4.h - 100,
-      width: logoImage.width * ratio,
-      height: targetH,
-    });
-  } else {
-    page.drawText("HILTON MADE TO MEASURE", {
-      x: A4.w / 2 - 110,
-      y: A4.h - 70,
-      size: 14,
-      font: serifBold,
-      color: BURGUNDY,
-    });
-  }
+  // Content must stay ABOVE this y; the footer sits below it. A heavily
+  // customised garment has many specification lines, so the list is
+  // paginated rather than left to run straight through the footer (the
+  // overlap bug). drawChrome paints the page background + logo on every
+  // page; drawFooter stamps the address block on every page.
+  const BOTTOM_SAFE = 120;
 
-  // ── Title block ────────────────────────────────────────────────────────
+  const drawChrome = (p: ReturnType<PDFDocument["addPage"]>) => {
+    p.drawRectangle({ x: 0, y: 0, width: A4.w, height: A4.h, color: IVORY_BG });
+    if (logoImage) {
+      const targetH = 56;
+      const ratio = targetH / logoImage.height;
+      p.drawImage(logoImage, {
+        x: A4.w / 2 - (logoImage.width * ratio) / 2,
+        y: A4.h - 100,
+        width: logoImage.width * ratio,
+        height: targetH,
+      });
+    } else {
+      p.drawText("HILTON MADE TO MEASURE", {
+        x: A4.w / 2 - 110, y: A4.h - 70, size: 14, font: serifBold, color: BURGUNDY,
+      });
+    }
+  };
+
+  const drawFooter = (p: ReturnType<PDFDocument["addPage"]>) => {
+    drawRule(p, colLeftX, 90, A4.w - colLeftX * 2);
+    centerText(p, "HILTON MADE TO MEASURE", 72, { font: sans, size: 8, color: BURGUNDY, tracking: 3 });
+    centerText(p, "Shop No. 119, Shaikh Abdulla Avenue  ·  Manama, Kingdom of Bahrain", 58, { font: sans, size: 8, color: MUTED, tracking: 1.5 });
+    centerText(p, "atelier@hiltonmtm.com  ·  +973 17 245 689", 46, { font: sans, size: 8, color: MUTED, tracking: 1.5 });
+  };
+
+  let page = pdf.addPage([A4.w, A4.h]);
+  drawChrome(page);
+
+  // ── Title block (first page only) ──────────────────────────────────────
   const eyebrowY = A4.h - 160;
   centerText(page, "BESPOKE SPECIFICATION", eyebrowY, {
     font: sans, size: 8, color: MUTED, tracking: 3,
   });
-
   centerText(page, "Made to Measure — Specification Sheet", eyebrowY - 32, {
     font: serif, size: 22, color: CHARCOAL,
   });
-
   const stamp = new Date().toLocaleDateString("en-GB", {
     day: "2-digit", month: "long", year: "numeric",
   });
   centerText(page, `Issued ${stamp}${customerName ? `  ·  For ${customerName}` : ""}`, eyebrowY - 54, {
     font: sans, size: 9, color: MUTED, tracking: 1.5,
   });
-
   drawRule(page, A4.w / 2 - 40, eyebrowY - 76, 80);
 
   // ── Specifications list ────────────────────────────────────────────────
-  const colLeftX  = 70;
-  const colMidX   = A4.w / 2;
   let cursorY     = A4.h - 220;
   const rowH      = 22;
 
   const category = extras?.category ?? "suit";
   const specSteps = visibleSteps(category, tierSlug, selections);
   const showCommission = categoryHasTiers(category);
+
+  // Break to a fresh continuation page when the next block won't fit above
+  // the footer. Continuation pages keep the logo but drop the title block.
+  const ensure = (needed: number) => {
+    if (cursorY - needed < BOTTOM_SAFE) {
+      drawFooter(page);
+      page = pdf.addPage([A4.w, A4.h]);
+      drawChrome(page);
+      cursorY = A4.h - 140;
+    }
+  };
 
   // Section header
   drawSectionHeader(page, "GARMENT SPECIFICATION", colLeftX, cursorY, serifBold);
@@ -118,37 +138,33 @@ export async function buildSpecPdf(
     const option = findOption(step.slug, value);
     if (!option) continue;
 
+    ensure(rowH);
+
     // Step title (left)
     page.drawText(step.title, {
-      x: colLeftX,
-      y: cursorY,
-      size: 9.5,
-      font: sans,
-      color: MUTED,
+      x: colLeftX, y: cursorY, size: 9.5, font: sans, color: MUTED,
     });
-
     // Selected option (right, bold serif)
     const choice = option.label;
     const choiceWidth = serifBold.widthOfTextAtSize(choice, 11);
     page.drawText(choice, {
-      x: A4.w - colLeftX - choiceWidth,
-      y: cursorY,
-      size: 11,
-      font: serifBold,
-      color: CHARCOAL,
+      x: A4.w - colLeftX - choiceWidth, y: cursorY, size: 11, font: serifBold, color: CHARCOAL,
     });
 
     cursorY -= rowH;
   }
 
   cursorY -= 12;
+  ensure(0);
   drawRule(page, colLeftX, cursorY, A4.w - colLeftX * 2);
 
-  // ── Commission / tier block (suits & jackets only) ──────────────────────
-  cursorY -= 30;
+  // ── Commission / tier block ─────────────────────────────────────────────
   const tier = tiers.find((t) => t.slug === tierSlug) ?? tiers[1];
 
   if (showCommission) {
+    // Keep the whole commission block on one page rather than splitting it.
+    ensure(30 + 28 + 16 + 22 + 18 + tier.features.length * 14 + 10);
+    cursorY -= 30;
     drawSectionHeader(page, "COMMISSION", colLeftX, cursorY, serifBold);
     cursorY -= 28;
 
@@ -178,6 +194,8 @@ export async function buildSpecPdf(
       cursorY -= 14;
     }
   } else {
+    ensure(30 + 28 + 16 + 18);
+    cursorY -= 30;
     drawSectionHeader(page, "COMMISSION", colLeftX, cursorY, serifBold);
     cursorY -= 28;
     page.drawText(`MADE TO MEASURE ${category.toUpperCase()}`, {
@@ -190,17 +208,8 @@ export async function buildSpecPdf(
     cursorY -= 18;
   }
 
-  // ── Footer ─────────────────────────────────────────────────────────────
-  drawRule(page, colLeftX, 90, A4.w - colLeftX * 2);
-  centerText(page, "HILTON MADE TO MEASURE", 72, {
-    font: sans, size: 8, color: BURGUNDY, tracking: 3,
-  });
-  centerText(page, "Shop No. 119, Shaikh Abdulla Avenue  ·  Manama, Kingdom of Bahrain", 58, {
-    font: sans, size: 8, color: MUTED, tracking: 1.5,
-  });
-  centerText(page, "atelier@hiltonmtm.com  ·  +973 17 245 689", 46, {
-    font: sans, size: 8, color: MUTED, tracking: 1.5,
-  });
+  // ── Footer on the final content page ────────────────────────────────────
+  drawFooter(page);
   void colMidX; // kept for future split-column layouts
 
   // ── Optional measurements page ─────────────────────────────────────────
