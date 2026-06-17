@@ -289,7 +289,7 @@ function AccountMenu({
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
             role="menu"
-            className="absolute right-0 top-full mt-2 w-72 bg-[var(--color-ivory-100)] border border-black/10 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.25)]"
+            className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-[var(--color-ivory-100)] border border-black/10 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.25)]"
           >
             <div className="px-5 py-4 border-b border-black/10 flex items-center gap-3">
               <div className="shrink-0 w-10 h-10 rounded-full bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] inline-flex items-center justify-center text-display text-[1rem]">
@@ -301,8 +301,9 @@ function AccountMenu({
                     {name}
                   </p>
                 )}
-                <p className="text-[0.78rem] text-[var(--color-charcoal-500)] truncate inline-flex items-center gap-1.5 mt-0.5">
-                  <Mail size={11} strokeWidth={1.5} className="shrink-0" /> {email}
+                <p className="text-[0.78rem] text-[var(--color-charcoal-500)] flex items-start gap-1.5 mt-0.5 min-w-0">
+                  <Mail size={11} strokeWidth={1.5} className="shrink-0 mt-[3px]" />
+                  <span className="break-all">{email}</span>
                 </p>
               </div>
             </div>
