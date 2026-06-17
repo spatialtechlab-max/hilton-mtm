@@ -18,10 +18,9 @@ import {
   categoryHasTiers, tierPriceFor, tierCopy,
 } from "@/lib/customizer";
 import {
-  type LiveStep, staticLiveSteps, fetchLiveSteps, visibleLiveSteps,
+  type LiveStep, fetchLiveSteps, visibleLiveSteps,
   findLiveOption, parsePrice, formatBhd,
 } from "@/lib/liveConfig";
-import { mergeLiveAndStatic } from "@/lib/liveConfigMerge";
 import { applyStepOrder } from "@/lib/adminData";
 import { fetchAllSettings, defaultFor } from "@/lib/settings";
 import { findProduct } from "@/lib/libraries";
@@ -103,7 +102,11 @@ function CustomizeInner() {
   // the edit REPLACES the item instead of creating a duplicate.
   const [editingCartId, setEditingCartId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
-  const [allSteps, setAllSteps] = useState<LiveStep[]>(staticLiveSteps);
+  // Steps come ONLY from the database (mtm_steps). No static seed, no merge —
+  // so the customizer's step count is exactly what the admin shows. `null`
+  // means "still loading"; an empty array after load means the garment has
+  // no configured steps.
+  const [allSteps, setAllSteps] = useState<LiveStep[] | null>(null);
   const [selections,   setSelections]   = useState<Selections>(defaultSelections);
   const [measurements, setMeasurements] = useState<MeasurementValues>(defaultMeasurements);
   const [unit,         setUnit]         = useState<MeasurementUnit>("cm");
@@ -150,6 +153,7 @@ function CustomizeInner() {
   // per-garment sequence (settings key `step.order.<garment>`); garments
   // with no saved order keep the default sort_order.
   const activeSteps        = useMemo(() => {
+    if (!allSteps) return [];   // still loading the DB config
     const steps = visibleLiveSteps(allSteps, category, tier, selections, hasTiers);
     const raw = settings[`step.order.${category}`];
     if (!raw) return steps;
@@ -184,22 +188,21 @@ function CustomizeInner() {
     fetchAllSettings().then(setSettings).catch(() => setSettings({}));
   }, []);
 
-  // Merge Supabase-backed admin config with the static defaults. Logic
-  // lives in lib/liveConfigMerge.ts so it can be unit-tested; this
-  // useEffect is now just glue to Supabase + React state.
+  // Pull the customizer config straight from Supabase (mtm_steps + active
+  // options). No static seed, no merge — the customizer renders exactly the
+  // steps the admin configured, so its count matches /admin. If the config
+  // can't be read, surface an error rather than falling back to stale code.
+  const [stepsError, setStepsError] = useState(false);
   useEffect(() => {
-    fetchLiveSteps().then((payload) => {
-      if (!payload) return;
-      const { steps: live, disabledStepSlugs, disabledOptionsByStep } = payload;
-      setAllSteps((staticSteps) =>
-        mergeLiveAndStatic({
-          staticSteps,
-          liveSteps: live,
-          disabledStepSlugs,
-          disabledOptionsByStep,
-        }),
-      );
-    });
+    let cancelled = false;
+    fetchLiveSteps()
+      .then((payload) => {
+        if (cancelled) return;
+        if (!payload) { setStepsError(true); setAllSteps([]); return; }
+        setAllSteps(payload.steps);
+      })
+      .catch(() => { if (!cancelled) { setStepsError(true); setAllSteps([]); } });
+    return () => { cancelled = true; };
   }, []);
 
   // Live garment gating: if /admin/garments has the requested slug
@@ -297,40 +300,35 @@ function CustomizeInner() {
       setTier(tierParam);
     }
     setCategory(cat);
-    // Entry rule: Fabric pick is ALWAYS the first phase, even when the user
-    // arrived from a PDP "Customise" CTA. The PDP item is inspiration, not a
-    // committed fabric — the user still picks a real cloth from the library.
-    // A fresh "Customise this <garment>" click from a PDP carries ?sku= but
-    // NOT ?edit=. That's a brand-new design — it must start at the beginning
-    // of the flow, never resume a previously-saved summary/measurements phase
-    // (the bug that dropped PDP visitors straight onto the last step). Only
-    // resume the saved session when returning organically (no ?sku=) or when
-    // editing a cart line (?edit=).
+    // Entry rule: every garment click — whether from the Design Yours picker
+    // or a PDP "Customise" CTA — starts the flow at the BEGINNING (cloth →
+    // tier → spec → measure → review). We never resume a previously-saved
+    // summary/measurements phase, which is what made different garments land
+    // on different screens (some on the summary, some mid-flow). The ONLY
+    // path that restores a saved session is editing a cart line (?edit=),
+    // where the customer is intentionally changing an existing order.
     const editParam = params.get("edit");
-    const isPdpEntry = !!skuParam && !editParam;
     try {
       const saved = JSON.parse(localStorage.getItem(`hilton-customizer-${cat}`) || "null") as null | {
         selections?: Selections; measurements?: MeasurementValues; unit?: MeasurementUnit;
         phase?: Phase; stepIdx?: number; tier?: string; selectedFabric?: Fabric;
       };
-      if (saved && !isPdpEntry) {
+      if (saved && editParam) {
         if (saved.selections)   setSelections({ ...defaultSelections(), ...saved.selections });
         if (saved.measurements) setMeasurements({ ...defaultMeasurements(), ...saved.measurements });
         if (saved.unit === "cm" || saved.unit === "in") setUnit(saved.unit);
         if (typeof saved.stepIdx === "number") setStepIdx(saved.stepIdx);
         if (saved.tier)         setTier(saved.tier);
         if (saved.selectedFabric) setSelectedFabric(saved.selectedFabric);
-        // Restore the saved phase only if a fabric was actually picked.
-        // Otherwise start over at Fabric so the flow always begins there.
         if (saved.phase && saved.selectedFabric) {
           setPhase(saved.phase);
         } else {
           setPhase("fabric");
         }
       } else {
-        // PDP entry or no saved session: clean start at step 0. The
-        // skip-fabric effect picks up ?sku= and advances from "fabric" to
-        // the first spec step (tier comes from the URL for suits/jackets).
+        // Fresh entry (Design Yours or PDP): clean start at the cloth phase,
+        // step 0. The skip-fabric effect picks up ?sku= and advances from
+        // "fabric" to tier/spec (tier comes from the URL for suits/jackets).
         setSelections(defaultSelections());
         setStepIdx(0);
         setPhase("fabric");
@@ -624,6 +622,27 @@ function CustomizeInner() {
             Contact the atelier
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  // Steps load from the DB only — no static fallback. If the config genuinely
+  // can't be read, say so plainly instead of rendering a stale code-seeded flow.
+  if (ready && categoryRouting === "valid" && stepsError) {
+    return (
+      <div className="pt-32 md:pt-40 pb-24 min-h-[70vh] container-editorial">
+        <Link
+          href="/customize"
+          className="inline-flex items-center gap-2 text-eyebrow text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors mb-8"
+        >
+          <ArrowLeft size={14} strokeWidth={1.5} /> Design Yours
+        </Link>
+        <h1 className="text-display text-[clamp(2rem,4vw,3.25rem)] mt-3 leading-tight max-w-2xl">
+          We couldn&rsquo;t load the customizer right now.
+        </h1>
+        <p className="mt-5 max-w-xl text-[1rem] text-[var(--color-charcoal-700)] leading-relaxed">
+          Please refresh in a moment, or come back shortly.
+        </p>
       </div>
     );
   }
@@ -1905,6 +1924,56 @@ function SummaryPanel({
         <p className="mt-6 inline-flex items-center gap-2 text-[0.8rem] text-[var(--color-charcoal-500)]">
           <Lock size={12} strokeWidth={1.5} /> You&rsquo;ll sign in before checkout.
         </p>
+
+        {/* Total — kept on the LEFT next to the buttons so the customer sees
+            the price immediately, without scrolling past the spec list. */}
+        {(basePrice > 0 || surcharge > 0) && (
+          <div className="mt-10 max-w-md border-t border-black/10 pt-6">
+            <dl className="space-y-2 text-[0.9rem]">
+              {basePrice > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-charcoal-500)]">{hasTiers ? "Commission" : "Garment"}</dt>
+                  <dd className="text-[var(--color-charcoal-900)] tabular-nums">{formatBhd(basePrice)}</dd>
+                </div>
+              )}
+              {surcharge > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-charcoal-500)]">Customisation</dt>
+                  <dd className="text-[var(--color-burgundy-700)] tabular-nums">+ {formatBhd(surcharge)}</dd>
+                </div>
+              )}
+              <div className="flex justify-between pt-2 mt-1 border-t border-black/10 text-display text-[1.5rem] text-[var(--color-charcoal-900)]">
+                <dt>Total</dt>
+                <dd className="tabular-nums">{formatBhd(grandTotal)}</dd>
+              </div>
+            </dl>
+          </div>
+        )}
+
+        {/* Measurements — also on the LEFT, in a compact two-column grid so the
+            full set is visible at a glance instead of a long vertical scroll. */}
+        <div className="mt-8 max-w-xl">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="text-eyebrow text-[var(--color-burgundy-700)]">
+              Measurements{measurementRows.length > 0 ? ` · ${unit}` : ""}
+            </div>
+            <EditButton onClick={onEditMeasurements} label="Edit measurements" />
+          </div>
+          {measurementRows.length > 0 ? (
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-3">
+              {measurementRows.map(({ m, v }) => (
+                <div key={m.slug} className="flex justify-between gap-3 text-[0.85rem] border-b border-black/5 pb-2">
+                  <dt className="text-[var(--color-charcoal-500)]">{m.label}</dt>
+                  <dd className="text-[var(--color-charcoal-900)] text-right whitespace-nowrap">{v} {unit}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p className="text-[0.82rem] text-[var(--color-charcoal-500)] leading-relaxed max-w-md">
+              None entered yet. We&rsquo;ll measure you at the fitting, or tap Edit to add them now.
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="lg:col-span-5 bg-[var(--color-ivory-200)] p-6 sm:p-8 lg:p-10">
@@ -1956,52 +2025,6 @@ function SummaryPanel({
           )}
         </div>
 
-        {/* Measurements */}
-        <div className="my-6 h-px bg-black/10" />
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div className="text-eyebrow text-[var(--color-burgundy-700)]">
-            Measurements{measurementRows.length > 0 ? ` · ${unit}` : ""}
-          </div>
-          <EditButton onClick={onEditMeasurements} label="Edit measurements" />
-        </div>
-        {measurementRows.length > 0 ? (
-          <dl className="space-y-3">
-            {measurementRows.map(({ m, v }) => (
-              <div key={m.slug} className="flex justify-between gap-3 text-[0.85rem]">
-                <dt className="text-[var(--color-charcoal-500)]">{m.label}</dt>
-                <dd className="text-[var(--color-charcoal-900)] text-right">{v} {unit}</dd>
-              </div>
-            ))}
-          </dl>
-        ) : (
-          <p className="text-[0.82rem] text-[var(--color-charcoal-500)] leading-relaxed">
-            None entered yet. We&rsquo;ll measure you at the fitting, or tap Edit to add them now.
-          </p>
-        )}
-
-        {(basePrice > 0 || surcharge > 0) && (
-          <>
-            <div className="my-6 h-px bg-black/10" />
-            <dl className="space-y-2 text-[0.88rem]">
-              {basePrice > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-[var(--color-charcoal-500)]">{hasTiers ? "Commission" : "Garment"}</dt>
-                  <dd className="text-[var(--color-charcoal-900)] tabular-nums">{formatBhd(basePrice)}</dd>
-                </div>
-              )}
-              {surcharge > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-[var(--color-charcoal-500)]">Customisation</dt>
-                  <dd className="text-[var(--color-burgundy-700)] tabular-nums">+ {formatBhd(surcharge)}</dd>
-                </div>
-              )}
-              <div className="flex justify-between pt-2 mt-1 border-t border-black/10 text-display text-[1.25rem] text-[var(--color-charcoal-900)]">
-                <dt>Total</dt>
-                <dd className="tabular-nums">{formatBhd(grandTotal)}</dd>
-              </div>
-            </dl>
-          </>
-        )}
       </div>
     </div>
   );
