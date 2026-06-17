@@ -27,6 +27,7 @@ import { findProduct } from "@/lib/libraries";
 import { fetchGarments, fetchGarmentStepCounts } from "@/lib/garments";
 import { fetchMyMeasurements } from "@/lib/measurements";
 import { buildSpecPdf } from "@/lib/specSheet";
+import { computeOrderTotals } from "@/lib/checkoutFees";
 import { AuthForm } from "@/components/AuthForm";
 import { useAuth } from "@/components/AuthProvider";
 import { addToCart as pushToCart, removeFromCart } from "@/lib/cart";
@@ -455,7 +456,22 @@ function CustomizeInner() {
   // Push the commission into the shared localStorage cart and route to
   // /cart, which handles sign-in, profile completion, and order placement
   // (createOrderFromCart writes the row to mtm_orders).
+  // Sign-in is now required to ADD TO CART (not only at checkout). When a
+  // guest taps Add to cart we send them to the inline sign-in and remember
+  // to complete the add right after they authenticate.
+  const pendingAddRef = useRef(false);
   function addToCart() {
+    if (!selectedFabric) return;
+    if (!user) {
+      pendingAddRef.current = true;
+      setPhase("auth");
+      scrollTop();
+      return;
+    }
+    doAddToCart();
+  }
+
+  function doAddToCart() {
     if (!selectedFabric) return;
     // Editing an existing cart line: drop the old one so the re-add
     // replaces it rather than leaving a duplicate behind.
@@ -491,12 +507,19 @@ function CustomizeInner() {
     router.push("/cart");
   }
 
-  // After signing in (incl. returning from Google OAuth) advance the gate to cart.
+  // After signing in (incl. returning from Google OAuth): if they were trying
+  // to add to cart, complete that now; otherwise advance the checkout gate.
   useEffect(() => {
     if (phase === "auth" && user) {
-      setPhase("cart");
-      scrollTop();
+      if (pendingAddRef.current) {
+        pendingAddRef.current = false;
+        doAddToCart();
+      } else {
+        setPhase("cart");
+        scrollTop();
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, phase]);
 
   function next() {
@@ -861,6 +884,7 @@ function CustomizeInner() {
                 basePrice={basePrice}
                 surcharge={surcharge}
                 grandTotal={grandTotal}
+                signedIn={!!user}
                 onDownload={downloadPdf}
                 downloading={downloading}
                 onReset={resetAll}
@@ -1835,7 +1859,7 @@ function SummaryPanel({
   steps, groups, hasTiers, category,
   selections, measurements, unit, tier,
   essentialOverride, settings,
-  basePrice, surcharge, grandTotal,
+  basePrice, surcharge, grandTotal, signedIn,
   onDownload, downloading, onReset,
   onAddToCart, onEditStep, onEditTier, onEditMeasurements,
 }: {
@@ -1852,6 +1876,7 @@ function SummaryPanel({
   basePrice: number;
   surcharge: number;
   grandTotal: number;
+  signedIn: boolean;
   onDownload: () => void;
   downloading: boolean;
   onReset: () => void;
@@ -1921,36 +1946,15 @@ function SummaryPanel({
             Start over
           </button>
         </div>
-        <p className="mt-6 inline-flex items-center gap-2 text-[0.8rem] text-[var(--color-charcoal-500)]">
-          <Lock size={12} strokeWidth={1.5} /> You&rsquo;ll sign in before checkout.
-        </p>
-
-        {/* Total — kept on the LEFT next to the buttons so the customer sees
-            the price immediately, without scrolling past the spec list. */}
-        {(basePrice > 0 || surcharge > 0) && (
-          <div className="mt-10 max-w-md border-t border-black/10 pt-6">
-            <dl className="space-y-2 text-[0.9rem]">
-              {basePrice > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-[var(--color-charcoal-500)]">{hasTiers ? "Commission" : "Garment"}</dt>
-                  <dd className="text-[var(--color-charcoal-900)] tabular-nums">{formatBhd(basePrice)}</dd>
-                </div>
-              )}
-              {surcharge > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-[var(--color-charcoal-500)]">Customisation</dt>
-                  <dd className="text-[var(--color-burgundy-700)] tabular-nums">+ {formatBhd(surcharge)}</dd>
-                </div>
-              )}
-              <div className="flex justify-between pt-2 mt-1 border-t border-black/10 text-display text-[1.5rem] text-[var(--color-charcoal-900)]">
-                <dt>Total</dt>
-                <dd className="tabular-nums">{formatBhd(grandTotal)}</dd>
-              </div>
-            </dl>
-          </div>
+        {/* Sign-in note only when the visitor isn't signed in — they sign in
+            to ADD TO CART now, not just at checkout. */}
+        {!signedIn && (
+          <p className="mt-6 inline-flex items-center gap-2 text-[0.8rem] text-[var(--color-charcoal-500)]">
+            <Lock size={12} strokeWidth={1.5} /> You&rsquo;ll sign in to add this to your cart.
+          </p>
         )}
 
-        {/* Measurements — also on the LEFT, in a compact two-column grid so the
+        {/* Measurements — on the LEFT, in a compact two-column grid so the
             full set is visible at a glance instead of a long vertical scroll. */}
         <div className="mt-8 max-w-xl">
           <div className="flex items-center justify-between gap-3 mb-4">
@@ -2024,6 +2028,46 @@ function SummaryPanel({
             ) : null
           )}
         </div>
+
+        {/* Estimated total — on the RIGHT, directly under the specification.
+            Includes VAT and delivery so the number is the real estimate. */}
+        {(basePrice > 0 || surcharge > 0) && (() => {
+          const est = computeOrderTotals(basePrice + surcharge);
+          return (
+            <>
+              <div className="my-6 h-px bg-black/10" />
+              <dl className="space-y-2 text-[0.88rem]">
+                {basePrice > 0 && (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-charcoal-500)]">{hasTiers ? "Commission" : "Garment"}</dt>
+                    <dd className="text-[var(--color-charcoal-900)] tabular-nums">{formatBhd(basePrice)}</dd>
+                  </div>
+                )}
+                {surcharge > 0 && (
+                  <div className="flex justify-between">
+                    <dt className="text-[var(--color-charcoal-500)]">Customisation</dt>
+                    <dd className="text-[var(--color-burgundy-700)] tabular-nums">+ {formatBhd(surcharge)}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-charcoal-500)]">VAT (10%)</dt>
+                  <dd className="text-[var(--color-charcoal-900)] tabular-nums">{formatBhd(est.vat)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-[var(--color-charcoal-500)]">Delivery</dt>
+                  <dd className="text-[var(--color-charcoal-900)] tabular-nums">{formatBhd(est.shipping)}</dd>
+                </div>
+                <div className="flex justify-between pt-2 mt-1 border-t border-black/10 text-display text-[1.35rem] text-[var(--color-charcoal-900)]">
+                  <dt>Estimated total</dt>
+                  <dd className="tabular-nums">{formatBhd(est.grandTotal)}</dd>
+                </div>
+              </dl>
+              <p className="mt-2 text-[0.72rem] text-[var(--color-charcoal-500)] leading-relaxed">
+                Estimated price. Free delivery within Bahrain is applied at checkout.
+              </p>
+            </>
+          );
+        })()}
 
       </div>
     </div>
