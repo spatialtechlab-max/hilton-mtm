@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  ArrowRight, LogOut, ShoppingBag, Ruler, CalendarClock, Mail, Package, MapPin,
+  ArrowRight, LogOut, ShoppingBag, Ruler, CalendarClock, Mail, Package, MapPin, Camera,
 } from "lucide-react";
+import { listProfilePhotos, countProfilePhotos, PROFILE_VIEWS } from "@/lib/profilePhotos";
 import type { User } from "@supabase/supabase-js";
 import { AuthForm } from "@/components/AuthForm";
 import { useAuth } from "@/components/AuthProvider";
@@ -130,16 +131,18 @@ function AccountDashboard({ user, onSignOut }: { user: User; onSignOut: () => vo
   const [freeCountries, setFreeCountries] = useState<FreeShippingCountry[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [savedMeasurementsCount, setSavedMeasurementsCount] = useState(0);
+  const [photoCount, setPhotoCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [p, os, fc, addr, meas] = await Promise.all([
+      const [p, os, fc, addr, meas, photos] = await Promise.all([
         fetchProfile(user.id),
         listMyOrders(),
         listFreeShippingCountries(),
         listMyAddresses(),
         fetchMyMeasurements(),
+        listProfilePhotos(user.id).catch(() => ({})),
       ]);
       if (cancelled) return;
       setProfile(p);
@@ -147,6 +150,7 @@ function AccountDashboard({ user, onSignOut }: { user: User; onSignOut: () => vo
       setFreeCountries(fc);
       setAddresses(addr);
       setSavedMeasurementsCount(countSavedMeasurements(meas?.values));
+      setPhotoCount(countProfilePhotos(photos));
       setLoading(false);
     }
     load();
@@ -208,6 +212,10 @@ function AccountDashboard({ user, onSignOut }: { user: User; onSignOut: () => vo
                   ? `Measurements ${savedMeasurementsCount} of ${allMeasurements.length}`
                   : "Take your measurements",
                 done: measurementsComplete, href: "/account/measurements", icon: Ruler },
+              { key: "photos", label: photoCount > 0
+                ? `Body photographs ${photoCount} of ${PROFILE_VIEWS.length}`
+                : "Add body photographs (optional)",
+                done: photoCount >= PROFILE_VIEWS.length, href: "/account/photos", icon: Camera },
             ];
             const doneCount = items.filter((i) => i.done).length;
             const pct = Math.round((doneCount / items.length) * 100);
@@ -359,6 +367,12 @@ function AccountDashboard({ user, onSignOut }: { user: User; onSignOut: () => vo
                 title="Saved measurements"
                 body="Your numbers, kept on file so every future order fits the same."
                 cta={{ href: "/account/measurements", label: "Add measurements" }}
+              />
+              <DashCard
+                icon={<Camera size={18} strokeWidth={1.5} />}
+                title="Body photographs"
+                body="Front, back and both sides — uploaded once, used for every order. Optional."
+                cta={{ href: "/account/photos", label: photoCount > 0 ? `Photos · ${photoCount} of ${PROFILE_VIEWS.length}` : "Add photos" }}
               />
               {/* Fittings card hidden per atelier request (code kept). */}
               {false && (
