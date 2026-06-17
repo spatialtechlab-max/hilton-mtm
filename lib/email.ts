@@ -144,6 +144,27 @@ export async function sendWelcomeEmail(args: { to: string; name?: string }) {
   });
 }
 
+/* ─────────────────────────── 1b. Password reset ─────────────────────────── */
+
+export async function sendPasswordResetEmail(args: { to: string; resetUrl: string; name?: string }) {
+  const firstName = (args.name ?? "").split(/\s+/)[0] || "";
+  const body = `
+    <p>${firstName ? `Dear ${firstName},` : "Hello,"}</p>
+    <p>We received a request to reset the password on your Hilton Made to Measure account. Choose a new one with the button below.</p>
+    <p>The link is valid for one hour and can be used once. If you didn&rsquo;t request this, you can safely ignore this email and your password stays the same.</p>
+  `;
+  return send({
+    to: args.to,
+    subject: "Reset your password · Hilton Made to Measure",
+    html: shell({
+      preview: "Reset your Hilton Made to Measure password.",
+      heading: "Reset your password.",
+      body,
+      cta: { label: "Set a New Password", url: args.resetUrl },
+    }),
+  });
+}
+
 /* ───────────────────── 2. Order confirmation ───────────────────── */
 
 type OrderEmailItem = { name: string; type_label: string; qty: number; price_num: number; image?: string | null };

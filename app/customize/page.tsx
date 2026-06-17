@@ -27,7 +27,6 @@ import { findProduct } from "@/lib/libraries";
 import { fetchGarments, fetchGarmentStepCounts } from "@/lib/garments";
 import { fetchMyMeasurements } from "@/lib/measurements";
 import { buildSpecPdf } from "@/lib/specSheet";
-import { computeOrderTotals } from "@/lib/checkoutFees";
 import { AuthForm } from "@/components/AuthForm";
 import { useAuth } from "@/components/AuthProvider";
 import { addToCart as pushToCart, removeFromCart } from "@/lib/cart";
@@ -2029,45 +2028,32 @@ function SummaryPanel({
           )}
         </div>
 
-        {/* Estimated total — on the RIGHT, directly under the specification.
-            Includes VAT and delivery so the number is the real estimate. */}
-        {(basePrice > 0 || surcharge > 0) && (() => {
-          const est = computeOrderTotals(basePrice + surcharge);
-          return (
-            <>
-              <div className="my-6 h-px bg-black/10" />
-              <dl className="space-y-2 text-[0.88rem]">
-                {basePrice > 0 && (
-                  <div className="flex justify-between">
-                    <dt className="text-[var(--color-charcoal-500)]">{hasTiers ? "Commission" : "Garment"}</dt>
-                    <dd className="text-[var(--color-charcoal-900)] tabular-nums">{formatBhd(basePrice)}</dd>
-                  </div>
-                )}
-                {surcharge > 0 && (
-                  <div className="flex justify-between">
-                    <dt className="text-[var(--color-charcoal-500)]">Customisation</dt>
-                    <dd className="text-[var(--color-burgundy-700)] tabular-nums">+ {formatBhd(surcharge)}</dd>
-                  </div>
-                )}
+        {/* Standard price — on the RIGHT, directly under the specification.
+            This is pre-cart, so it's just the garment price; VAT and delivery
+            are added later, at checkout. */}
+        {(basePrice > 0 || surcharge > 0) && (
+          <>
+            <div className="my-6 h-px bg-black/10" />
+            <dl className="space-y-2 text-[0.88rem]">
+              {basePrice > 0 && (
                 <div className="flex justify-between">
-                  <dt className="text-[var(--color-charcoal-500)]">VAT (10%)</dt>
-                  <dd className="text-[var(--color-charcoal-900)] tabular-nums">{formatBhd(est.vat)}</dd>
+                  <dt className="text-[var(--color-charcoal-500)]">{hasTiers ? "Commission" : "Garment"}</dt>
+                  <dd className="text-[var(--color-charcoal-900)] tabular-nums">{formatBhd(basePrice)}</dd>
                 </div>
+              )}
+              {surcharge > 0 && (
                 <div className="flex justify-between">
-                  <dt className="text-[var(--color-charcoal-500)]">Delivery</dt>
-                  <dd className="text-[var(--color-charcoal-900)] tabular-nums">{formatBhd(est.shipping)}</dd>
+                  <dt className="text-[var(--color-charcoal-500)]">Customisation</dt>
+                  <dd className="text-[var(--color-burgundy-700)] tabular-nums">+ {formatBhd(surcharge)}</dd>
                 </div>
-                <div className="flex justify-between pt-2 mt-1 border-t border-black/10 text-display text-[1.35rem] text-[var(--color-charcoal-900)]">
-                  <dt>Estimated total</dt>
-                  <dd className="tabular-nums">{formatBhd(est.grandTotal)}</dd>
-                </div>
-              </dl>
-              <p className="mt-2 text-[0.72rem] text-[var(--color-charcoal-500)] leading-relaxed">
-                Estimated price. Free delivery within Bahrain is applied at checkout.
-              </p>
-            </>
-          );
-        })()}
+              )}
+              <div className="flex justify-between pt-2 mt-1 border-t border-black/10 text-display text-[1.35rem] text-[var(--color-charcoal-900)]">
+                <dt>Total</dt>
+                <dd className="tabular-nums">{formatBhd(grandTotal)}</dd>
+              </div>
+            </dl>
+          </>
+        )}
 
       </div>
     </div>

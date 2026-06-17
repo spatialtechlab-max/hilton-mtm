@@ -39,9 +39,10 @@ export default function ResetPasswordPage() {
       if (data.session) { setReady(true); setChecking(false); }
     });
 
-    // If no session has appeared shortly after load, the link is missing,
-    // already used, or expired.
-    const t = setTimeout(() => setChecking(false), 2500);
+    // If no session has appeared after load, the link is missing, already
+    // used, or expired. Allow time for the token exchange (and the
+    // PASSWORD_RECOVERY redirect from another allowed URL) to complete.
+    const t = setTimeout(() => setChecking(false), 5000);
 
     return () => { sub.subscription.unsubscribe(); clearTimeout(t); };
   }, []);

@@ -71,17 +71,21 @@ export function AuthForm({
   async function handleForgot() {
     setError(null); setNotice(null);
     if (!email.trim()) { setError("Enter your email above first."); return; }
-    if (!isSupabaseConfigured) { setError("Authentication isn't configured yet."); return; }
     setLoading(true);
-    // Send the reset link to the dedicated set-a-new-password page, NOT the
-    // current page. The client auto-exchanges the recovery token in the URL,
-    // so pointing it at /account would just sign the user straight in with no
-    // chance to choose a new password.
-    const resetRedirect =
+    // Send via our own branded Resend email (the house template) instead of
+    // Supabase's default "Supabase Auth" message. The server generates the
+    // recovery link with the admin API and emails it. Redirect target is the
+    // dedicated set-a-new-password page.
+    const redirectTo =
       typeof window !== "undefined" ? `${window.location.origin}/account/reset` : undefined;
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: resetRedirect });
+    try {
+      await fetch("/api/notify/password-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, redirectTo }),
+      });
+    } catch { /* the notice below is shown regardless, so we don't leak status */ }
     setLoading(false);
-    if (error) { setError(error.message); return; }
     setNotice("Check your email for a password reset link.");
   }
 
