@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Lock } from "lucide-react";
+import { ArrowRight, Lock, Eye, EyeOff } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 /**
@@ -132,9 +132,8 @@ export function AuthForm({
           <Field label="Full name" type="text" autoComplete="name" value={name} onChange={setName} required />
         )}
         <Field label="Email" type="email" autoComplete="email" value={email} onChange={setEmail} required />
-        <Field
+        <PasswordField
           label="Password"
-          type="password"
           autoComplete={mode === "signin" ? "current-password" : "new-password"}
           value={password}
           onChange={setPassword}
@@ -221,6 +220,47 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         className="mt-2 w-full bg-[var(--color-ivory-100)] border border-black/15 px-4 py-3.5 text-[1rem] text-[var(--color-charcoal-900)] placeholder:text-[var(--color-charcoal-500)] focus:outline-none focus:border-[var(--color-burgundy-700)] transition-colors"
       />
+    </label>
+  );
+}
+
+/**
+ * Password input with a show/hide eye toggle, so the customer can confirm
+ * what they typed before signing in or creating an account.
+ */
+function PasswordField({
+  label, autoComplete, value, onChange, required, minLength,
+}: {
+  label: string;
+  autoComplete?: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+  minLength?: number;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <label className="block">
+      <span className="text-eyebrow text-[var(--color-charcoal-500)]">{label}</span>
+      <div className="relative mt-2">
+        <input
+          type={show ? "text" : "password"}
+          required={required}
+          minLength={minLength}
+          autoComplete={autoComplete}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full bg-[var(--color-ivory-100)] border border-black/15 px-4 py-3.5 pr-12 text-[1rem] text-[var(--color-charcoal-900)] placeholder:text-[var(--color-charcoal-500)] focus:outline-none focus:border-[var(--color-burgundy-700)] transition-colors"
+        />
+        <button
+          type="button"
+          onClick={() => setShow((s) => !s)}
+          aria-label={show ? "Hide password" : "Show password"}
+          className="absolute inset-y-0 right-0 flex items-center px-4 text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors"
+        >
+          {show ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
+        </button>
+      </div>
     </label>
   );
 }

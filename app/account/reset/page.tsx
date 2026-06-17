@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Lock } from "lucide-react";
+import { ArrowRight, Lock, Eye, EyeOff } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 /**
@@ -55,12 +55,16 @@ export default function ResetPasswordPage() {
 
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
-    setLoading(false);
-    if (error) { setError(error.message); return; }
+    if (error) { setLoading(false); setError(error.message); return; }
 
+    // The recovery link signs the user in just long enough to set the new
+    // password. We don't want to drop them straight into their account on
+    // that temporary session — sign them out and send them back to the
+    // sign-in page so they log in fresh with the password they just chose.
+    await supabase.auth.signOut();
+    setLoading(false);
     setDone(true);
-    // The user now has a valid session; send them into their account.
-    setTimeout(() => router.push("/account"), 1400);
+    setTimeout(() => router.push("/account"), 1600);
   }
 
   return (
@@ -79,30 +83,28 @@ export default function ResetPasswordPage() {
             Set a new password
           </h1>
           <p className="mt-3 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
-            Choose a new password for your account. You&apos;ll be signed in once it&apos;s saved.
+            Choose a new password for your account. You&apos;ll sign in with it on the next screen.
           </p>
         </div>
 
         {done ? (
           <p className="text-[0.9rem] text-[var(--color-charcoal-800)] bg-[var(--color-ivory-200)] px-4 py-3">
-            Password updated. Taking you to your account…
+            Password updated. Sign in with your new password…
           </p>
         ) : checking ? (
           <p className="text-[0.9rem] text-[var(--color-charcoal-500)]">Checking your reset link…</p>
         ) : ready ? (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Field
+            <PasswordField
               label="New password"
-              type="password"
               autoComplete="new-password"
               value={password}
               onChange={setPassword}
               required
               minLength={6}
             />
-            <Field
+            <PasswordField
               label="Confirm new password"
-              type="password"
               autoComplete="new-password"
               value={confirm}
               onChange={setConfirm}
@@ -148,29 +150,44 @@ export default function ResetPasswordPage() {
   );
 }
 
-function Field({
-  label, type, autoComplete, value, onChange, required, minLength,
+/**
+ * Password input with a show/hide eye toggle. Lets the customer confirm
+ * what they typed before saving — a fresh password is easy to fat-finger,
+ * and there's no second device to check it against here.
+ */
+function PasswordField({
+  label, autoComplete, value, onChange, required, minLength,
 }: {
   label: string;
-  type: string;
   autoComplete?: string;
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
   minLength?: number;
 }) {
+  const [show, setShow] = useState(false);
   return (
     <label className="block">
       <span className="text-eyebrow text-[var(--color-charcoal-500)]">{label}</span>
-      <input
-        type={type}
-        required={required}
-        minLength={minLength}
-        autoComplete={autoComplete}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-2 w-full bg-[var(--color-ivory-100)] border border-black/15 px-4 py-3.5 text-[1rem] text-[var(--color-charcoal-900)] placeholder:text-[var(--color-charcoal-500)] focus:outline-none focus:border-[var(--color-burgundy-700)] transition-colors"
-      />
+      <div className="relative mt-2">
+        <input
+          type={show ? "text" : "password"}
+          required={required}
+          minLength={minLength}
+          autoComplete={autoComplete}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full bg-[var(--color-ivory-100)] border border-black/15 px-4 py-3.5 pr-12 text-[1rem] text-[var(--color-charcoal-900)] placeholder:text-[var(--color-charcoal-500)] focus:outline-none focus:border-[var(--color-burgundy-700)] transition-colors"
+        />
+        <button
+          type="button"
+          onClick={() => setShow((s) => !s)}
+          aria-label={show ? "Hide password" : "Show password"}
+          className="absolute inset-y-0 right-0 flex items-center px-4 text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors"
+        >
+          {show ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
+        </button>
+      </div>
     </label>
   );
 }
