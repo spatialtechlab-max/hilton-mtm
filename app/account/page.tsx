@@ -360,12 +360,15 @@ function AccountDashboard({ user, onSignOut }: { user: User; onSignOut: () => vo
                 body="Your numbers, kept on file so every future order fits the same."
                 cta={{ href: "/account/measurements", label: "Add measurements" }}
               />
-              <DashCard
-                icon={<CalendarClock size={18} strokeWidth={1.5} />}
-                title="Fittings"
-                body="Book and manage your atelier appointments."
-                cta={{ href: "/book", label: "Book a fitting" }}
-              />
+              {/* Fittings card hidden per atelier request (code kept). */}
+              {false && (
+                <DashCard
+                  icon={<CalendarClock size={18} strokeWidth={1.5} />}
+                  title="Fittings"
+                  body="Book and manage your atelier appointments."
+                  cta={{ href: "/book", label: "Book a fitting" }}
+                />
+              )}
               <DashCard
                 icon={<ShoppingBag size={18} strokeWidth={1.5} />}
                 title="Your cart"

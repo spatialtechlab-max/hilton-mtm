@@ -45,9 +45,10 @@ export function ShowroomFeature() {
           </Reveal>
           <Reveal delay={0.35}>
             <div className="mt-8 flex flex-wrap gap-5">
+              {/* Book a fitting hidden per atelier request (code kept). */}
               <Link
                 href="/book"
-                className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-6 py-3 hover:bg-[var(--color-burgundy-800)] transition-colors"
+                className="hidden items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-6 py-3 hover:bg-[var(--color-burgundy-800)] transition-colors"
               >
                 Book a fitting <ArrowRight size={14} strokeWidth={1.5} />
               </Link>

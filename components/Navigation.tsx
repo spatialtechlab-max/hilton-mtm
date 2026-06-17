@@ -124,9 +124,10 @@ export function Navigation() {
               </Link>
             )}
 
+            {/* Book a Fitting hidden per atelier request (code kept). */}
             <Link
               href="/book"
-              className={`hidden lg:inline-flex items-center gap-2 px-5 py-3 text-eyebrow transition-colors ${
+              className={`hidden items-center gap-2 px-5 py-3 text-eyebrow transition-colors ${
                 onDark
                   ? "bg-[var(--color-ivory-100)] text-[var(--color-charcoal-900)] hover:bg-white"
                   : "bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] hover:bg-[var(--color-burgundy-800)]"
@@ -200,9 +201,10 @@ export function Navigation() {
                   <User size={16} strokeWidth={1.5} />
                   {user ? "Your account" : "Sign in / Create account"}
                 </Link>
+                {/* Book a Fitting hidden per atelier request (code kept). */}
                 <Link
                   href="/book"
-                  className="block w-full text-center bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] py-5 text-eyebrow"
+                  className="hidden w-full text-center bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] py-5 text-eyebrow"
                 >
                   Book a Fitting
                 </Link>

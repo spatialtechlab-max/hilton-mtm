@@ -61,10 +61,10 @@ export default async function HomePage() {
 
             <Reveal delay={0.6}>
               <div className="mt-12 flex flex-wrap items-center gap-4">
-                {/* Primary CTA routes into Design Yours rather than the
-                    booking page — the storefront sells the configurator,
-                    in-store fitting is a secondary path via Contact. */}
-                <Button href="/customize" variant="ivory">Book a Fitting</Button>
+                {/* Primary CTA routes into Design Yours. (Was labelled "Book
+                    a Fitting"; the booking option is hidden site-wide per
+                    atelier request, so this reads "Design Yours" now.) */}
+                <Button href="/customize" variant="ivory">Design Yours</Button>
                 <Button href="/contact" variant="ghost" showArrow>
                   <span className="text-[var(--color-ivory-100)]">Contact</span>
                 </Button>

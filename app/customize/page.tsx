@@ -30,7 +30,7 @@ import { fetchMyMeasurements } from "@/lib/measurements";
 import { buildSpecPdf } from "@/lib/specSheet";
 import { AuthForm } from "@/components/AuthForm";
 import { useAuth } from "@/components/AuthProvider";
-import { addToCart as pushToCart } from "@/lib/cart";
+import { addToCart as pushToCart, removeFromCart } from "@/lib/cart";
 import { DesignYoursPicker } from "@/components/DesignYoursPicker";
 
 type Phase = "fabric" | "tier" | "spec" | "measurements" | "summary" | "auth" | "cart";
@@ -98,6 +98,10 @@ export default function CustomizePage() {
 function CustomizeInner() {
   const [category, setCategory] = useState<StepCategory>("suit");
   const [sku, setSku] = useState<string | null>(null);
+  // When the customer arrives via the cart's "Edit" link, this holds the
+  // cart line id being edited. On add-to-cart we remove that line first so
+  // the edit REPLACES the item instead of creating a duplicate.
+  const [editingCartId, setEditingCartId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [allSteps, setAllSteps] = useState<LiveStep[]>(staticLiveSteps);
   const [selections,   setSelections]   = useState<Selections>(defaultSelections);
@@ -260,6 +264,8 @@ function CustomizeInner() {
     const raw = params.get("category") ?? params.get("garment") ?? params.get("cat");
     const skuParam = params.get("sku");
     setSku(skuParam);
+    // Cart "Edit" deep-link carries the cart line id so re-adding replaces it.
+    setEditingCartId(params.get("edit"));
     // Track whether the URL carried a real category. If not, the page
     // renders the Design Yours picker tiles below instead of the
     // customizer. We still set `category` to a safe default so the
@@ -294,12 +300,20 @@ function CustomizeInner() {
     // Entry rule: Fabric pick is ALWAYS the first phase, even when the user
     // arrived from a PDP "Customise" CTA. The PDP item is inspiration, not a
     // committed fabric — the user still picks a real cloth from the library.
+    // A fresh "Customise this <garment>" click from a PDP carries ?sku= but
+    // NOT ?edit=. That's a brand-new design — it must start at the beginning
+    // of the flow, never resume a previously-saved summary/measurements phase
+    // (the bug that dropped PDP visitors straight onto the last step). Only
+    // resume the saved session when returning organically (no ?sku=) or when
+    // editing a cart line (?edit=).
+    const editParam = params.get("edit");
+    const isPdpEntry = !!skuParam && !editParam;
     try {
       const saved = JSON.parse(localStorage.getItem(`hilton-customizer-${cat}`) || "null") as null | {
         selections?: Selections; measurements?: MeasurementValues; unit?: MeasurementUnit;
         phase?: Phase; stepIdx?: number; tier?: string; selectedFabric?: Fabric;
       };
-      if (saved) {
+      if (saved && !isPdpEntry) {
         if (saved.selections)   setSelections({ ...defaultSelections(), ...saved.selections });
         if (saved.measurements) setMeasurements({ ...defaultMeasurements(), ...saved.measurements });
         if (saved.unit === "cm" || saved.unit === "in") setUnit(saved.unit);
@@ -314,6 +328,11 @@ function CustomizeInner() {
           setPhase("fabric");
         }
       } else {
+        // PDP entry or no saved session: clean start at step 0. The
+        // skip-fabric effect picks up ?sku= and advances from "fabric" to
+        // the first spec step (tier comes from the URL for suits/jackets).
+        setSelections(defaultSelections());
+        setStepIdx(0);
         setPhase("fabric");
       }
     } catch {
@@ -440,6 +459,12 @@ function CustomizeInner() {
   // (createOrderFromCart writes the row to mtm_orders).
   function addToCart() {
     if (!selectedFabric) return;
+    // Editing an existing cart line: drop the old one so the re-add
+    // replaces it rather than leaving a duplicate behind.
+    if (editingCartId) {
+      removeFromCart(editingCartId);
+      setEditingCartId(null);
+    }
     const tierLabel = hasTiers ? tierObj.name : "Made to measure";
     const categoryNoun = category === "trouser" ? "trousers" : category;
     const lineName = hasTiers
@@ -585,9 +610,10 @@ function CustomizeInner() {
           person at the house.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
+          {/* Book a fitting hidden per atelier request (code kept). */}
           <Link
             href="/book"
-            className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-6 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors"
+            className="hidden items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-6 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors"
           >
             Book a fitting <ArrowRight size={14} strokeWidth={1.5} />
           </Link>
@@ -1643,7 +1669,8 @@ function MeasurementsPhase({
           {filledCount} of {allActive.length} entered
         </div>
 
-        <div className="mt-10 p-6 border border-black/10 bg-[var(--color-ivory-200)]">
+        {/* "Prefer in-person? Book a fitting" card hidden per atelier request (code kept). */}
+        <div className="hidden mt-10 p-6 border border-black/10 bg-[var(--color-ivory-200)]">
           <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-2">Prefer in-person?</div>
           <p className="text-[0.9rem] text-[var(--color-charcoal-800)] leading-relaxed">
             Skip ahead and book a fitting; the master tailor will take every measurement at the atelier.
@@ -1860,9 +1887,10 @@ function SummaryPanel({
           </button>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2">
+          {/* Book a fitting hidden per atelier request (code kept). */}
           <Link
             href="/book"
-            className="text-eyebrow text-[var(--color-charcoal-800)] hover:text-[var(--color-burgundy-700)] transition-colors"
+            className="hidden text-[var(--color-charcoal-800)] hover:text-[var(--color-burgundy-700)] transition-colors"
           >
             Book a fitting instead
           </Link>

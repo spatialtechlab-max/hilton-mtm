@@ -155,7 +155,8 @@ export default function MeasurementsPage() {
           <p className="text-eyebrow text-[var(--color-charcoal-500)]">Loading…</p>
         )}
 
-        <div className="mt-16 pt-8 border-t border-black/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* "Prefer in-person? Book a fitting" hidden per atelier request (code kept). */}
+        <div className="hidden mt-16 pt-8 border-t border-black/10 flex-col md:flex-row md:items-center justify-between gap-4">
           <p className="text-[0.85rem] text-[var(--color-charcoal-500)] max-w-xl">
             Prefer in-person? Book a fitting and the master tailor will take every measurement at the atelier.
           </p>
