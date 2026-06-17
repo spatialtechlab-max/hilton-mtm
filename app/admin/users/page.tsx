@@ -10,10 +10,11 @@
  */
 import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Search, Users, AlertCircle, ExternalLink, Camera } from "lucide-react";
+import { ArrowLeft, Search, Users, AlertCircle, ExternalLink, Camera, Download, Ruler } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import { supabase } from "@/lib/supabase";
+import { allMeasurements } from "@/lib/customizer";
 
 type AdminUser = {
   id: string;
@@ -27,6 +28,7 @@ type AdminUser = {
   orders_count: number;
   total_spent: number;
   profile_complete: boolean;
+  measurements: { unit: string; values: Record<string, string> } | null;
 };
 
 const PROFILE_VIEWS = ["front", "back", "left", "right"] as const;
@@ -57,6 +59,31 @@ export default function AdminUsersPage() {
   // first time a row is expanded, then cached so re-opening is instant.
   const [openId, setOpenId] = useState<string | null>(null);
   const [photosById, setPhotosById] = useState<Record<string, PhotoState>>({});
+
+  const [exporting, setExporting] = useState(false);
+  async function exportExcel() {
+    setExporting(true);
+    setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? "";
+      const res = await fetch("/api/admin/users/export", { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) { setError("Couldn't generate the Excel export."); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `hilton-customers-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Couldn't generate the Excel export.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function togglePhotos(id: string) {
     if (openId === id) { setOpenId(null); return; }
@@ -136,6 +163,15 @@ export default function AdminUsersPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={exportExcel}
+              disabled={exporting || loadingData}
+              className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-4 py-2.5 hover:bg-[var(--color-burgundy-800)] transition-colors disabled:opacity-60"
+            >
+              <Download size={14} strokeWidth={1.5} />
+              {exporting ? "Preparing…" : "Export to Excel"}
+            </button>
             <Link href="/admin"           className="text-eyebrow inline-flex items-center gap-2 border border-black/15 px-4 py-2.5 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors">Customizer options</Link>
             <Link href="/admin/garments"  className="text-eyebrow inline-flex items-center gap-2 border border-black/15 px-4 py-2.5 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors">Garments</Link>
             <Link href="/admin/media"     className="text-eyebrow inline-flex items-center gap-2 border border-black/15 px-4 py-2.5 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors">Media</Link>
@@ -242,7 +278,7 @@ export default function AdminUsersPage() {
                   {openId === r.id && (
                     <tr className="border-b border-black/5 bg-[var(--color-ivory-200)]">
                       <td colSpan={9} className="py-5 px-3">
-                        <PhotoPanel state={photosById[r.id]} />
+                        <CustomerDetailPanel state={photosById[r.id]} measurements={r.measurements} />
                       </td>
                     </tr>
                   )}
@@ -256,27 +292,40 @@ export default function AdminUsersPage() {
   );
 }
 
-function PhotoPanel({ state }: { state: PhotoState | undefined }) {
+function CustomerDetailPanel({
+  state, measurements,
+}: {
+  state: PhotoState | undefined;
+  measurements: { unit: string; values: Record<string, string> } | null;
+}) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <PhotoBlock state={state} />
+      <MeasurementBlock measurements={measurements} />
+    </div>
+  );
+}
+
+function PhotoBlock({ state }: { state: PhotoState | undefined }) {
+  const heading = (
+    <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-3 inline-flex items-center gap-2">
+      <Camera size={13} strokeWidth={1.5} /> Body photographs · visible only to the atelier
+    </div>
+  );
   if (!state || state === "loading") {
-    return <p className="text-eyebrow text-[var(--color-charcoal-500)]">Loading photos…</p>;
+    return <div>{heading}<p className="text-eyebrow text-[var(--color-charcoal-500)]">Loading photos…</p></div>;
   }
   if (state === "error") {
-    return <p className="text-[0.85rem] text-[var(--color-burgundy-700)]">Couldn&rsquo;t load this customer&rsquo;s photos.</p>;
+    return <div>{heading}<p className="text-[0.85rem] text-[var(--color-burgundy-700)]">Couldn&rsquo;t load this customer&rsquo;s photos.</p></div>;
   }
   const any = PROFILE_VIEWS.some((v) => state[v]);
   if (!any) {
-    return (
-      <p className="text-[0.85rem] text-[var(--color-charcoal-500)] italic">
-        No body photographs on file for this customer.
-      </p>
-    );
+    return <div>{heading}<p className="text-[0.85rem] text-[var(--color-charcoal-500)] italic">No body photographs on file.</p></div>;
   }
   return (
     <div>
-      <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-3 inline-flex items-center gap-2">
-        <Camera size={13} strokeWidth={1.5} /> Body photographs · visible only to the atelier
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl">
+      {heading}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {PROFILE_VIEWS.map((v) => {
           const url = state[v];
           return (
@@ -298,6 +347,32 @@ function PhotoPanel({ state }: { state: PhotoState | undefined }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function MeasurementBlock({ measurements }: { measurements: { unit: string; values: Record<string, string> } | null }) {
+  const unit = measurements?.unit ?? "cm";
+  const rows = allMeasurements
+    .map((m) => ({ label: m.label, value: (measurements?.values?.[m.slug] ?? "").toString().trim() }))
+    .filter((r) => r.value !== "");
+  return (
+    <div>
+      <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-3 inline-flex items-center gap-2">
+        <Ruler size={13} strokeWidth={1.5} /> Saved measurements{rows.length > 0 ? ` · ${unit}` : ""}
+      </div>
+      {rows.length > 0 ? (
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-2 max-w-xl">
+          {rows.map((r) => (
+            <div key={r.label} className="flex justify-between gap-3 text-[0.85rem] border-b border-black/5 pb-1.5">
+              <dt className="text-[var(--color-charcoal-500)]">{r.label}</dt>
+              <dd className="text-[var(--color-charcoal-900)] tabular-nums whitespace-nowrap">{r.value} {unit}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="text-[0.85rem] text-[var(--color-charcoal-500)] italic">No saved measurements on file.</p>
+      )}
     </div>
   );
 }
