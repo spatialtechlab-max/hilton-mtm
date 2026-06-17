@@ -8,9 +8,9 @@
  * or has to synthesise the list from profiles + orders; the `partial`
  * flag drives a one-line notice in the UI so the atelier knows.
  */
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Search, Users, AlertCircle, ExternalLink } from "lucide-react";
+import { ArrowLeft, Search, Users, AlertCircle, ExternalLink, Camera } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import { supabase } from "@/lib/supabase";
@@ -29,6 +29,14 @@ type AdminUser = {
   profile_complete: boolean;
 };
 
+const PROFILE_VIEWS = ["front", "back", "left", "right"] as const;
+type ProfileView = (typeof PROFILE_VIEWS)[number];
+const PROFILE_VIEW_LABEL: Record<ProfileView, string> = {
+  front: "Front", back: "Back", left: "Left side", right: "Right side",
+};
+type PhotoMap = Record<ProfileView, string | null>;
+type PhotoState = "loading" | "error" | PhotoMap;
+
 const fmtBhd = (n: number) => `BHD ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 const fmtDate = (iso: string) => {
   if (!iso) return "—";
@@ -44,6 +52,29 @@ export default function AdminUsersPage() {
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
+
+  // Per-customer body-photograph viewer. Photos are fetched on demand the
+  // first time a row is expanded, then cached so re-opening is instant.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [photosById, setPhotosById] = useState<Record<string, PhotoState>>({});
+
+  async function togglePhotos(id: string) {
+    if (openId === id) { setOpenId(null); return; }
+    setOpenId(id);
+    const cached = photosById[id];
+    if (cached && cached !== "error") return;
+    setPhotosById((m) => ({ ...m, [id]: "loading" }));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? "";
+      const res = await fetch(`/api/admin/users/${id}/photos`, { headers: { Authorization: `Bearer ${token}` } });
+      const body = await res.json();
+      if (!res.ok) { setPhotosById((m) => ({ ...m, [id]: "error" })); return; }
+      setPhotosById((m) => ({ ...m, [id]: body.photos as PhotoMap }));
+    } catch {
+      setPhotosById((m) => ({ ...m, [id]: "error" }));
+    }
+  }
 
   useEffect(() => {
     if (!user) { setAdmin(false); return; }
@@ -167,41 +198,107 @@ export default function AdminUsersPage() {
                 <th className="text-right py-3 px-3">Spend</th>
                 <th className="text-left py-3 px-3 hidden md:table-cell">Joined</th>
                 <th className="text-left py-3 px-3 hidden xl:table-cell">Last seen</th>
+                <th className="text-right py-3 px-3">Photos</th>
               </tr>
             </thead>
             <tbody>
               {visible.map((r) => (
-                <tr key={r.id} className="border-b border-black/5 hover:bg-[var(--color-ivory-200)] transition-colors">
-                  <td className="py-3 px-3">
-                    <div className="text-[0.9rem] text-[var(--color-charcoal-900)]">{r.full_name ?? <span className="text-[var(--color-charcoal-500)] italic">Not provided</span>}</div>
-                    {!r.profile_complete && (
-                      <span className="text-[0.65rem] tracking-[0.15em] uppercase text-[var(--color-charcoal-500)]">Profile incomplete</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-3 hidden md:table-cell">
-                    {r.email ? (
-                      <a
-                        href={`mailto:${r.email}`}
-                        className="text-[0.85rem] text-[var(--color-burgundy-700)] hover:underline inline-flex items-center gap-1"
+                <Fragment key={r.id}>
+                  <tr className="border-b border-black/5 hover:bg-[var(--color-ivory-200)] transition-colors">
+                    <td className="py-3 px-3">
+                      <div className="text-[0.9rem] text-[var(--color-charcoal-900)]">{r.full_name ?? <span className="text-[var(--color-charcoal-500)] italic">Not provided</span>}</div>
+                      {!r.profile_complete && (
+                        <span className="text-[0.65rem] tracking-[0.15em] uppercase text-[var(--color-charcoal-500)]">Profile incomplete</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 hidden md:table-cell">
+                      {r.email ? (
+                        <a
+                          href={`mailto:${r.email}`}
+                          className="text-[0.85rem] text-[var(--color-burgundy-700)] hover:underline inline-flex items-center gap-1"
+                        >
+                          {r.email}
+                          <ExternalLink size={11} strokeWidth={1.5} />
+                        </a>
+                      ) : <span className="text-[var(--color-charcoal-500)]">—</span>}
+                    </td>
+                    <td className="py-3 px-3 hidden lg:table-cell text-[0.85rem] tabular-nums">{r.phone ?? "—"}</td>
+                    <td className="py-3 px-3 hidden lg:table-cell text-[0.85rem]">{[r.city, r.country].filter(Boolean).join(", ") || "—"}</td>
+                    <td className="py-3 px-3 text-right tabular-nums text-[0.9rem]">{r.orders_count}</td>
+                    <td className="py-3 px-3 text-right tabular-nums text-[0.9rem]">{r.total_spent > 0 ? fmtBhd(r.total_spent) : "—"}</td>
+                    <td className="py-3 px-3 hidden md:table-cell text-[0.85rem] text-[var(--color-charcoal-500)]">{fmtDate(r.created_at)}</td>
+                    <td className="py-3 px-3 hidden xl:table-cell text-[0.85rem] text-[var(--color-charcoal-500)]">{fmtDate(r.last_sign_in_at ?? "")}</td>
+                    <td className="py-3 px-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => togglePhotos(r.id)}
+                        className="text-eyebrow inline-flex items-center gap-1.5 border border-black/15 px-3 py-1.5 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
                       >
-                        {r.email}
-                        <ExternalLink size={11} strokeWidth={1.5} />
-                      </a>
-                    ) : <span className="text-[var(--color-charcoal-500)]">—</span>}
-                  </td>
-                  <td className="py-3 px-3 hidden lg:table-cell text-[0.85rem] tabular-nums">{r.phone ?? "—"}</td>
-                  <td className="py-3 px-3 hidden lg:table-cell text-[0.85rem]">{[r.city, r.country].filter(Boolean).join(", ") || "—"}</td>
-                  <td className="py-3 px-3 text-right tabular-nums text-[0.9rem]">{r.orders_count}</td>
-                  <td className="py-3 px-3 text-right tabular-nums text-[0.9rem]">{r.total_spent > 0 ? fmtBhd(r.total_spent) : "—"}</td>
-                  <td className="py-3 px-3 hidden md:table-cell text-[0.85rem] text-[var(--color-charcoal-500)]">{fmtDate(r.created_at)}</td>
-                  <td className="py-3 px-3 hidden xl:table-cell text-[0.85rem] text-[var(--color-charcoal-500)]">{fmtDate(r.last_sign_in_at ?? "")}</td>
-                </tr>
+                        <Camera size={12} strokeWidth={1.5} />
+                        {openId === r.id ? "Hide" : "Photos"}
+                      </button>
+                    </td>
+                  </tr>
+                  {openId === r.id && (
+                    <tr className="border-b border-black/5 bg-[var(--color-ivory-200)]">
+                      <td colSpan={9} className="py-5 px-3">
+                        <PhotoPanel state={photosById[r.id]} />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>
         </div>
       )}
     </Shell>
+  );
+}
+
+function PhotoPanel({ state }: { state: PhotoState | undefined }) {
+  if (!state || state === "loading") {
+    return <p className="text-eyebrow text-[var(--color-charcoal-500)]">Loading photos…</p>;
+  }
+  if (state === "error") {
+    return <p className="text-[0.85rem] text-[var(--color-burgundy-700)]">Couldn&rsquo;t load this customer&rsquo;s photos.</p>;
+  }
+  const any = PROFILE_VIEWS.some((v) => state[v]);
+  if (!any) {
+    return (
+      <p className="text-[0.85rem] text-[var(--color-charcoal-500)] italic">
+        No body photographs on file for this customer.
+      </p>
+    );
+  }
+  return (
+    <div>
+      <div className="text-eyebrow text-[var(--color-burgundy-700)] mb-3 inline-flex items-center gap-2">
+        <Camera size={13} strokeWidth={1.5} /> Body photographs · visible only to the atelier
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl">
+        {PROFILE_VIEWS.map((v) => {
+          const url = state[v];
+          return (
+            <div key={v}>
+              <div className="relative aspect-[3/4] border border-black/10 bg-[var(--color-ivory-100)] overflow-hidden">
+                {url ? (
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="absolute inset-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={PROFILE_VIEW_LABEL[v]} className="absolute inset-0 w-full h-full object-cover" />
+                  </a>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-[var(--color-charcoal-500)] text-[0.72rem] italic">
+                    Not provided
+                  </div>
+                )}
+              </div>
+              <div className="text-eyebrow text-[0.6rem] text-[var(--color-charcoal-700)] mt-2">{PROFILE_VIEW_LABEL[v]}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
