@@ -507,10 +507,13 @@ export default function AdminPage() {
    existing `tier` text column as a comma-separated list ("essential,signature")
    so no DB migration is needed; a legacy single value parses as a one-item set. */
 const TIER_KEYS = ["essential", "signature", "bespoke"] as const;
+// Selected tier chips use the same solid burgundy as the "Visible for"
+// garment chips, so a picked package reads as the brand red, not grey/black.
+const TIER_SELECTED = "bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)]";
 const TIER_TONES: Record<string, string> = {
-  essential: "bg-[var(--color-burgundy-700)]/15 text-[var(--color-burgundy-700)]",
-  signature: "bg-[var(--color-charcoal-900)]/85 text-[var(--color-ivory-100)]",
-  bespoke:   "bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)]",
+  essential: TIER_SELECTED,
+  signature: TIER_SELECTED,
+  bespoke:   TIER_SELECTED,
 };
 function parseTiers(tier: string | null | undefined): Set<string> {
   return new Set((tier ?? "").split(",").map((t) => t.trim()).filter(Boolean));
