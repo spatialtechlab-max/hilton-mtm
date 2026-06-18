@@ -91,12 +91,18 @@ export async function buildCustomerDossier(req: Request): Promise<string | null>
 
     const [profileRes, ordersRes, notesRes, freeRes, measRes] = await Promise.all([
       sb.from("mtm_profiles").select("full_name, phone, city, country").eq("id", uid).maybeSingle(),
+      // Scope EXPLICITLY to this user's own rows by user_id — not just RLS.
+      // An admin's JWT can read every order under RLS, but Sebastian is the
+      // customer concierge and must only ever speak about the signed-in
+      // person's own account, never the whole customer base.
       sb.from("mtm_orders")
         .select("order_number, status, subtotal, shipping_address, discount_code, courier_name, tracking_number, tracking_url, dispatched_at, created_at, mtm_order_items(name, type_label, qty)")
+        .eq("user_id", uid)
         .order("created_at", { ascending: false })
         .limit(8),
       sb.from("mtm_order_status_history")
-        .select("note, status, changed_at, mtm_orders(order_number)")
+        .select("note, status, changed_at, mtm_orders!inner(order_number, user_id)")
+        .eq("mtm_orders.user_id", uid)
         .neq("note", "")
         .order("changed_at", { ascending: false })
         .limit(8),

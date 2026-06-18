@@ -29,8 +29,22 @@ export function Navigation() {
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
     onScroll();
+    // The browser's automatic scroll restoration and the back/forward
+    // bfcache resume a page WITHOUT firing a scroll event, and the hero
+    // images settle the layout a beat after mount. Any of these can leave
+    // the nav stuck in the wrong (opaque) state at the very top until the
+    // visitor scrolls. Re-derive the state on the next frame, shortly
+    // after, and on every pageshow so it always matches the real scroll.
+    const raf = requestAnimationFrame(onScroll);
+    const settle = setTimeout(onScroll, 300);
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    window.addEventListener("pageshow", onScroll);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(settle);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("pageshow", onScroll);
+    };
   }, []);
 
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Send, X, RotateCcw, Sparkles, ArrowRight } from "lucide-react";
 import type { Recommendation, Clarification } from "@/app/api/concierge/chat/route";
@@ -346,7 +346,7 @@ function MessageBubble({
   return (
     <div className="space-y-3">
       <div className="max-w-[88%] px-4 py-2.5 bg-[var(--color-ivory-200)] text-[var(--color-charcoal-900)] text-[0.92rem] leading-relaxed whitespace-pre-wrap">
-        {msg.content}
+        {renderRich(msg.content)}
       </div>
       {showChips && (
         <div className="flex flex-wrap gap-2 pt-1">
@@ -365,6 +365,27 @@ function MessageBubble({
       {msg.rec && <RecommendationCard rec={msg.rec} onPick={onTakeMeThere} />}
     </div>
   );
+}
+
+/**
+ * Render Sebastian's light markdown — only **bold** — as real emphasis.
+ * He marks order numbers, codes and totals with **…**; without this the
+ * asterisks render literally. Everything else stays plain text, and
+ * newlines are preserved by the bubble's whitespace-pre-wrap.
+ */
+function renderRich(text: string): ReactNode[] {
+  const out: ReactNode[] = [];
+  const re = /\*\*([^*\n]+)\*\*/g;
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    out.push(<strong key={key++} className="font-semibold">{m[1]}</strong>);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
 }
 
 function RecommendationCard({
