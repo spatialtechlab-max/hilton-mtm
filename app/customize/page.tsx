@@ -399,10 +399,11 @@ function CustomizeInner() {
     if (!match) return;
     autoSkippedFabricRef.current = true;
     setSelectedFabric(match);
-    const urlParams = new URLSearchParams(window.location.search);
-    const validTiers = ["essential", "signature", "bespoke"] as const;
-    const urlHasTier = (validTiers as readonly string[]).includes(urlParams.get("tier") ?? "");
-    setPhase(hasTiers && !urlHasTier ? "tier" : "spec");
+    // Always present the package step for tiered garments — the package the
+    // customer picks decides which modules show, so we never auto-skip it. A
+    // tier in the URL (from a PDP "Customise" CTA) only pre-selects the
+    // highlight (handled on init), it no longer bypasses the choice.
+    setPhase(hasTiers ? "tier" : "spec");
   }, [phase, sku, fabrics, hasTiers]);
 
   // Persist (per category) once initialised.
@@ -426,15 +427,10 @@ function CustomizeInner() {
       setStepIdx(0);
       setTier("signature");
     }
-    // If a tier was pre-set in the URL (e.g. arriving from a library PDP
-    // 'Customise this jacket' CTA which appends &tier=bespoke), skip the
-    // tier picker — the customer is already in the full-bespoke flow and
-    // should land straight on the spec steps with every booklet option
-    // visible.
-    const params = new URLSearchParams(window.location.search);
-    const validTiers = ["essential", "signature", "bespoke"] as const;
-    const urlHasTier = (validTiers as readonly string[]).includes(params.get("tier") ?? "");
-    setPhase(hasTiers && !urlHasTier ? "tier" : "spec");
+    // Always present the package step for tiered garments. The package the
+    // customer picks now governs which modules appear, so it must be asked
+    // every time (a URL tier only pre-selects the highlight, set on init).
+    setPhase(hasTiers ? "tier" : "spec");
   }
 
   const safeStepIdx = Math.min(stepIdx, Math.max(activeSteps.length - 1, 0));

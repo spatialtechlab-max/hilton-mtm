@@ -27,7 +27,10 @@ export type LiveStep = {
   description: string;
   kind: StepKind;
   appliesTo: StepCategory[];
-  tier: TierLevel | null;
+  // One OR MORE packages this module belongs to, comma-separated
+  // ("essential,signature"). The admin sets this multi-select; the customizer
+  // shows the module only for the package(s) listed here.
+  tier: string | null;
   requiresSlug: string | null;
   requiresValue: string | null;
   options: LiveOption[];
@@ -107,7 +110,7 @@ export async function fetchLiveSteps(): Promise<LiveConfigPayload | null> {
       description: s.description ?? "",
       kind: (s.kind ?? "diagram") as StepKind,
       appliesTo: (s.applies_to ?? []) as StepCategory[],
-      tier: (s.tier ?? null) as TierLevel | null,
+      tier: s.tier ?? null,
       requiresSlug: s.requires_slug,
       requiresValue: s.requires_value,
       options: byStep[s.slug] ?? [],
@@ -118,23 +121,29 @@ export async function fetchLiveSteps(): Promise<LiveConfigPayload | null> {
   }
 }
 
-/** Steps shown for a category + current selections.
+/** Steps shown for a category + selected package (tier) + current selections.
  *
  *  A step shows for a garment ONLY when that garment is in its applies_to
  *  (the admin's per-garment chips). There's no "inherit all steps" fallback:
  *  a garment with zero assigned steps is an accessory (tie, belt, shoes…),
- *  not a garment that silently pulls in the whole suit module set. Tier
- *  governs PRICE, not which modules appear, so every assigned module shows
- *  at every tier and the customizer's "Step X of N" matches the admin's
- *  garment count. `_tierSlug` / `_tieredOverride` are kept in the signature
- *  for callers but no longer filter the step set. */
+ *  not a garment that silently pulls in the whole suit module set.
+ *
+ *  PACKAGE GATING: for a tiered garment, a module shows only for the package
+ *  the customer picked (Essential / Signature / Bespoke). The admin tags each
+ *  module with one or more packages; a module tagged "essential,signature"
+ *  appears in both those flows but not Bespoke. A module with NO package tag
+ *  shows in every package, so an un-categorised module never vanishes. */
 export function visibleLiveSteps(
-  all: LiveStep[], cat: StepCategory, _tierSlug: string, selections: Selections,
-  _tieredOverride?: boolean,
+  all: LiveStep[], cat: StepCategory, tierSlug: string, selections: Selections,
+  tieredOverride?: boolean,
 ): LiveStep[] {
   return all.filter((s) => {
     if (!s.appliesTo.includes(cat)) return false;
     if (s.requiresSlug && selections[s.requiresSlug] !== s.requiresValue) return false;
+    if (tieredOverride && tierSlug) {
+      const tiers = (s.tier ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+      if (tiers.length > 0 && !tiers.includes(tierSlug)) return false;
+    }
     return true;
   });
 }
