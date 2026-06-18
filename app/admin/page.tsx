@@ -502,7 +502,24 @@ export default function AdminPage() {
   );
 }
 
-/* ── Tier picker (which package owns this step) ── */
+/* ── Tier list helpers ──
+   A module can belong to ONE OR MORE packages. We keep storing it in the
+   existing `tier` text column as a comma-separated list ("essential,signature")
+   so no DB migration is needed; a legacy single value parses as a one-item set. */
+const TIER_KEYS = ["essential", "signature", "bespoke"] as const;
+const TIER_TONES: Record<string, string> = {
+  essential: "bg-[var(--color-burgundy-700)]/15 text-[var(--color-burgundy-700)]",
+  signature: "bg-[var(--color-charcoal-900)]/85 text-[var(--color-ivory-100)]",
+  bespoke:   "bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)]",
+};
+function parseTiers(tier: string | null | undefined): Set<string> {
+  return new Set((tier ?? "").split(",").map((t) => t.trim()).filter(Boolean));
+}
+function serializeTiers(set: Set<string>): string {
+  return TIER_KEYS.filter((t) => set.has(t)).join(",");
+}
+
+/* ── Tier picker (which packages this step belongs to — multi-select) ── */
 function TierPicker({
   slug, tier, onChanged,
 }: {
@@ -511,29 +528,28 @@ function TierPicker({
   onChanged: () => Promise<void> | void;
 }) {
   const [busy, setBusy] = useState(false);
-  const tones: Record<string, string> = {
-    essential: "bg-[var(--color-burgundy-700)]/15 text-[var(--color-burgundy-700)]",
-    signature: "bg-[var(--color-charcoal-900)]/85 text-[var(--color-ivory-100)]",
-    bespoke:   "bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)]",
-  };
-  async function pick(next: string) {
-    if (busy || next === (tier ?? "")) return;
+  const selected = parseTiers(tier);
+  async function toggle(t: string) {
+    if (busy) return;
+    const next = new Set(selected);
+    if (next.has(t)) next.delete(t); else next.add(t);
     setBusy(true);
-    try { await updateStep(slug, { tier: next }); await onChanged(); }
+    try { await updateStep(slug, { tier: serializeTiers(next) }); await onChanged(); }
     finally { setBusy(false); }
   }
   return (
     <span className="inline-flex border border-black/10 overflow-hidden">
-      {(["essential", "signature", "bespoke"] as const).map((t) => {
-        const active = tier === t;
+      {TIER_KEYS.map((t) => {
+        const active = selected.has(t);
         return (
           <button
             key={t}
             type="button"
-            onClick={() => pick(t)}
+            onClick={() => toggle(t)}
             disabled={busy}
+            aria-pressed={active}
             className={`text-eyebrow text-[0.6rem] px-2.5 py-1 transition-colors ${
-              active ? tones[t] : "text-[var(--color-charcoal-500)] hover:bg-[var(--color-ivory-200)]"
+              active ? TIER_TONES[t] : "text-[var(--color-charcoal-500)] hover:bg-[var(--color-ivory-200)]"
             } ${busy ? "opacity-50" : ""}`}
           >
             {t}
@@ -620,13 +636,16 @@ function AddStep({
   // and uploading an image per option promotes it to an image tile. So the
   // atelier never has to think about diagram/swatch/gallery.
   const kind = "choice";
-  const [tier, setTier] = useState("essential");
+  const [tiers, setTiers] = useState<string[]>(["essential"]);
   const [appliesTo, setAppliesTo] = useState<string[]>(defaultGarments);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   function toggleG(slug: string) {
     setAppliesTo((a) => (a.includes(slug) ? a.filter((x) => x !== slug) : [...a, slug]));
+  }
+  function toggleTier(t: string) {
+    setTiers((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]));
   }
 
   async function add() {
@@ -641,8 +660,8 @@ function AddStep({
     }
     setBusy(true); setErr(null);
     try {
-      await insertStep({ slug, title: title.trim(), kind, tier, applies_to: appliesTo, sort_order: nextSortOrder });
-      setTitle(""); setTier("essential"); setAppliesTo(defaultGarments); setOpen(false);
+      await insertStep({ slug, title: title.trim(), kind, tier: TIER_KEYS.filter((t) => tiers.includes(t)).join(","), applies_to: appliesTo, sort_order: nextSortOrder });
+      setTitle(""); setTiers(["essential"]); setAppliesTo(defaultGarments); setOpen(false);
       await onAdded(slug);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Couldn't create the module.");
@@ -671,12 +690,25 @@ function AddStep({
         <Field label="Module name">
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Suspend your style" className={inputCls + " w-64"} />
         </Field>
-        <Field label="Tier">
-          <select value={tier} onChange={(e) => setTier(e.target.value)} className={inputCls + " w-40"}>
-            <option value="essential">Essential</option>
-            <option value="signature">Signature</option>
-            <option value="bespoke">Full Bespoke</option>
-          </select>
+        <Field label="Tiers (one or more)">
+          <span className="inline-flex border border-black/10 overflow-hidden">
+            {TIER_KEYS.map((t) => {
+              const active = tiers.includes(t);
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => toggleTier(t)}
+                  aria-pressed={active}
+                  className={`text-eyebrow text-[0.6rem] px-2.5 py-2 transition-colors ${
+                    active ? TIER_TONES[t] : "text-[var(--color-charcoal-500)] hover:bg-[var(--color-ivory-200)]"
+                  }`}
+                >
+                  {t}
+                </button>
+              );
+            })}
+          </span>
         </Field>
       </div>
       <div className="mt-4">
