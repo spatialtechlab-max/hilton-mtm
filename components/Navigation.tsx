@@ -20,10 +20,22 @@ export function Navigation() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
+  // usePathname() is null/placeholder during static prerender and the first
+  // client render of statically-generated routes, so `pathname === "/"` came
+  // up false on the home page and left the hero nav stuck in its opaque
+  // inner-page state (the earlier scroll-only fix never touched this).
+  // Re-derive the real path on the client so the home hero reliably gets the
+  // transparent, dark-overlay nav.
+  const [clientPath, setClientPath] = useState<string | null>(null);
+  useEffect(() => {
+    setClientPath(window.location.pathname);
+  }, [pathname]);
+  const activePath = clientPath ?? pathname;
+
   // Only the home page has a dark, full-bleed hero behind the nav.
   // Inner pages use a light background, so the nav should always be in
   // its "scrolled" dark-on-light state.
-  const isHome = pathname === "/";
+  const isHome = activePath === "/";
   const onDark = isHome && !scrolled && !open;
 
   useEffect(() => {
@@ -72,7 +84,7 @@ export function Navigation() {
 
           <nav className="hidden lg:flex items-center gap-9">
             {nav.map((item) => {
-              const active = pathname === item.href;
+              const active = activePath === item.href;
               return (
                 <Link
                   key={item.href}
