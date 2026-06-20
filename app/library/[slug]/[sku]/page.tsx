@@ -28,11 +28,62 @@ function customizeForErpType(type: string | undefined): CustomizeCategory | unde
   return undefined;
 }
 
+/** Count the active customizer steps assigned to a garment slug — the same
+ *  signal the home Accessories section uses (lib/garments.ts:
+ *  fetchGarmentStepCounts / isAccessoryGarment). ZERO steps means the atelier
+ *  has marked the garment Live but assigned no customization, so it's an
+ *  accessory (bought ready-made, add-to-cart), not a commission. The moment
+ *  they assign a module the count goes positive and the PDP flips to Customise.
+ *
+ *  Returns null (not 0) when the table can't be read, so the caller fails
+ *  OPEN — a transient DB hiccup must never strip the Customise CTA off a real
+ *  commissionable garment like a suit. Only a confirmed count of 0 demotes a
+ *  product to add-to-cart. */
+async function customizerStepCount(slug: string): Promise<number | null> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  try {
+    const sb = createClient(url, key);
+    const { data, error } = await sb.from("mtm_steps").select("applies_to,active");
+    if (error || !data) return null;
+    let n = 0;
+    for (const r of data as { applies_to: string[] | null; active: boolean }[]) {
+      if (r.active === false) continue;
+      if ((r.applies_to ?? []).includes(slug)) n++;
+    }
+    return n;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Resolve a product by sku. Static products via libraries; ERP items by id,
- * fetched live with ISR caching.
+ * Resolve a product, then gate its Customise CTA on real customization.
+ *
+ * The product taxonomy is fully dynamic: ERP categories sync in, the atelier
+ * marks a garment Live, and ONLY when they assign at least one customizer step
+ * does that product become a commission. So whatever path resolved the hit
+ * (static library, ERP-backed library, or a dynamic garment row), we make the
+ * final call here in one place: a garment with zero active steps is an
+ * accessory — the Customise CTA is dropped and the PDP shows Add to cart.
+ * Same rule, every product, no per-category special-casing.
  */
 async function resolveProduct(slug: string, sku: string): Promise<ProductHit | null> {
+  const hit = await resolveProductRaw(slug, sku);
+  if (hit?.customize) {
+    const steps = await customizerStepCount(String(hit.customize));
+    if (steps === 0) return { ...hit, customize: undefined };
+  }
+  return hit;
+}
+
+/**
+ * Resolve a product by sku. Static products via libraries; ERP items by id,
+ * fetched live with ISR caching. Returns a candidate `customize` category;
+ * resolveProduct() above decides whether it survives the step-count gate.
+ */
+async function resolveProductRaw(slug: string, sku: string): Promise<ProductHit | null> {
   const staticHit = findProduct(sku);
   if (staticHit && staticHit.library.slug === slug) return staticHit;
 
