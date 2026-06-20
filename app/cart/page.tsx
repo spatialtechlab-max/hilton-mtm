@@ -604,7 +604,7 @@ export default function CartPage() {
       </div>
 
       {paySession && (
-        <MpgsCheckout sessionId={paySession} onCancel={() => { setPaySession(null); setPhase("cart"); }} />
+        <MpgsCheckout sessionId={paySession} amount={grandTotal} onCancel={() => { setPaySession(null); setPhase("cart"); }} />
       )}
     </div>
   );
