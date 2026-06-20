@@ -5,15 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, Minus, Plus, Pencil, Trash2, ShoppingBag, Tag, Check, X, MapPin, Star } from "lucide-react";
-import { useCart, removeFromCart, updateQty, clearCart } from "@/lib/cart";
+import { useCart, removeFromCart, updateQty } from "@/lib/cart";
 import { useAuth } from "@/components/AuthProvider";
 import { ProfileForm } from "@/components/ProfileForm";
 import { AuthForm } from "@/components/AuthForm";
-import { createOrderFromCart, fetchProfile, isProfileComplete, type Profile } from "@/lib/orders";
+import { fetchProfile, isProfileComplete, type Profile } from "@/lib/orders";
 import { listMyAddresses, upsertAddress, MAX_ADDRESSES, type Address, type AddressInput } from "@/lib/addresses";
 import { computeOrderTotals, VAT_RATE } from "@/lib/checkoutFees";
 import { listFreeShippingCountries, isFreeShippingCountry, type FreeShippingCountry } from "@/lib/shippingZones";
 import { supabase } from "@/lib/supabase";
+import MpgsCheckout from "@/components/MpgsCheckout";
 
 const fmt = (n: number) =>
   `BHD ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
@@ -27,6 +28,9 @@ export default function CartPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [placing, setPlacing] = useState(false);
   const [error, setError]     = useState<string | null>(null);
+  // MPGS hosted-checkout session id, set once the server mints a session.
+  // While non-null the embedded card-payment panel is shown.
+  const [paySession, setPaySession] = useState<string | null>(null);
 
   // Discount code state. Applied = a validated code stamped with the
   // percentage and amount returned by the server. We keep the input
@@ -152,18 +156,23 @@ export default function CartPage() {
     let p = profile;
     if (!p) { p = await fetchProfile(user.id); setProfile(p); }
     if (!isProfileComplete(p)) { setPhase("profile"); return; }
-    placeOrder(p!);
+    startPayment(p!);
   }
 
-  async function placeOrder(p: Profile) {
+  // Pay first, then the order is created — see /api/payments/mpgs/*. We ask the
+  // server to price the cart and mint an MPGS session, then show the embedded
+  // card form. The real order is only written once the gateway captures the
+  // funds (on the /checkout/return page). A failed payment leaves no order and
+  // the cart intact.
+  async function startPayment(p: Profile) {
     if (!user) return;
     setPlacing(true);
-    const { order, error } = await createOrderFromCart(
-      items,
-      p,
-      user.email ?? "",
-      applied ? { code: applied.code } : null,
-      selectedAddr
+    setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) { setPhase("auth"); return; }
+      const shipTo = selectedAddr
         ? {
             full_name: selectedAddr.full_name,
             phone:     selectedAddr.phone,
@@ -172,29 +181,36 @@ export default function CartPage() {
             city:      selectedAddr.city,
             country:   selectedAddr.country,
           }
-        : null,
-    );
-    if (error || !order) {
-      setError(error ?? "Could not place the order.");
-      setPlacing(false);
-      setPhase("cart");
-      return;
-    }
-    // Confirmation email — fire-and-forget. The order is already
-    // saved; we don't want a transient email-service hiccup to
-    // strand the customer on the cart page.
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        fetch("/api/notify/order-confirmation", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: order.id }),
-        }).catch(() => { /* non-blocking */ });
+        : {
+            full_name: p.full_name,
+            phone:     p.phone,
+            line1:     p.address_line1,
+            line2:     p.address_line2,
+            city:      p.city,
+            country:   p.country,
+          };
+      const res = await fetch("/api/payments/mpgs/session", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items,
+          shipTo,
+          discountCode: applied?.code ?? null,
+          profileName:  p.full_name,
+          profilePhone: p.phone,
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.sessionId) {
+        setError(body?.error ?? "Could not start payment. Please try again.");
+        return;
       }
-    } catch { /* non-blocking */ }
-    clearCart();
-    router.push(`/account/orders/${order.order_number}`);
+      setPaySession(body.sessionId);
+    } catch {
+      setError("Could not reach the payment service. Please try again.");
+    } finally {
+      setPlacing(false);
+    }
   }
 
   return (
@@ -538,7 +554,7 @@ export default function CartPage() {
                 disabled={placing || authLoading}
                 className="mt-7 w-full text-eyebrow inline-flex items-center justify-center gap-3 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-6 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors disabled:opacity-60"
               >
-                {placing ? "Placing order…" : <>Place order <ArrowRight size={14} strokeWidth={1.5} /></>}
+                {placing ? "Starting payment…" : <>Proceed to payment <ArrowRight size={14} strokeWidth={1.5} /></>}
               </button>
 
               {error && (
@@ -549,7 +565,8 @@ export default function CartPage() {
 
               <p className="mt-4 text-[0.72rem] text-[var(--color-charcoal-500)] leading-relaxed">
                 You&rsquo;ll sign in (or create an account) at checkout to save your pattern on file.
-                Secure payment will be added soon; your atelier will confirm by email.
+                Card payment is taken securely on Mastercard&rsquo;s page; your order is placed only once
+                payment clears, and we&rsquo;ll confirm by email.
               </p>
             </aside>
           </div>
@@ -577,7 +594,7 @@ export default function CartPage() {
             <ProfileForm
               userId={user.id}
               initialName={(user.user_metadata as { full_name?: string; name?: string } | undefined)?.full_name ?? ""}
-              onSaved={(p) => { setProfile(p); placeOrder(p); }}
+              onSaved={(p) => { setProfile(p); startPayment(p); }}
             />
             <button type="button" onClick={() => setPhase("cart")} className="mt-4 text-eyebrow text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors">
               ← Back to cart
@@ -585,6 +602,10 @@ export default function CartPage() {
           </div>
         )}
       </div>
+
+      {paySession && (
+        <MpgsCheckout sessionId={paySession} onCancel={() => { setPaySession(null); setPhase("cart"); }} />
+      )}
     </div>
   );
 }
