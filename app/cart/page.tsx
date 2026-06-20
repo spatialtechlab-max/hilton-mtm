@@ -15,6 +15,10 @@ import { computeOrderTotals, VAT_RATE } from "@/lib/checkoutFees";
 import { listFreeShippingCountries, isFreeShippingCountry, type FreeShippingCountry } from "@/lib/shippingZones";
 import { supabase } from "@/lib/supabase";
 import MpgsCheckout from "@/components/MpgsCheckout";
+import BenefitPayCheckout from "@/components/BenefitPayCheckout";
+import { VisaMark, MastercardMark, AmexMark, BenefitPayMark } from "@/components/PaymentMarks";
+
+type PayMethod = "card" | "benefitpay";
 
 const fmt = (n: number) =>
   `BHD ${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
@@ -31,6 +35,10 @@ export default function CartPage() {
   // MPGS hosted-checkout session id, set once the server mints a session.
   // While non-null the embedded card-payment panel is shown.
   const [paySession, setPaySession] = useState<string | null>(null);
+  // Chosen payment method. Card is the live MPGS rail; BenefitPay is a
+  // frontend-only option for now (no live rail until Benefit activation).
+  const [payMethod, setPayMethod]   = useState<PayMethod>("card");
+  const [benefitOpen, setBenefitOpen] = useState(false);
 
   // Discount code state. Applied = a validated code stamped with the
   // percentage and amount returned by the server. We keep the input
@@ -548,13 +556,72 @@ export default function CartPage() {
                 <span className="text-display text-[1.5rem] text-[var(--color-burgundy-700)]">{fmt(grandTotal)}</span>
               </div>
 
+              {/* Payment method — card (live MPGS rail) or BenefitPay
+                  (frontend preview until Benefit activation completes). */}
+              <div className="mt-6 pt-5 border-t border-black/10">
+                <h3 className="text-eyebrow text-[var(--color-charcoal-500)] mb-3">Payment method</h3>
+                <div className="space-y-2.5">
+                  <label className={`flex items-center gap-3 border px-3.5 py-3 cursor-pointer transition-colors ${
+                    payMethod === "card"
+                      ? "border-[var(--color-burgundy-700)] bg-[var(--color-ivory-100)]"
+                      : "border-black/10 bg-white/40 hover:border-[var(--color-burgundy-700)]/40"
+                  }`}>
+                    <input
+                      type="radio"
+                      name="pay-method"
+                      value="card"
+                      checked={payMethod === "card"}
+                      onChange={() => setPayMethod("card")}
+                      className="accent-[var(--color-burgundy-700)]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[0.9rem] text-[var(--color-charcoal-900)]">Credit or debit card</div>
+                      <div className="text-[0.7rem] text-[var(--color-charcoal-500)]">Visa, Mastercard, American Express</div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <VisaMark className="h-[22px] w-auto" />
+                      <MastercardMark className="h-[22px] w-auto" />
+                      <AmexMark className="h-[22px] w-auto" />
+                    </div>
+                  </label>
+
+                  <label className={`flex items-center gap-3 border px-3.5 py-3 cursor-pointer transition-colors ${
+                    payMethod === "benefitpay"
+                      ? "border-[var(--color-burgundy-700)] bg-[var(--color-ivory-100)]"
+                      : "border-black/10 bg-white/40 hover:border-[var(--color-burgundy-700)]/40"
+                  }`}>
+                    <input
+                      type="radio"
+                      name="pay-method"
+                      value="benefitpay"
+                      checked={payMethod === "benefitpay"}
+                      onChange={() => setPayMethod("benefitpay")}
+                      className="accent-[var(--color-burgundy-700)]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[0.9rem] text-[var(--color-charcoal-900)]">BenefitPay</span>
+                        <span className="text-[0.55rem] tracking-[0.16em] uppercase text-[#00807B] bg-[#00A6A0]/[0.12] border border-[#00A6A0]/30 px-1.5 py-[1px]">Coming soon</span>
+                      </div>
+                      <div className="text-[0.7rem] text-[var(--color-charcoal-500)]">Pay with the BenefitPay app</div>
+                    </div>
+                    <BenefitPayMark className="h-[20px] w-auto shrink-0" />
+                  </label>
+                </div>
+              </div>
+
               <button
                 type="button"
-                onClick={startCheckout}
+                onClick={() => {
+                  if (payMethod === "benefitpay") { setError(null); setBenefitOpen(true); return; }
+                  startCheckout();
+                }}
                 disabled={placing || authLoading}
-                className="mt-7 w-full text-eyebrow inline-flex items-center justify-center gap-3 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-6 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors disabled:opacity-60"
+                className="mt-6 w-full text-eyebrow inline-flex items-center justify-center gap-3 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-6 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors disabled:opacity-60"
               >
-                {placing ? "Starting payment…" : <>Proceed to payment <ArrowRight size={14} strokeWidth={1.5} /></>}
+                {placing
+                  ? "Starting payment…"
+                  : <>{payMethod === "benefitpay" ? "Continue with BenefitPay" : "Proceed to payment"} <ArrowRight size={14} strokeWidth={1.5} /></>}
               </button>
 
               {error && (
@@ -605,6 +672,14 @@ export default function CartPage() {
 
       {paySession && (
         <MpgsCheckout sessionId={paySession} amount={grandTotal} onCancel={() => { setPaySession(null); setPhase("cart"); }} />
+      )}
+
+      {benefitOpen && (
+        <BenefitPayCheckout
+          amount={grandTotal}
+          onClose={() => setBenefitOpen(false)}
+          onPayByCard={() => { setBenefitOpen(false); setPayMethod("card"); startCheckout(); }}
+        />
       )}
     </div>
   );
