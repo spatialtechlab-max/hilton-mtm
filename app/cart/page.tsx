@@ -561,7 +561,7 @@ export default function CartPage() {
               <div className="mt-6 pt-5 border-t border-black/10">
                 <h3 className="text-eyebrow text-[var(--color-charcoal-500)] mb-3">Payment method</h3>
                 <div className="space-y-2.5">
-                  <label className={`flex items-center gap-3 border px-3.5 py-3 cursor-pointer transition-colors ${
+                  <label className={`flex flex-wrap items-center gap-x-3 gap-y-2.5 border px-3.5 py-3 cursor-pointer transition-colors ${
                     payMethod === "card"
                       ? "border-[var(--color-burgundy-700)] bg-[var(--color-ivory-100)]"
                       : "border-black/10 bg-white/40 hover:border-[var(--color-burgundy-700)]/40"
@@ -572,20 +572,23 @@ export default function CartPage() {
                       value="card"
                       checked={payMethod === "card"}
                       onChange={() => setPayMethod("card")}
-                      className="accent-[var(--color-burgundy-700)]"
+                      className="accent-[var(--color-burgundy-700)] shrink-0"
                     />
                     <div className="min-w-0 flex-1">
                       <div className="text-[0.9rem] text-[var(--color-charcoal-900)]">Credit or debit card</div>
                       <div className="text-[0.7rem] text-[var(--color-charcoal-500)]">Visa, Mastercard, American Express</div>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Logos sit inline on tablet/desktop; on small phones they
+                        drop to their own indented row so the label text isn't
+                        crushed into a sliver. */}
+                    <div className="flex items-center gap-1.5 shrink-0 basis-full pl-7 sm:basis-auto sm:pl-0">
                       <VisaMark className="h-[22px] w-auto" />
                       <MastercardMark className="h-[22px] w-auto" />
                       <AmexMark className="h-[22px] w-auto" />
                     </div>
                   </label>
 
-                  <label className={`flex items-center gap-3 border px-3.5 py-3 cursor-pointer transition-colors ${
+                  <label className={`flex flex-wrap items-center gap-x-3 gap-y-2.5 border px-3.5 py-3 cursor-pointer transition-colors ${
                     payMethod === "benefitpay"
                       ? "border-[var(--color-burgundy-700)] bg-[var(--color-ivory-100)]"
                       : "border-black/10 bg-white/40 hover:border-[var(--color-burgundy-700)]/40"
@@ -596,13 +599,15 @@ export default function CartPage() {
                       value="benefitpay"
                       checked={payMethod === "benefitpay"}
                       onChange={() => setPayMethod("benefitpay")}
-                      className="accent-[var(--color-burgundy-700)]"
+                      className="accent-[var(--color-burgundy-700)] shrink-0"
                     />
                     <div className="min-w-0 flex-1">
                       <div className="text-[0.9rem] text-[var(--color-charcoal-900)]">BenefitPay</div>
                       <div className="text-[0.7rem] text-[var(--color-charcoal-500)]">Pay with the BenefitPay app</div>
                     </div>
-                    <BenefitPayMark className="h-[20px] w-auto shrink-0" />
+                    <div className="shrink-0 basis-full pl-7 sm:basis-auto sm:pl-0">
+                      <BenefitPayMark className="h-[20px] w-auto" />
+                    </div>
                   </label>
                 </div>
               </div>
