@@ -15,15 +15,15 @@ import {
   type AddressInput,
 } from "@/lib/addresses";
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, back }: { children: React.ReactNode; back: { href: string; label: string } }) {
   return (
     <div className="pt-32 md:pt-40 pb-24 min-h-[80vh]">
       <div className="container-editorial">
         <Link
-          href="/account"
+          href={back.href}
           className="inline-flex items-center gap-2 text-eyebrow text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors mb-8"
         >
-          <ArrowLeft size={14} strokeWidth={1.5} /> Your account
+          <ArrowLeft size={14} strokeWidth={1.5} /> {back.label}
         </Link>
         {children}
       </div>
@@ -55,6 +55,19 @@ export default function AddressBookPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [draft, setDraft] = useState<AddressInput>(emptyDraft());
   const [saving, setSaving] = useState(false);
+
+  // Where the back link points. Default to the account hub; when checkout
+  // sent the customer here (?return=/cart) we send them straight back to the
+  // cart, so an admin doesn't land on the atelier dashboard. Only internal
+  // paths (a single leading slash) are honoured, so the back link can never
+  // be aimed off-site.
+  const [back, setBack] = useState<{ href: string; label: string }>({ href: "/account", label: "Your account" });
+  useEffect(() => {
+    const ret = new URLSearchParams(window.location.search).get("return");
+    if (ret && /^\/(?!\/)/.test(ret)) {
+      setBack({ href: ret, label: ret === "/cart" ? "Back to cart" : "Back" });
+    }
+  }, []);
 
   // Bounce signed-out visitors back to /account so they sign in there.
   useEffect(() => {
@@ -148,11 +161,11 @@ export default function AddressBookPage() {
   }
 
   if (loading || !user) {
-    return <Shell><p className="text-eyebrow text-[var(--color-charcoal-500)]">Loading…</p></Shell>;
+    return <Shell back={back}><p className="text-eyebrow text-[var(--color-charcoal-500)]">Loading…</p></Shell>;
   }
 
   return (
-    <Shell>
+    <Shell back={back}>
       <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-5 border-b border-black/10 pb-8">
         <div>
           <h1 className="text-display text-[clamp(2rem,4vw,3rem)] leading-tight inline-flex items-center gap-3">

@@ -406,7 +406,10 @@ export default function CartPage() {
                     ))}
                   </ul>
                   <Link
-                    href="/account/addresses"
+                    // Carry where to return so the address book's back link
+                    // brings the customer back to checkout, not to /account
+                    // (which, for an admin, is the atelier dashboard).
+                    href="/account/addresses?return=/cart"
                     className="mt-3 inline-block text-eyebrow text-[0.6rem] text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors"
                   >
                     Manage saved addresses →
