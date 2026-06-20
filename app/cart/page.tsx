@@ -599,10 +599,7 @@ export default function CartPage() {
                       className="accent-[var(--color-burgundy-700)]"
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[0.9rem] text-[var(--color-charcoal-900)]">BenefitPay</span>
-                        <span className="text-[0.55rem] tracking-[0.16em] uppercase text-[#00807B] bg-[#00A6A0]/[0.12] border border-[#00A6A0]/30 px-1.5 py-[1px]">Coming soon</span>
-                      </div>
+                      <div className="text-[0.9rem] text-[var(--color-charcoal-900)]">BenefitPay</div>
                       <div className="text-[0.7rem] text-[var(--color-charcoal-500)]">Pay with the BenefitPay app</div>
                     </div>
                     <BenefitPayMark className="h-[20px] w-auto shrink-0" />
