@@ -606,7 +606,7 @@ export default function CartPage() {
                       <div className="text-[0.7rem] text-[var(--color-charcoal-500)]">Pay with the BenefitPay app</div>
                     </div>
                     <div className="shrink-0 basis-full pl-7 sm:basis-auto sm:pl-0">
-                      <BenefitPayMark className="h-[20px] w-auto" />
+                      <BenefitPayMark className="h-9 w-auto" />
                     </div>
                   </label>
                 </div>

@@ -48,18 +48,12 @@ export function AmexMark({ className = "h-5 w-auto" }: MarkProps) {
   );
 }
 
-/** Placeholder BenefitPay wordmark — replace with the official brand SVG. */
-export function BenefitPayMark({ className = "h-5 w-auto" }: MarkProps) {
-  return (
-    <svg className={className} viewBox="0 0 104 24" role="img" aria-label="BenefitPay" xmlns="http://www.w3.org/2000/svg">
-      <rect x="0" y="3" width="18" height="18" rx="5" fill="#00A6A0" />
-      <text x="9" y="16.5" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontWeight="800" fontSize="12" fill="#fff">
-        b
-      </text>
-      <text x="24" y="17" fontFamily="Arial, Helvetica, sans-serif" fontWeight="700" fontSize="13" letterSpacing="0.2">
-        <tspan fill="#1F2A37">benefit</tspan>
-        <tspan fill="#00A6A0">pay</tspan>
-      </text>
-    </svg>
-  );
+/** Official Benefit logo (downloaded to /public/benefitpay.png): the red
+ *  fingerprint "b" over the bilingual wordmark, on a transparent background.
+ *  Portrait lockup — size it by height via className; width follows. */
+export function BenefitPayMark({ className = "h-8 w-auto" }: MarkProps) {
+  // Plain <img> (not next/image) so it drops into flex rows and the checkout
+  // overlay at any height with no layout config; it's a 25 KB transparent PNG.
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/benefitpay.png" alt="BenefitPay" className={className} />;
 }
