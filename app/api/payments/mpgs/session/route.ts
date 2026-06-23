@@ -14,7 +14,9 @@ import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
 import { computeOrderTotals } from "@/lib/checkoutFees";
 import { getMpgsConfig, createCheckoutSession } from "@/lib/mpgs";
+import { missingMeasurements } from "@/lib/measurementRules";
 import type { CartItem } from "@/lib/cart";
+import type { MeasurementValues } from "@/lib/customizer";
 
 export const runtime = "nodejs";
 
@@ -50,6 +52,24 @@ export async function POST(req: Request) {
   }
 
   const admin = createClient(SUPA_URL, SERVICE, { auth: { persistSession: false } });
+
+  // ── Measurements gate ─────────────────────────────────────────────────
+  // Any commissioned line (custom != null) is cut to the customer's body, so
+  // the relevant measurements must be on file before we take payment.
+  // Accessories are exempt. Mirrors the cart's client gate; enforced here so
+  // the order genuinely cannot be placed with missing measurements.
+  const commissionCats = items.filter((i) => i.custom).map((i) => String(i.custom?.category ?? ""));
+  if (commissionCats.length > 0) {
+    const { data: meas } = await admin
+      .from("mtm_measurements").select("values").eq("user_id", user.id).maybeSingle();
+    const missing = missingMeasurements((meas as { values?: MeasurementValues } | null)?.values, commissionCats);
+    if (missing.length > 0) {
+      return NextResponse.json(
+        { error: "Please add your measurements before placing this order.", code: "measurements_required", missing },
+        { status: 400 },
+      );
+    }
+  }
 
   // ── Price it server-side ──────────────────────────────────────────────
   const grossSubtotal = items.reduce((s, i) => s + Number(i.priceNum) * Number(i.qty || 1), 0);

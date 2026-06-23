@@ -17,6 +17,10 @@ import { supabase } from "@/lib/supabase";
 import MpgsCheckout from "@/components/MpgsCheckout";
 import BenefitPayCheckout from "@/components/BenefitPayCheckout";
 import { VisaMark, MastercardMark, AmexMark, BenefitPayMark } from "@/components/PaymentMarks";
+import { MeasurementsForm } from "@/components/MeasurementsForm";
+import { fetchMyMeasurements, saveMyMeasurements } from "@/lib/measurements";
+import { requiredMeasurementGroups, missingMeasurements } from "@/lib/measurementRules";
+import type { MeasurementValues, MeasurementUnit } from "@/lib/customizer";
 
 type PayMethod = "card" | "benefitpay";
 
@@ -28,10 +32,16 @@ export default function CartPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [phase, setPhase]     = useState<"cart" | "auth" | "profile">("cart");
+  const [phase, setPhase]     = useState<"cart" | "auth" | "profile" | "measurements">("cart");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [placing, setPlacing] = useState(false);
   const [error, setError]     = useState<string | null>(null);
+  // Measurements gate — a commission can't be ordered until the customer's
+  // measurements (for the body areas it involves) are on file. Held here so
+  // the inline form at checkout can fill and save them before payment.
+  const [measValues, setMeasValues] = useState<MeasurementValues>({});
+  const [measUnit, setMeasUnit]     = useState<MeasurementUnit>("cm");
+  const [measSaving, setMeasSaving] = useState(false);
   // MPGS hosted-checkout session id, set once the server mints a session.
   // While non-null the embedded card-payment panel is shown.
   const [paySession, setPaySession] = useState<string | null>(null);
@@ -164,7 +174,47 @@ export default function CartPage() {
     let p = profile;
     if (!p) { p = await fetchProfile(user.id); setProfile(p); }
     if (!isProfileComplete(p)) { setPhase("profile"); return; }
-    startPayment(p!);
+    await proceedAfterProfile(p!);
+  }
+
+  // Categories of the commissioned items in the cart (accessories have no
+  // `custom` and are excluded). Drives which measurements are required.
+  const commissionCategories = items.filter((it) => it.custom).map((it) => it.custom!.category);
+
+  // After the profile is complete, gate on measurements: a commission needs
+  // the customer's measurements (for the body areas it involves) on file. If
+  // any are missing we drop them into the inline measurements step, pre-filled
+  // with whatever they already have, before payment can start.
+  async function proceedAfterProfile(p: Profile) {
+    setError(null);
+    const cats = items.filter((it) => it.custom).map((it) => it.custom!.category);
+    if (cats.length > 0) {
+      const saved = await fetchMyMeasurements();
+      if (missingMeasurements(saved?.values, cats).length > 0) {
+        if (saved) { setMeasValues(saved.values ?? {}); setMeasUnit(saved.unit ?? "cm"); }
+        setPhase("measurements");
+        return;
+      }
+    }
+    startPayment(p);
+  }
+
+  // Save the measurements entered in the inline step, then continue to payment.
+  // Blocks until every required measurement is filled.
+  async function saveMeasurementsAndContinue() {
+    if (!profile) return;
+    setError(null);
+    const cats = items.filter((it) => it.custom).map((it) => it.custom!.category);
+    const missing = missingMeasurements(measValues, cats);
+    if (missing.length > 0) {
+      setError(`Please fill in every measurement to continue — ${missing.length} still blank.`);
+      return;
+    }
+    setMeasSaving(true);
+    const { error: err } = await saveMyMeasurements(measValues, measUnit);
+    setMeasSaving(false);
+    if (err) { setError(err); return; }
+    startPayment(profile);
   }
 
   // Pay first, then the order is created — see /api/payments/mpgs/*. We ask the
@@ -666,11 +716,54 @@ export default function CartPage() {
             <ProfileForm
               userId={user.id}
               initialName={(user.user_metadata as { full_name?: string; name?: string } | undefined)?.full_name ?? ""}
-              onSaved={(p) => { setProfile(p); startPayment(p); }}
+              onSaved={(p) => { setProfile(p); proceedAfterProfile(p); }}
             />
             <button type="button" onClick={() => setPhase("cart")} className="mt-4 text-eyebrow text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors">
               ← Back to cart
             </button>
+          </div>
+        )}
+
+        {/* ── Measurements gate (commission orders only) ── */}
+        {phase === "measurements" && user && (
+          <div className="mt-10">
+            <div className="max-w-3xl mx-auto mb-8">
+              <span className="text-eyebrow text-[var(--color-burgundy-700)]">One more step</span>
+              <h2 className="text-display text-[1.6rem] md:text-[1.9rem] mt-2 leading-tight">Your measurements</h2>
+              <p className="mt-3 text-[0.92rem] text-[var(--color-charcoal-700)] leading-relaxed">
+                Every commission is cut to your own measurements, so we need them before this order can be placed.
+                Fill them in below and we&rsquo;ll save them to your account for next time, or{" "}
+                <Link href="/account/measurements" className="text-[var(--color-burgundy-700)] underline">manage them in your account</Link>.
+              </p>
+            </div>
+
+            <MeasurementsForm
+              values={measValues}
+              unit={measUnit}
+              onSetValue={(slug, v) => setMeasValues((m) => ({ ...m, [slug]: v }))}
+              onSetUnit={(u) => setMeasUnit(u)}
+              groups={requiredMeasurementGroups(commissionCategories)}
+            />
+
+            {error && (
+              <p className="max-w-3xl mx-auto mt-6 text-[0.85rem] text-[var(--color-burgundy-700)] bg-[var(--color-burgundy-50)] border border-[var(--color-burgundy-700)]/20 px-3 py-2">
+                {error}
+              </p>
+            )}
+
+            <div className="max-w-3xl mx-auto mt-8 flex flex-wrap items-center gap-5">
+              <button
+                type="button"
+                onClick={saveMeasurementsAndContinue}
+                disabled={measSaving || placing}
+                className="text-eyebrow inline-flex items-center justify-center gap-3 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-8 py-4 hover:bg-[var(--color-burgundy-800)] transition-colors disabled:opacity-60"
+              >
+                {measSaving ? "Saving…" : placing ? "Starting payment…" : <>Save &amp; continue to payment <ArrowRight size={14} strokeWidth={1.5} /></>}
+              </button>
+              <button type="button" onClick={() => { setError(null); setPhase("cart"); }} className="text-eyebrow text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors">
+                ← Back to cart
+              </button>
+            </div>
           </div>
         )}
       </div>
