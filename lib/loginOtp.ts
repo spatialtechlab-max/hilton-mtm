@@ -69,6 +69,14 @@ export async function verifyPassword(email: string, password: string): Promise<G
   }
 }
 
+/** Is this email an atelier admin (row in mtm_admins)? Admins are currently
+ *  exempt from the OTP second factor. Works with any client — pass the user's
+ *  own client (checking their own email) or the service-role client. */
+export async function isAdminEmail(client: SupabaseClient, email: string): Promise<boolean> {
+  const { data } = await client.from("mtm_admins").select("email").ilike("email", normaliseEmail(email));
+  return Array.isArray(data) && data.length > 0;
+}
+
 /** Decode the Supabase `session_id` claim from an access-token JWT. No
  *  signature check — callers validate the token via getUser first; this only
  *  reads the claim so we can key the verified-sessions table by session. */

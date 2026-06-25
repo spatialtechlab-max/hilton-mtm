@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendLoginOtpEmail } from "@/lib/email";
-import { verifyPassword, generateOtp, hashOtp, normaliseEmail, OTP_TTL_MS } from "@/lib/loginOtp";
+import { verifyPassword, generateOtp, hashOtp, normaliseEmail, isAdminEmail, OTP_TTL_MS } from "@/lib/loginOtp";
 
 export const runtime = "nodejs";
 
@@ -26,9 +26,17 @@ export async function POST(req: Request) {
   const grant = await verifyPassword(email, password);
   if (!grant.ok) return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
 
-  const code = generateOtp();
   const emailLower = normaliseEmail(grant.email);
   const admin = createClient(SUPA_URL, SERVICE, { auth: { persistSession: false } });
+
+  // Admins are exempt from the OTP for now — hand back the session directly so
+  // the client signs straight in (no code, no email). Everyone else continues
+  // to the second factor below.
+  if (await isAdminEmail(admin, grant.email)) {
+    return NextResponse.json({ otpRequired: false, accessToken: grant.accessToken, refreshToken: grant.refreshToken });
+  }
+
+  const code = generateOtp();
 
   // One active code per email — upsert replaces any prior unconsumed code.
   const { error } = await admin.from("mtm_login_otps").upsert(

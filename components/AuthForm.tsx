@@ -53,6 +53,13 @@ export function AuthForm({
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) { setError(data?.error || "Couldn't sign in. Please try again."); return; }
+        if (data?.otpRequired === false && data?.accessToken) {
+          // OTP-exempt account (admin) — sign straight in, no code step.
+          const { error } = await supabase.auth.setSession({ access_token: data.accessToken, refresh_token: data.refreshToken });
+          if (error) { setError(error.message); return; }
+          onSuccess?.();
+          return;
+        }
         setCode("");
         setStep("otp");
         setNotice("We've emailed you a 6-digit code. It expires in one hour.");
