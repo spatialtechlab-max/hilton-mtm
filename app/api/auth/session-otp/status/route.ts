@@ -5,7 +5,7 @@
  */
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sessionIdFromAccessToken, isAdminEmail } from "@/lib/loginOtp";
+import { sessionIdFromAccessToken, isOtpExemptEmail } from "@/lib/loginOtp";
 
 export const runtime = "nodejs";
 
@@ -22,10 +22,9 @@ export async function POST(req: Request) {
   const { data: u, error } = await userClient.auth.getUser(token);
   if (error || !u?.user) return NextResponse.json({ verified: false }, { status: 401 });
 
-  // Admins are exempt from the OTP gate for now — treat as verified regardless
-  // of how they signed in (password or Google). This also keeps the only admin
-  // (whose mailbox bounces) from being locked out.
-  if (u.user.email && (await isAdminEmail(userClient, u.user.email))) {
+  // Admins and operators are exempt from the OTP gate for now — treat as
+  // verified regardless of how they signed in (password or Google).
+  if (u.user.email && (await isOtpExemptEmail(userClient, u.user.email))) {
     return NextResponse.json({ verified: true, email: u.user.email });
   }
 

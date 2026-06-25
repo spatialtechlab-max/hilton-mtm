@@ -35,3 +35,30 @@ export function resetAdminCache() {
   cached = null;
   inflight = null;
 }
+
+// ── Operators ──────────────────────────────────────────────────────────────
+// Limited-access store staff (mtm_operators). They reach ONLY the ERP image
+// tool, never the rest of admin. Same memoised, client-visible pattern.
+let opCached: Set<string> | null = null;
+let opInflight: Promise<Set<string>> | null = null;
+
+async function loadOperators(): Promise<Set<string>> {
+  const { data, error } = await supabase.from("mtm_operators").select("email");
+  if (error || !data) return new Set();
+  return new Set(data.map((r) => String(r.email).toLowerCase()));
+}
+
+/** Returns true if the email is in the mtm_operators table. */
+export async function isOperator(email: string | null | undefined): Promise<boolean> {
+  if (!email) return false;
+  if (!opCached) {
+    opInflight = opInflight ?? loadOperators();
+    opCached = await opInflight;
+  }
+  return opCached.has(email.toLowerCase());
+}
+
+export function resetOperatorCache() {
+  opCached = null;
+  opInflight = null;
+}

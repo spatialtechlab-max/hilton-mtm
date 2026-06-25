@@ -69,12 +69,22 @@ export async function verifyPassword(email: string, password: string): Promise<G
   }
 }
 
-/** Is this email an atelier admin (row in mtm_admins)? Admins are currently
- *  exempt from the OTP second factor. Works with any client — pass the user's
- *  own client (checking their own email) or the service-role client. */
+/** Is this email an atelier admin (row in mtm_admins)? Works with any client —
+ *  pass the user's own client (checking their own email) or the service role. */
 export async function isAdminEmail(client: SupabaseClient, email: string): Promise<boolean> {
   const { data } = await client.from("mtm_admins").select("email").ilike("email", normaliseEmail(email));
   return Array.isArray(data) && data.length > 0;
+}
+
+/** Admins AND operators are exempt from the login OTP for now. Operators are
+ *  store staff who use only the ERP image tool (mtm_operators). */
+export async function isOtpExemptEmail(client: SupabaseClient, email: string): Promise<boolean> {
+  const e = normaliseEmail(email);
+  const [adm, op] = await Promise.all([
+    client.from("mtm_admins").select("email").ilike("email", e),
+    client.from("mtm_operators").select("email").ilike("email", e),
+  ]);
+  return (Array.isArray(adm.data) && adm.data.length > 0) || (Array.isArray(op.data) && op.data.length > 0);
 }
 
 /** Decode the Supabase `session_id` claim from an access-token JWT. No

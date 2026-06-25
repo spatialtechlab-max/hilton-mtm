@@ -13,7 +13,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { MediaImageClient } from "@/components/MediaImageClient";
 import { PlaceholderBadge } from "@/components/PlaceholderBadge";
 import { ProfileForm } from "@/components/ProfileForm";
-import { isAdmin } from "@/lib/admin";
+import { isAdmin, isOperator } from "@/lib/admin";
 import { computeOrderTotals } from "@/lib/checkoutFees";
 import { useVatRate } from "@/lib/useVatRate";
 import { listFreeShippingCountries, isFreeShippingCountry, type FreeShippingCountry } from "@/lib/shippingZones";
@@ -28,17 +28,18 @@ import {
 export default function AccountPage() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
-  // Admins never see the customer dashboard. The moment they're signed in
-  // we send them to /admin. This handles every entry point (sign-in form,
-  // returning visitor, direct URL) without touching the AuthForm flow.
+  // Admins never see the customer dashboard — they go to /admin. Operators are
+  // store staff who only use the ERP image tool, so they go straight to
+  // /admin/erp. Handles every entry point (sign-in form, returning visitor,
+  // direct URL) without touching the AuthForm flow.
   const [redirecting, setRedirecting] = useState(false);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    isAdmin(user.email).then((adm) => {
-      if (cancelled || !adm) return;
-      setRedirecting(true);
-      router.replace("/admin");
+    Promise.all([isAdmin(user.email), isOperator(user.email)]).then(([adm, op]) => {
+      if (cancelled) return;
+      if (adm) { setRedirecting(true); router.replace("/admin"); }
+      else if (op) { setRedirecting(true); router.replace("/admin/erp"); }
     });
     return () => { cancelled = true; };
   }, [user, router]);
