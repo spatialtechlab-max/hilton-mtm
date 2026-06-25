@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Database, RefreshCw, AlertTriangle, Lock, Pencil, Trash2, Plus, Check, X, Upload, Package, Eye, EyeOff, Shirt, Image as ImageIcon, Users, Tag, Truck, ChevronUp, ChevronDown } from "lucide-react";
+import { ArrowLeft, Database, RefreshCw, AlertTriangle, Lock, Pencil, Trash2, Plus, Check, X, Upload, Package, Eye, EyeOff, Shirt, Image as ImageIcon, Users, Tag, Truck, ChevronUp, ChevronDown, Boxes } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import {
@@ -212,6 +212,12 @@ export default function AdminPage() {
             className="text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)] text-[var(--color-charcoal-900)] px-5 py-3 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
           >
             <Shirt size={14} strokeWidth={1.5} /> Garments
+          </Link>
+          <Link
+            href="/admin/erp"
+            className="text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)] text-[var(--color-charcoal-900)] px-5 py-3 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
+          >
+            <Boxes size={14} strokeWidth={1.5} /> ERP data
           </Link>
           <Link
             href="/admin/media"
