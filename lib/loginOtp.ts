@@ -7,6 +7,7 @@
  * service-role key as a pepper) in mtm_login_otps and expire after one hour.
  */
 import { createHash, randomInt } from "crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const ANON     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -66,4 +67,59 @@ export async function verifyPassword(email: string, password: string): Promise<G
   } catch {
     return { ok: false };
   }
+}
+
+/** Decode the Supabase `session_id` claim from an access-token JWT. No
+ *  signature check — callers validate the token via getUser first; this only
+ *  reads the claim so we can key the verified-sessions table by session. */
+export function sessionIdFromAccessToken(jwt: string): string | null {
+  try {
+    const part = jwt.split(".")[1];
+    const b64 = part.replace(/-/g, "+").replace(/_/g, "/");
+    const json = Buffer.from(b64, "base64").toString("utf8");
+    const claims = JSON.parse(json) as { session_id?: string };
+    return typeof claims.session_id === "string" ? claims.session_id : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Generate + store a fresh OTP for this email, replacing any prior code.
+ *  Returns the plaintext code for sending. */
+export async function issueOtp(admin: SupabaseClient, email: string): Promise<string> {
+  const code = generateOtp();
+  const e = normaliseEmail(email);
+  await admin.from("mtm_login_otps").upsert(
+    {
+      email: e,
+      code_hash: hashOtp(e, code),
+      expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
+      consumed: false,
+      attempts: 0,
+      created_at: new Date().toISOString(),
+    },
+    { onConflict: "email" },
+  );
+  return code;
+}
+
+export type OtpCheck = { ok: true } | { ok: false; status: number; error: string };
+
+/** Validate a submitted code against the stored hash, handling expiry, single
+ *  use and the attempt cap. Marks the code consumed on success. */
+export async function consumeOtp(admin: SupabaseClient, email: string, code: string): Promise<OtpCheck> {
+  const e = normaliseEmail(email);
+  const { data } = await admin
+    .from("mtm_login_otps").select("code_hash, expires_at, consumed, attempts").eq("email", e).maybeSingle();
+  const otp = data as { code_hash: string; expires_at: string; consumed: boolean; attempts: number } | null;
+  if (!otp) return { ok: false, status: 400, error: "No code on file. Request a new one." };
+  if (otp.consumed) return { ok: false, status: 400, error: "That code was already used. Request a new one." };
+  if (new Date(otp.expires_at).getTime() < Date.now()) return { ok: false, status: 400, error: "Your code has expired. Request a new one." };
+  if (otp.attempts >= OTP_MAX_ATTEMPTS) return { ok: false, status: 429, error: "Too many attempts. Request a new code." };
+  if (otp.code_hash !== hashOtp(e, code)) {
+    await admin.from("mtm_login_otps").update({ attempts: otp.attempts + 1 }).eq("email", e);
+    return { ok: false, status: 401, error: "That code isn't right. Try again." };
+  }
+  await admin.from("mtm_login_otps").update({ consumed: true }).eq("email", e);
+  return { ok: true };
 }
