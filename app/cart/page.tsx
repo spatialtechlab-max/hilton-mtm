@@ -11,7 +11,8 @@ import { ProfileForm } from "@/components/ProfileForm";
 import { AuthForm } from "@/components/AuthForm";
 import { fetchProfile, isProfileComplete, type Profile } from "@/lib/orders";
 import { listMyAddresses, upsertAddress, MAX_ADDRESSES, type Address, type AddressInput } from "@/lib/addresses";
-import { computeOrderTotals, VAT_RATE } from "@/lib/checkoutFees";
+import { computeOrderTotals } from "@/lib/checkoutFees";
+import { useVatRate } from "@/lib/useVatRate";
 import { listFreeShippingCountries, isFreeShippingCountry, type FreeShippingCountry } from "@/lib/shippingZones";
 import { supabase } from "@/lib/supabase";
 import MpgsCheckout from "@/components/MpgsCheckout";
@@ -121,12 +122,15 @@ export default function CartPage() {
   // for them to be captured once on the customer's profile instead of on
   // every order. The order-time upload UI has been removed.
 
+  // VAT rate is the admin-set value (read from public settings); falls back
+  // to the default until it loads so the totals never flash.
+  const vatRate = useVatRate();
   const itemsAfterDiscount = applied
     ? Math.max(0, Math.round((subtotal - applied.amount) * 100) / 100)
     : subtotal;
   const shipCountry = selectedAddr?.country ?? null;
   const freeShipping = isFreeShippingCountry(shipCountry, freeCountries);
-  const { vat, shipping, grandTotal } = computeOrderTotals(itemsAfterDiscount, { freeShipping });
+  const { vat, shipping, grandTotal } = computeOrderTotals(itemsAfterDiscount, { freeShipping, vatRate });
 
   async function applyDiscount() {
     setDiscountError(null);
@@ -539,7 +543,7 @@ export default function CartPage() {
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-[var(--color-charcoal-500)]">VAT ({Math.round(VAT_RATE * 100)}%)</span>
+                  <span className="text-[var(--color-charcoal-500)]">VAT ({Math.round(vatRate * 100)}%)</span>
                   <span className="text-[var(--color-charcoal-900)] tabular-nums">{fmt(vat)}</span>
                 </div>
                 <div className="flex justify-between">

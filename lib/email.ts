@@ -165,6 +165,30 @@ export async function sendPasswordResetEmail(args: { to: string; resetUrl: strin
   });
 }
 
+/* ─────────────────────────── 1c. Login OTP (2FA) ─────────────────────────── */
+
+export async function sendLoginOtpEmail(args: { to: string; code: string; name?: string }) {
+  const firstName = (args.name ?? "").split(/\s+/)[0] || "";
+  const codeBlock = `<div style="margin:28px 0 8px;text-align:center"><span style="display:inline-block;font-family:Georgia,'Times New Roman',serif;font-size:34px;letter-spacing:10px;color:${BURGUNDY};background:${IVORY};border:1px solid rgba(110,38,57,0.25);padding:16px 14px 16px 24px">${args.code}</span></div>`;
+  const body = `
+    <p>${firstName ? `Dear ${firstName},` : "Hello,"}</p>
+    <p>Use this one-time code to finish signing in to your Hilton Made to Measure account:</p>
+    ${codeBlock}
+    <p style="text-align:center;font-family:Arial,sans-serif;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:${CHARCOAL_500};margin-top:0">Valid for one hour · one use only</p>
+    <p>If you didn&rsquo;t try to sign in, you can safely ignore this email and your account stays secure.</p>
+  `;
+  return send({
+    to: args.to,
+    subject: `${args.code} is your Hilton sign-in code`,
+    html: shell({
+      preview: `Your Hilton sign-in code is ${args.code}.`,
+      heading: "Your sign-in code.",
+      body,
+    }),
+    text: `Your Hilton Made to Measure sign-in code is ${args.code}. It is valid for one hour and can be used once. If you didn't try to sign in, ignore this email.`,
+  });
+}
+
 /* ───────────────────── 2. Order confirmation ───────────────────── */
 
 type OrderEmailItem = { name: string; type_label: string; qty: number; price_num: number; image?: string | null };

@@ -15,7 +15,8 @@ import {
   type OrderStatus,
   type StatusHistoryEntry,
 } from "@/lib/orders";
-import { computeOrderTotals, VAT_RATE } from "@/lib/checkoutFees";
+import { computeOrderTotals } from "@/lib/checkoutFees";
+import { useVatRate } from "@/lib/useVatRate";
 import { listFreeShippingCountries, isFreeShippingCountry, type FreeShippingCountry } from "@/lib/shippingZones";
 
 const fmt = (n: number) =>
@@ -39,6 +40,7 @@ export function OrderDetailModal({
   onUpdated?: () => void;
 }) {
   const isOpen = !!orderNumber;
+  const vatRate = useVatRate();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [items, setItems] = useState<OrderItem[]>([]);
@@ -378,7 +380,7 @@ export function OrderDetailModal({
                       <h3 className="text-eyebrow text-[var(--color-charcoal-500)]">Total</h3>
                       {(() => {
                         const freeShipping = isFreeShippingCountry(order.shipping_address?.country, freeCountries);
-                        const t = computeOrderTotals(Number(order.subtotal), { freeShipping });
+                        const t = computeOrderTotals(Number(order.subtotal), { freeShipping, vatRate });
                         const gross = Number(order.subtotal) + Number(order.discount_amount ?? 0);
                         return (
                           <div className="mt-2 space-y-1 text-[0.82rem]">
@@ -393,7 +395,7 @@ export function OrderDetailModal({
                               </div>
                             ) : null}
                             <div className="flex justify-between text-[var(--color-charcoal-500)]">
-                              <span>VAT ({Math.round(VAT_RATE * 100)}%)</span>
+                              <span>VAT ({Math.round(vatRate * 100)}%)</span>
                               <span className="tabular-nums">{fmt(t.vat)}</span>
                             </div>
                             <div className="flex justify-between text-[var(--color-charcoal-500)]">

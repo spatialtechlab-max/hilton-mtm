@@ -8,7 +8,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendOrderConfirmationEmail } from "@/lib/email";
-import { computeOrderTotals, VAT_RATE } from "@/lib/checkoutFees";
+import { computeOrderTotals } from "@/lib/checkoutFees";
+import { fetchVatRate } from "@/lib/settingsServer";
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -55,7 +56,8 @@ export async function POST(req: Request) {
     freeShipping = !!free?.some((r: { country: string }) => norm(r.country) === target) && !!target;
   }
 
-  const totals = computeOrderTotals(subtotal, { freeShipping });
+  const vatRate = await fetchVatRate();
+  const totals = computeOrderTotals(subtotal, { freeShipping, vatRate });
 
   const result = await sendOrderConfirmationEmail({
     to: (order as { customer_email: string }).customer_email,
@@ -72,7 +74,7 @@ export async function POST(req: Request) {
     discountPercent: (order as { discount_percent?: number | null }).discount_percent ?? undefined,
     discountAmount:  (order as { discount_amount?: number | null }).discount_amount ?? undefined,
     vat:        totals.vat,
-    vatRate:    VAT_RATE,
+    vatRate:    vatRate,
     shipping:   totals.shipping,
     grandTotal: totals.grandTotal,
   });

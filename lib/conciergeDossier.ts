@@ -18,11 +18,11 @@
  * customer sees on their own order page.
  */
 import { createClient } from "@supabase/supabase-js";
+import { fetchVatRate } from "./settingsServer";
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const ANON     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-const VAT_RATE = 0.10;
 const SHIPPING_FEE = 15;
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const bhd = (n: number) => `BHD ${n.toFixed(2)}`;
@@ -88,6 +88,8 @@ export async function buildCustomerDossier(req: Request): Promise<string | null>
     if (!u?.user?.id) return null;
     const uid = u.user.id;
     const email = u.user.email ?? "";
+    // Admin-set VAT rate, so the totals Sebastian quotes match the order pages.
+    const vatRate = await fetchVatRate();
 
     const [profileRes, ordersRes, notesRes, freeRes, measRes] = await Promise.all([
       sb.from("mtm_profiles").select("full_name, phone, city, country").eq("id", uid).maybeSingle(),
@@ -147,7 +149,7 @@ export async function buildCustomerDossier(req: Request): Promise<string | null>
       orders.forEach((o, i) => {
         const freeShip = free.includes((o.shipping_address?.country || "").trim().toLowerCase());
         const itemsTotal = Math.max(0, round2(Number(o.subtotal) || 0));
-        const vat = round2(itemsTotal * VAT_RATE);
+        const vat = round2(itemsTotal * vatRate);
         const shipping = freeShip ? 0 : SHIPPING_FEE;
         const total = round2(itemsTotal + vat + shipping);
         const items = (o.mtm_order_items || []).map((it) => `${it.name}${it.qty > 1 ? ` x${it.qty}` : ""}`).join(", ") || "—";

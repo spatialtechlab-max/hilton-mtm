@@ -5,6 +5,7 @@
  * settings table, so no auth is needed.
  */
 import { defaultFor } from "./settingsRegistry";
+import { parseVatRate } from "./checkoutFees";
 
 type SettingRow = { key: string; value: string };
 
@@ -38,4 +39,11 @@ export function resolveSetting(
   key: string,
 ): string {
   return map[key] ?? defaultFor(key);
+}
+
+/** The admin-set VAT rate as a fraction (e.g. 0.10), for server routes
+ *  (the payment session, the confirmation email, Sebastian's dossier). */
+export async function fetchVatRate(): Promise<number> {
+  const map = await fetchSettingsServer();
+  return parseVatRate(map["vat.rate"]);
 }

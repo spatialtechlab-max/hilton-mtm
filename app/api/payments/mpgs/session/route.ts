@@ -12,7 +12,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
-import { computeOrderTotals } from "@/lib/checkoutFees";
+import { computeOrderTotals, parseVatRate } from "@/lib/checkoutFees";
 import { getMpgsConfig, createCheckoutSession } from "@/lib/mpgs";
 import { missingMeasurements } from "@/lib/measurementRules";
 import type { CartItem } from "@/lib/cart";
@@ -102,7 +102,12 @@ export async function POST(req: Request) {
     freeShipping = (rows ?? []).some((r: { country: string }) => (r.country ?? "").trim().toLowerCase() === wanted);
   } catch { /* default: charge shipping */ }
 
-  const totals = computeOrderTotals(subtotal, { freeShipping });
+  // VAT rate is the admin-set value (mtm_settings.vat.rate), resolved here so
+  // the amount we actually charge matches what the cart shows the customer.
+  const { data: vatRow } = await admin.from("mtm_settings").select("value").eq("key", "vat.rate").maybeSingle();
+  const vatRate = parseVatRate((vatRow as { value?: string } | null)?.value);
+
+  const totals = computeOrderTotals(subtotal, { freeShipping, vatRate });
   if (totals.grandTotal <= 0) return NextResponse.json({ error: "Nothing to charge." }, { status: 400 });
 
   // ── Build the order rows now; /verify just inserts them on CAPTURED ────

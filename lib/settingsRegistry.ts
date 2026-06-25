@@ -48,6 +48,18 @@ export const SETTINGS: SettingDef[] = [
     kind: "currency",
   },
 
+  // Checkout — VAT applied to the items total. Editable here so the atelier
+  // can change the rate without a code change; the cart, payment charge,
+  // order pages and confirmation email all read this single value.
+  {
+    key: "vat.rate",
+    group: "Checkout",
+    label: "VAT rate (%)",
+    description: "VAT percentage added to the items total at checkout, and shown on the cart, the order pages and the confirmation email. Enter the number only — e.g. 10 for 10%.",
+    defaultValue: "10",
+    kind: "text",
+  },
+
   // Tier pricing — Suit. Essentials is *always* the cloth price from
   // the ERP, so it has no row here. Signature and Full Bespoke values
   // are the UPGRADE ABOVE Essentials: customer pays (fabric price +

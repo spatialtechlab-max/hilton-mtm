@@ -8,7 +8,8 @@ import { ArrowLeft, Check, Save, Truck, Send } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { OrderPhotosGrid } from "@/components/OrderPhotosGrid";
 import { isAdmin } from "@/lib/admin";
-import { computeOrderTotals, VAT_RATE } from "@/lib/checkoutFees";
+import { computeOrderTotals } from "@/lib/checkoutFees";
+import { useVatRate } from "@/lib/useVatRate";
 import { listFreeShippingCountries, isFreeShippingCountry, type FreeShippingCountry } from "@/lib/shippingZones";
 import {
   fetchOrderByNumber, ORDER_STATUS_LABEL, ORDER_STATUSES,
@@ -23,6 +24,7 @@ export default function AdminOrderDetailPage() {
   const orderNumber = params?.orderNumber ?? "";
   const { user, loading } = useAuth();
   const [admin, setAdmin]     = useState<boolean | null>(null);
+  const vatRate = useVatRate();
 
   useEffect(() => {
     if (!user) { setAdmin(false); return; }
@@ -148,7 +150,7 @@ export default function AdminOrderDetailPage() {
           {order.order_number}
         </h1>
         <p className="mt-3 text-[0.9rem] text-[var(--color-charcoal-500)]">
-          Placed {new Date(order.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · {fmt(computeOrderTotals(Number(order.subtotal), { freeShipping: isFreeShippingCountry(order.shipping_address.country, freeCountries) }).grandTotal)}
+          Placed {new Date(order.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · {fmt(computeOrderTotals(Number(order.subtotal), { freeShipping: isFreeShippingCountry(order.shipping_address.country, freeCountries), vatRate }).grandTotal)}
         </p>
       </header>
 
@@ -328,7 +330,7 @@ export default function AdminOrderDetailPage() {
             <h3 className="text-eyebrow text-[var(--color-charcoal-500)]">Total</h3>
             {(() => {
               const freeShipping = isFreeShippingCountry(order.shipping_address.country, freeCountries);
-              const t = computeOrderTotals(Number(order.subtotal), { freeShipping });
+              const t = computeOrderTotals(Number(order.subtotal), { freeShipping, vatRate });
               const gross = Number(order.subtotal) + Number(order.discount_amount ?? 0);
               return (
                 <>
@@ -344,7 +346,7 @@ export default function AdminOrderDetailPage() {
                       </div>
                     ) : null}
                     <div className="flex justify-between text-[var(--color-charcoal-500)]">
-                      <span>VAT ({Math.round(VAT_RATE * 100)}%)</span>
+                      <span>VAT ({Math.round(vatRate * 100)}%)</span>
                       <span className="tabular-nums">{fmt(t.vat)}</span>
                     </div>
                     <div className="flex justify-between text-[var(--color-charcoal-500)]">

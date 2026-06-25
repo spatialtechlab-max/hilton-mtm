@@ -10,7 +10,8 @@ import {
   type Order, type OrderItem, type StatusHistoryEntry,
 } from "@/lib/orders";
 import { OrderPhotosGrid } from "@/components/OrderPhotosGrid";
-import { computeOrderTotals, VAT_RATE } from "@/lib/checkoutFees";
+import { computeOrderTotals } from "@/lib/checkoutFees";
+import { useVatRate } from "@/lib/useVatRate";
 import { listFreeShippingCountries, isFreeShippingCountry, type FreeShippingCountry } from "@/lib/shippingZones";
 import { supabase } from "@/lib/supabase";
 
@@ -19,6 +20,7 @@ const fmt = (n: number) => `BHD ${n.toLocaleString(undefined, { maximumFractionD
 export default function OrderDetailPage() {
   const params = useParams<{ orderNumber: string }>();
   const orderNumber = params?.orderNumber ?? "";
+  const vatRate = useVatRate();
 
   const [order, setOrder]     = useState<Order | null>(null);
   const [items, setItems]     = useState<OrderItem[]>([]);
@@ -92,7 +94,7 @@ export default function OrderDetailPage() {
             </h1>
             <p className="mt-3 text-[0.9rem] text-[var(--color-charcoal-500)]">
               Placed {new Date(order.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
-              {" · "}{fmt(computeOrderTotals(order.subtotal, { freeShipping: isFreeShippingCountry(order.shipping_address.country, freeCountries) }).grandTotal)}
+              {" · "}{fmt(computeOrderTotals(order.subtotal, { freeShipping: isFreeShippingCountry(order.shipping_address.country, freeCountries), vatRate }).grandTotal)}
             </p>
           </div>
 
@@ -223,7 +225,7 @@ export default function OrderDetailPage() {
                 <h3 className="text-eyebrow text-[var(--color-charcoal-500)]">Total</h3>
                 {(() => {
                   const freeShipping = isFreeShippingCountry(order.shipping_address.country, freeCountries);
-                  const totals = computeOrderTotals(order.subtotal, { freeShipping });
+                  const totals = computeOrderTotals(order.subtotal, { freeShipping, vatRate });
                   return (
                     <>
                       <div className="mt-2 space-y-1 text-[0.85rem]">
@@ -240,7 +242,7 @@ export default function OrderDetailPage() {
                           </div>
                         ) : null}
                         <div className="flex justify-between text-[var(--color-charcoal-500)]">
-                          <span>VAT ({Math.round(VAT_RATE * 100)}%)</span>
+                          <span>VAT ({Math.round(vatRate * 100)}%)</span>
                           <span className="tabular-nums">{fmt(totals.vat)}</span>
                         </div>
                         <div className="flex justify-between text-[var(--color-charcoal-500)]">
