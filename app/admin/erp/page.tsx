@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, RefreshCw, ChevronDown, ChevronRight, Search, AlertCircle, Code2, ImageOff, LogOut } from "lucide-react";
+import { ArrowLeft, RefreshCw, ChevronDown, ChevronRight, Search, AlertCircle, Code2, ImageOff, LogOut, Upload, Sparkles, Loader2 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin, isOperator } from "@/lib/admin";
 import { supabase } from "@/lib/supabase";
@@ -30,6 +30,16 @@ type ErpRaw = {
 type ImgFilter = "all" | "has" | "needs";
 
 const isUrl = (v: unknown): v is string => typeof v === "string" && /^https?:\/\//i.test(v);
+
+// Categories we generate for (garments). Everything else is an accessory and
+// gets no upload. Mirrors lib/erpGenerate.ts (server enforces it too).
+const GARMENT_CATEGORIES = new Set([
+  "SUITING", "SUITINGS", "SUITS", "JACKETING", "JACKET", "BLAZER", "OVERCOAT",
+  "PANTS", "CHINO PANTS", "TROUSER", "SHIRTING", "SHIRTS",
+]);
+const isGarment = (categoryName: unknown) => GARMENT_CATEGORIES.has(String(categoryName ?? "").trim().toUpperCase());
+
+type GenImages = { swatch: string | null; front: string | null; back: string | null };
 
 /** "Has images" = at least one real garment photo in images[]. The fabric
  *  swatch thumbnail does NOT count, per the spec. */
@@ -293,10 +303,96 @@ function ItemCard({ item, jsonOpen, onToggleJson }: { item: ErpItem; jsonOpen: b
         ))}
       </dl>
 
+      {needs && isGarment(item.categoryName) && <GenPanel item={item} />}
+
       {jsonOpen && (
         <pre className="mx-4 mb-4 p-3 bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)] text-[0.72rem] leading-relaxed overflow-x-auto rounded-sm">
           {JSON.stringify(item, null, 2)}
         </pre>
+      )}
+    </div>
+  );
+}
+
+function GenPanel({ item }: { item: ErpItem }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [result, setResult] = useState<GenImages | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusy(true); setErr(null); setResult(null);
+    try {
+      const { data: s } = await supabase.auth.getSession();
+      const token = s.session?.access_token;
+      if (!token) { setErr("Sign in required."); return; }
+      const fd = new FormData();
+      fd.append("itemId", String(item.id));
+      fd.append("fabric", file);
+      const res = await fetch("/api/admin/erp-generate", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setErr(data?.error || "Generation failed."); return; }
+      setResult(data.images as GenImages);
+    } catch {
+      setErr("Generation failed. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const out: Array<[string, string | null]> = result ? [["Swatch", result.swatch], ["Front", result.front], ["Back", result.back]] : [];
+
+  return (
+    <div className="mx-4 mb-4 border-t border-black/10 pt-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={busy}
+          className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-4 py-2.5 hover:bg-[var(--color-burgundy-800)] transition-colors disabled:opacity-60"
+        >
+          {busy ? <Loader2 size={14} strokeWidth={1.5} className="animate-spin" /> : <Upload size={14} strokeWidth={1.5} />}
+          {busy ? "Generating…" : result ? "Upload another fabric" : "Upload fabric & generate"}
+        </button>
+        <span className="text-[0.78rem] text-[var(--color-charcoal-500)] inline-flex items-center gap-1.5">
+          <Sparkles size={12} strokeWidth={1.5} /> Phone photo of the cloth → clean swatch + front + back, on white.
+        </span>
+      </div>
+
+      {err && <p className="mt-3 text-[0.82rem] text-[var(--color-burgundy-700)] bg-[var(--color-burgundy-50)] border border-[var(--color-burgundy-700)]/20 px-3 py-2">{err}</p>}
+      {busy && <p className="mt-3 text-[0.78rem] text-[var(--color-charcoal-500)]">Generating 3 images with the AI — this takes around a minute.</p>}
+
+      {result && (
+        <div className="mt-4">
+          <div className="grid grid-cols-3 gap-3 max-w-2xl">
+            {out.map(([label, src]) => (
+              <figure key={label} className="border border-black/10 bg-white">
+                {src ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={src} alt={label} className="w-full aspect-square object-contain bg-white" />
+                ) : (
+                  <div className="w-full aspect-square flex items-center justify-center text-[0.72rem] text-[var(--color-charcoal-400)]">not generated</div>
+                )}
+                <figcaption className="text-eyebrow text-center text-[var(--color-charcoal-500)] py-1.5">{label}</figcaption>
+              </figure>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              disabled
+              title="Storing to the VPS + adding to the ERP feed is the next step"
+              className="text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)]/30 px-4 py-2 opacity-50 cursor-not-allowed"
+            >
+              Make live
+            </button>
+            <span className="text-[0.72rem] text-[var(--color-charcoal-400)]">Make-live stores these on the VPS and adds them to the ERP feed (next step).</span>
+          </div>
+        </div>
       )}
     </div>
   );
