@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, RefreshCw, ChevronDown, ChevronRight, Search, AlertCircle, Code2, ImageOff, LogOut, Upload, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, ChevronDown, ChevronRight, Search, AlertCircle, Code2, ImageOff, LogOut, Upload, UploadCloud, Check, Sparkles, Loader2 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin, isOperator } from "@/lib/admin";
 import { supabase } from "@/lib/supabase";
@@ -318,6 +318,10 @@ function GenPanel({ item }: { item: ErpItem }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [result, setResult] = useState<GenImages | null>(null);
+  const [pushing, setPushing] = useState(false);
+  const [pushed, setPushed] = useState(false);
+  const [pushErr, setPushErr] = useState<string | null>(null);
+  const [pushMsg, setPushMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -325,6 +329,7 @@ function GenPanel({ item }: { item: ErpItem }) {
     e.target.value = "";
     if (!file) return;
     setBusy(true); setErr(null); setResult(null);
+    setPushed(false); setPushErr(null); setPushMsg(null);
     try {
       const { data: s } = await supabase.auth.getSession();
       const token = s.session?.access_token;
@@ -340,6 +345,46 @@ function GenPanel({ item }: { item: ErpItem }) {
       setErr("Generation failed. Please try again.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function pushToErp() {
+    if (!result) return;
+    const barcode = String(item.barcode ?? "").trim();
+    if (!barcode) { setPushErr("This item has no barcode in the ERP, so it can't be matched."); return; }
+    setPushing(true); setPushErr(null); setPushMsg(null);
+    try {
+      const { data: s } = await supabase.auth.getSession();
+      const token = s.session?.access_token;
+      if (!token) { setPushErr("Sign in required."); return; }
+      // Stage each generated image on the VPS, in catalogue order (front = hero).
+      const slots: Array<[string, string | null]> = [["front", result.front], ["back", result.back], ["swatch", result.swatch]];
+      const urls: string[] = [];
+      for (const [slot, dataUrl] of slots) {
+        if (!dataUrl) continue;
+        const hr = await fetch("/api/admin/erp-host", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ dataUrl, slot }),
+        });
+        const hd = await hr.json().catch(() => ({}));
+        if (!hr.ok || !hd.url) { setPushErr(hd?.error || `Could not stage the ${slot} image.`); return; }
+        urls.push(hd.url as string);
+      }
+      if (urls.length === 0) { setPushErr("No generated images to push."); return; }
+      const pr = await fetch("/api/admin/erp-push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ barcode, images: urls }),
+      });
+      const pd = await pr.json().catch(() => ({}));
+      if (!pr.ok || !pd.pushed) { setPushErr(pd?.error || "Push to the ERP failed."); return; }
+      setPushed(true);
+      setPushMsg(`Pushed ${pd.count} image${pd.count === 1 ? "" : "s"} to the ERP — now live. The catalogue updates within a few minutes.`);
+    } catch {
+      setPushErr("Push failed. Please try again.");
+    } finally {
+      setPushing(false);
     }
   }
 
@@ -381,16 +426,24 @@ function GenPanel({ item }: { item: ErpItem }) {
               </figure>
             ))}
           </div>
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-3 flex flex-wrap items-center gap-3">
             <button
               type="button"
-              disabled
-              title="Hosts these on the VPS, then pushes them to the ERP (update_item_images.php) — wired in the prototype step"
-              className="text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)]/30 px-4 py-2 opacity-50 cursor-not-allowed"
+              onClick={pushToErp}
+              disabled={pushing || pushed}
+              title="Stages the 3 images, pushes them into the ERP (matched by barcode), then deletes the temporary copies. The ERP rehosts them and the storefront shows them."
+              className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)] px-4 py-2 hover:bg-[var(--color-burgundy-700)] transition-colors disabled:opacity-50"
             >
-              Push to ERP
+              {pushing ? <Loader2 size={14} strokeWidth={1.5} className="animate-spin" /> : pushed ? <Check size={14} strokeWidth={1.5} /> : <UploadCloud size={14} strokeWidth={1.5} />}
+              {pushing ? "Pushing…" : pushed ? "Pushed — live" : "Push to ERP"}
             </button>
-            <span className="text-[0.72rem] text-[var(--color-charcoal-400)]">Pushes the images into the ERP, which makes them live on the site. Wired in the prototype step.</span>
+            {pushMsg ? (
+              <span className="text-[0.72rem] text-green-700">{pushMsg}</span>
+            ) : pushErr ? (
+              <span className="text-[0.72rem] text-[var(--color-burgundy-700)]">{pushErr}</span>
+            ) : (
+              <span className="text-[0.72rem] text-[var(--color-charcoal-400)]">Pushes the 3 images into the ERP (matched by barcode), which makes them live. The temporary copies are deleted right after.</span>
+            )}
           </div>
         </div>
       )}
