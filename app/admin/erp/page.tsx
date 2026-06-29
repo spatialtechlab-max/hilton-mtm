@@ -385,12 +385,12 @@ function GenPanel({ item }: { item: ErpItem }) {
             <button
               type="button"
               disabled
-              title="Storing to the VPS + adding to the ERP feed is the next step"
+              title="Hosts these on the VPS, then pushes them to the ERP (update_item_images.php) — wired in the prototype step"
               className="text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)]/30 px-4 py-2 opacity-50 cursor-not-allowed"
             >
-              Make live
+              Push to ERP
             </button>
-            <span className="text-[0.72rem] text-[var(--color-charcoal-400)]">Make-live stores these on the VPS and adds them to the ERP feed (next step).</span>
+            <span className="text-[0.72rem] text-[var(--color-charcoal-400)]">Pushes the images into the ERP, which makes them live on the site. Wired in the prototype step.</span>
           </div>
         </div>
       )}
