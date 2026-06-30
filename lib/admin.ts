@@ -62,3 +62,31 @@ export function resetOperatorCache() {
   opCached = null;
   opInflight = null;
 }
+
+// ── Employees ────────────────────────────────────────────────────────────────
+// Internal staff enrolled in the Employee Learning Platform (mtm_employees).
+// They reach ONLY /learn, never the rest of admin. Same memoised,
+// client-visible pattern as admins and operators.
+let empCached: Set<string> | null = null;
+let empInflight: Promise<Set<string>> | null = null;
+
+async function loadEmployees(): Promise<Set<string>> {
+  const { data, error } = await supabase.from("mtm_employees").select("email");
+  if (error || !data) return new Set();
+  return new Set(data.map((r) => String(r.email).toLowerCase()));
+}
+
+/** Returns true if the email is in the mtm_employees table. */
+export async function isEmployee(email: string | null | undefined): Promise<boolean> {
+  if (!email) return false;
+  if (!empCached) {
+    empInflight = empInflight ?? loadEmployees();
+    empCached = await empInflight;
+  }
+  return empCached.has(email.toLowerCase());
+}
+
+export function resetEmployeeCache() {
+  empCached = null;
+  empInflight = null;
+}

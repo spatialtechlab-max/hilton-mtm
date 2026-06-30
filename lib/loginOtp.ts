@@ -76,15 +76,22 @@ export async function isAdminEmail(client: SupabaseClient, email: string): Promi
   return Array.isArray(data) && data.length > 0;
 }
 
-/** Admins AND operators are exempt from the login OTP for now. Operators are
- *  store staff who use only the ERP image tool (mtm_operators). */
+/** Admins, operators AND employees are exempt from the login OTP for now.
+ *  Operators are store staff who use only the ERP image tool (mtm_operators);
+ *  employees are internal staff enrolled in the learning platform
+ *  (mtm_employees, /learn). All three sign in with email + password only. */
 export async function isOtpExemptEmail(client: SupabaseClient, email: string): Promise<boolean> {
   const e = normaliseEmail(email);
-  const [adm, op] = await Promise.all([
+  const [adm, op, emp] = await Promise.all([
     client.from("mtm_admins").select("email").ilike("email", e),
     client.from("mtm_operators").select("email").ilike("email", e),
+    client.from("mtm_employees").select("email").ilike("email", e),
   ]);
-  return (Array.isArray(adm.data) && adm.data.length > 0) || (Array.isArray(op.data) && op.data.length > 0);
+  return (
+    (Array.isArray(adm.data) && adm.data.length > 0) ||
+    (Array.isArray(op.data) && op.data.length > 0) ||
+    (Array.isArray(emp.data) && emp.data.length > 0)
+  );
 }
 
 /** Decode the Supabase `session_id` claim from an access-token JWT. No

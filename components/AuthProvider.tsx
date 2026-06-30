@@ -26,7 +26,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Second factor on EVERY login: a Supabase session isn't "in" until its id
   // is in mtm_verified_sessions. null = still checking, false = needs the gate,
   // true = cleared. Password logins are pre-cleared by their verify route;
-  // Google / OAuth and any other session get challenged here.
+  // Google / OAuth and any other session get challenged here. Staff (admins,
+  // operators, employees) are OTP-exempt: /api/auth/session-otp/status returns
+  // verified:true for them via isOtpExemptEmail, so they never see the gate.
   const [otpVerified, setOtpVerified] = useState<boolean | null>(null);
   // The password-recovery session (reset link) must reach /account/reset
   // without an OTP wall, or the customer can never set a new password.

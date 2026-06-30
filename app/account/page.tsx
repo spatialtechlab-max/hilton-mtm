@@ -13,7 +13,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { MediaImageClient } from "@/components/MediaImageClient";
 import { PlaceholderBadge } from "@/components/PlaceholderBadge";
 import { ProfileForm } from "@/components/ProfileForm";
-import { isAdmin, isOperator } from "@/lib/admin";
+import { isAdmin, isOperator, isEmployee } from "@/lib/admin";
 import { computeOrderTotals } from "@/lib/checkoutFees";
 import { useVatRate } from "@/lib/useVatRate";
 import { listFreeShippingCountries, isFreeShippingCountry, type FreeShippingCountry } from "@/lib/shippingZones";
@@ -28,18 +28,20 @@ import {
 export default function AccountPage() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
-  // Admins never see the customer dashboard — they go to /admin. Operators are
+  // Admins never see the customer dashboard. They go to /admin. Operators are
   // store staff who only use the ERP image tool, so they go straight to
-  // /admin/erp. Handles every entry point (sign-in form, returning visitor,
-  // direct URL) without touching the AuthForm flow.
+  // /admin/erp. Employees are internal staff enrolled in the learning platform,
+  // so they go to /learn. Handles every entry point (sign-in form, returning
+  // visitor, direct URL) without touching the AuthForm flow.
   const [redirecting, setRedirecting] = useState(false);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    Promise.all([isAdmin(user.email), isOperator(user.email)]).then(([adm, op]) => {
+    Promise.all([isAdmin(user.email), isOperator(user.email), isEmployee(user.email)]).then(([adm, op, emp]) => {
       if (cancelled) return;
       if (adm) { setRedirecting(true); router.replace("/admin"); }
       else if (op) { setRedirecting(true); router.replace("/admin/erp"); }
+      else if (emp) { setRedirecting(true); router.replace("/learn"); }
     });
     return () => { cancelled = true; };
   }, [user, router]);
@@ -48,7 +50,7 @@ export default function AccountPage() {
     return (
       <div className="pt-40 pb-24 min-h-[70vh] flex items-center justify-center">
         <span className="text-eyebrow text-[var(--color-charcoal-500)]">
-          {redirecting ? "Taking you to the atelier admin…" : "Loading…"}
+          {redirecting ? "Taking you there…" : "Loading…"}
         </span>
       </div>
     );
