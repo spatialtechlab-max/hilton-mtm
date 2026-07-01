@@ -132,8 +132,8 @@ export default function LearnDashboardPage() {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4 min-w-0">
-                      <span className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full border border-[var(--color-burgundy-700)]/30 text-[var(--color-burgundy-700)] text-display text-[1.1rem] tabular-nums">
-                        {m.order}
+                      <span className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full border border-[var(--color-burgundy-700)]/30 text-[var(--color-burgundy-700)] text-display text-[1.1rem] leading-none tabular-nums">
+                        <span className="translate-y-[1px]">{m.order}</span>
                       </span>
                       <div className="min-w-0">
                         <h3 className="text-display text-[1.25rem] text-[var(--color-charcoal-900)] leading-tight group-hover:text-[var(--color-burgundy-700)] transition-colors">
