@@ -76,7 +76,7 @@ function Player({
   // Flatten every slide across the module's lessons, remembering which lesson
   // each one belongs to so we can mark lessons complete as the reader advances.
   const flat = useMemo(
-    () => mod.lessons.flatMap((l) => l.slides.map((slide) => ({ lessonSlug: l.slug, lessonTitle: l.title, slide }))),
+    () => mod.lessons.flatMap((l) => l.slides.map((slide, i) => ({ lessonSlug: l.slug, lessonTitle: l.title, slide, slideIndex: i }))),
     [mod],
   );
   // The flat index of the final slide of each lesson.
@@ -164,6 +164,16 @@ function Player({
 
       {/* Slide */}
       <article className="mt-8 border border-black/10 bg-white p-8 lg:p-12 min-h-[280px]">
+        {/* Premium slide illustration. Deterministic path; hidden cleanly if the
+            file was never generated. Keyed by src so a prior slide's onError-hide
+            never leaks onto the next slide's (valid) image. */}
+        <img
+          key={`/learn/${mod.slug}-${current.lessonSlug}-${current.slideIndex}.jpg`}
+          src={`/learn/${mod.slug}-${current.lessonSlug}-${current.slideIndex}.jpg`}
+          alt=""
+          onError={(e) => { e.currentTarget.style.display = "none"; }}
+          className="mb-8 w-full h-[200px] sm:h-[300px] lg:h-[360px] object-cover rounded-2xl border border-[var(--color-burgundy-700)]/15 shadow-[0_1px_20px_rgba(0,0,0,0.06)] bg-[var(--color-ivory-100)]"
+        />
         <h2 className="text-display text-[clamp(1.6rem,3vw,2.25rem)] leading-tight text-[var(--color-charcoal-900)]">
           {current.slide.heading}
         </h2>

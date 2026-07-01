@@ -33,7 +33,7 @@ export const course: Course = {
   slug: "the-hilton-way",
   title: "The Hilton Way",
   intro:
-    "Welcome to Hilton Bespoke. This course turns you from someone who takes measurements into an advisor who turns tailoring into confidence. Work through the six modules in order. Each ends with a short quiz, and you need 80 percent to pass. Keep the client, not the sale, at the centre of everything.",
+    "Welcome to Hilton Bespoke. This course turns you from someone who takes measurements into an advisor who turns tailoring into confidence. Work through the seven modules in order. Each ends with a short quiz, and you need 80 percent to pass. Keep the client, not the sale, at the centre of everything.",
   modules: [
     /* ───────────────────────── 1. The Hilton Standard ───────────────────────── */
     {
@@ -759,6 +759,134 @@ export const course: Course = {
             options: ["A point collar", "A spread collar", "A button-down collar", "A wing collar"],
             answer: 1,
             feedback: "A spread collar adds width to a narrow face. A point collar slims a rounder one.",
+          },
+        ],
+      },
+    },
+
+    /* ────────────────── 7. The Fitting & Measurement Process ────────────────── */
+    {
+      slug: "the-fitting-process",
+      order: 7,
+      title: "The Fitting & Measurement Process",
+      summary:
+        "A garment is only as good as the numbers it is built from and the order that carries it to the client. Learn the jacket, trouser, and shirt measurement sets, then the workflow from estimate to delivery: deposit, trial date, cutting with a margin, accurate entry, trials, finishing, and follow-up.",
+      lessons: [
+        {
+          slug: "measuring-the-jacket",
+          title: "Measuring the Jacket",
+          slides: [
+            {
+              heading: "The jacket measurement set",
+              body:
+                "A jacket is read across six core points: length, chest, stomach, hip and seat, shoulder, and sleeves. Length sets how the coat falls, chest and stomach shape the body of the garment, hip and seat govern the skirt of the jacket, and shoulder and sleeve settle the frame. Take each point in the same order every time so nothing is missed.",
+            },
+            {
+              heading: "The arm: biceps and wrist",
+              body:
+                "Two further points finish the sleeve: the biceps and the wrist. Biceps decides how cleanly the sleeve sits over the arm without pulling, and wrist sets the opening so the cuff breaks correctly over the hand. A sleeve that is right at both ends moves with the client rather than against him.",
+            },
+            {
+              heading: "Measure with a steady hand",
+              body:
+                "Keep the tape snug but never tight, and let the client stand naturally rather than holding a pose. Record every figure as you go, in the same unit throughout. The measurements are the whole foundation of the fit, so a minute of care here saves a retrial later.",
+            },
+          ],
+        },
+        {
+          slug: "trousers-and-shirt",
+          title: "Measuring Trousers and Shirt",
+          slides: [
+            {
+              heading: "The trouser set",
+              body:
+                "Trousers are read across six points: waist, hip, knee, bottom, length, and thigh. Waist and hip set the seat, thigh and knee shape the leg, bottom fixes the opening at the shoe, and length decides the break. Balance these against the client's build so the trouser sits cleanly without gripping or bagging.",
+            },
+            {
+              heading: "The shirt set",
+              body:
+                "A shirt is read across four points: collar (the neck), chest, sleeve, and length. Collar is the one felt most day to day, so leave a finger of room for comfort. Chest governs the drape, sleeve sets the cuff at the wrist, and length keeps the shirt tucked through movement.",
+            },
+          ],
+        },
+        {
+          slug: "estimate-to-cut",
+          title: "From Estimate to Cut",
+          slides: [
+            {
+              heading: "Start with an estimate",
+              body:
+                "Most clients begin by asking what a commission will cost, so prepare a clear estimate first. A good estimate sets honest expectations and opens the order. Once he is comfortable with it, move on to customising the garment and taking the measurements.",
+            },
+            {
+              heading: "Deposit and trial date",
+              body:
+                "Hilton takes fifty percent in advance at the point of sale, and you give the client a trial date there and then. Record the trial for the tailors a day ahead of the client's appointment, so the garment is ready when he arrives. Clear money terms and a firm date protect the relationship.",
+            },
+            {
+              heading: "Cutting the fabric",
+              body:
+                "The tailor master reads the measurements and calls the exact length of cloth and lining to cut from the roll. Always cut about five centimetres extra. That margin gives room for alterations at trial and protects against a cut that leaves no cloth to adjust.",
+            },
+          ],
+        },
+        {
+          slug: "trials-and-delivery",
+          title: "Trials, Finishing, and Delivery",
+          slides: [
+            {
+              heading: "Enter the measurements accurately",
+              body:
+                "After the fabric is cut, enter the measurements into the system with every element covered and nothing rounded away. The invoice number ties the figures to the payment, and the printout goes to the tailor master to assign the work. A precise entry here is what a good fit is built on.",
+            },
+            {
+              heading: "Trials and retrials",
+              body:
+                "Set the trial with the workload in mind, and follow up with the client on the date and time. If the tailor master calls for a retrial, treat those dates with the same care. Trials are where a good measurement becomes a garment that truly fits, so never let one drift.",
+            },
+            {
+              heading: "Finish, deliver, follow up",
+              body:
+                "When the trial is right, record it and prepare the piece for delivery. Deliver on time, every time, because the promised date is part of the service. Then follow up after the client has the garment. The order closes at delivery, and the relationship carries into the next commission.",
+            },
+          ],
+        },
+      ],
+      quiz: {
+        passPct: PASS_PCT,
+        questions: [
+          {
+            q: "How much does Hilton take in advance at the point of sale?",
+            options: [
+              "The full amount",
+              "Fifty percent",
+              "Nothing until delivery",
+              "A fixed handling fee",
+            ],
+            answer: 1,
+            feedback: "Hilton takes fifty percent in advance and gives the client a trial date at the same moment.",
+          },
+          {
+            q: "When cutting cloth from the roll, how much extra should you allow?",
+            options: [
+              "No extra, cut to the exact length",
+              "About five centimetres extra",
+              "Double the length",
+              "As little as possible to save cloth",
+            ],
+            answer: 1,
+            feedback: "Always cut about five centimetres extra so there is cloth to adjust at trial.",
+          },
+          {
+            q: "Which set of points is used to measure a jacket?",
+            options: [
+              "Waist, hip, knee, bottom, length, thigh",
+              "Collar, chest, sleeve, length",
+              "Length, chest, stomach, hip and seat, shoulder, sleeves, plus biceps and wrist",
+              "Only chest and length",
+            ],
+            answer: 2,
+            feedback: "A jacket is read across length, chest, stomach, hip and seat, shoulder, and sleeves, finished by the biceps and wrist.",
           },
         ],
       },
