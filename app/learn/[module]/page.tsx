@@ -177,9 +177,13 @@ function Player({
         <h2 className="text-display text-[clamp(1.6rem,3vw,2.25rem)] leading-tight text-[var(--color-charcoal-900)]">
           {current.slide.heading}
         </h2>
-        <p className="mt-5 text-[1.02rem] text-[var(--color-charcoal-700)] leading-relaxed max-w-2xl">
-          {current.slide.body}
-        </p>
+        <div className="mt-5 max-w-2xl space-y-4">
+          {current.slide.body.split(/\n\n+/).map((para, i) => (
+            <p key={i} className="text-[1.02rem] text-[var(--color-charcoal-700)] leading-relaxed">
+              {para}
+            </p>
+          ))}
+        </div>
       </article>
 
       {/* Controls */}

@@ -13,11 +13,11 @@ describe("course shape", () => {
     expect(course.title).toBe("The Hilton Way");
     expect(course.intro.length).toBeGreaterThan(20);
   });
-  test("has six modules", () => {
-    expect(course.modules).toHaveLength(6);
+  test("has seven modules", () => {
+    expect(course.modules).toHaveLength(7);
   });
-  test("module orders are 1..6 with no gaps", () => {
-    expect(modules.map((m) => m.order)).toEqual([1, 2, 3, 4, 5, 6]);
+  test("module orders are 1..7 with no gaps", () => {
+    expect(modules.map((m) => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
   test("modules export is sorted by order", () => {
     const orders = modules.map((m) => m.order);
@@ -48,6 +48,7 @@ describe("slugs", () => {
       "the-cloth",
       "style-options",
       "reading-the-body",
+      "the-fitting-process",
     ]);
   });
   test("moduleBySlug resolves and rejects", () => {
@@ -74,7 +75,7 @@ describe("lessons and slides", () => {
     expect(slides).toBeGreaterThanOrEqual(6);
     expect(slides).toBeLessThanOrEqual(8);
   });
-  test("modules 2 to 6 each have 3 to 5 lessons", () => {
+  test("modules 2 to 7 each have 3 to 5 lessons", () => {
     for (const m of course.modules.filter((x) => x.order >= 2)) {
       expect(m.lessons.length).toBeGreaterThanOrEqual(3);
       expect(m.lessons.length).toBeLessThanOrEqual(5);
@@ -90,7 +91,7 @@ describe("quizzes", () => {
   test("every quiz passes at 80%", () => {
     for (const m of course.modules) expect(m.quiz.passPct).toBe(80);
   });
-  test("module 1 has 5 questions; modules 2 to 6 have 3 each", () => {
+  test("module 1 has 5 questions; modules 2 to 7 have 3 each", () => {
     expect(moduleBySlug("the-hilton-standard")!.quiz.questions.length).toBe(5);
     for (const m of course.modules.filter((x) => x.order >= 2)) {
       expect(m.quiz.questions.length).toBe(3);
