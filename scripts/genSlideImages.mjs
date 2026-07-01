@@ -15,7 +15,7 @@
  * Node 22+/24 strips the .ts types on import, so course.ts is read directly.
  * The OpenRouter key is read from .env.local (never committed).
  */
-import { readFileSync, mkdirSync } from "node:fs";
+import { readFileSync, mkdirSync, existsSync } from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { course } from "../lib/learn/course.ts";
@@ -23,7 +23,7 @@ import { course } from "../lib/learn/course.ts";
 const ROOT = path.resolve(import.meta.dirname, "..");
 const OUT_DIR = path.join(ROOT, "public", "learn");
 const MODEL = "google/gemini-3-pro-image";
-const CONCURRENCY = 3;
+const CONCURRENCY = 2;
 const ONLY_MODULE = (process.env.ONLY_MODULE || "").trim();
 
 // ── Load OPENROUTER_API_KEY from .env.local ────────────────────────────────
@@ -129,8 +129,9 @@ function compressToJpeg(buffer, outPath) {
 // ── One slide, with one retry ──────────────────────────────────────────────
 async function generateSlide(job) {
   const outPath = path.join(OUT_DIR, `${job.file}.jpg`);
+  if (existsSync(outPath)) { console.log(`  skip ${job.file}.jpg (exists)`); return true; }
   const prompt = buildPrompt(job.slide);
-  for (let attempt = 1; attempt <= 2; attempt++) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const url = await callOpenRouter(prompt);
       const buf = dataUrlToBuffer(url);
@@ -139,7 +140,8 @@ async function generateSlide(job) {
       console.log(`  ok   ${job.file}.jpg  (${dims}, ${(buf.length / 1024).toFixed(0)}KB in)`);
       return true;
     } catch (e) {
-      const last = attempt === 2;
+      const last = attempt === 3;
+      if (!last) await new Promise((r) => setTimeout(r, 3000 * attempt));
       console.log(`  ${last ? "FAIL" : "retry"} ${job.file}.jpg  attempt ${attempt}: ${e.message}`);
       if (last) return false;
     }
