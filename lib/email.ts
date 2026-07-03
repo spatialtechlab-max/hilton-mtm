@@ -1,7 +1,7 @@
 /**
  * Transactional email layer. Wraps Resend so the rest of the app calls
- * one of three high-level helpers — sendWelcomeEmail, sendOrderConfirmationEmail,
- * sendCourierDispatchEmail — and never touches the SDK directly.
+ * one of three high-level helpers (sendWelcomeEmail, sendOrderConfirmationEmail,
+ * sendCourierDispatchEmail) and never touches the SDK directly.
  *
  * Lives server-side only. If RESEND_API_KEY isn't configured the helpers
  * log the email to the server console instead of crashing; this lets us
@@ -57,12 +57,12 @@ const CHARCOAL_500 = "#6b6663";
 
 /** Public URL for the brand mark used in transactional emails. We use the
  *  storefront's vercel.app deployment because hiltonmtm.com is host-routed
- *  to /coming-soon by middleware — static assets there still resolve, but
+ *  to /coming-soon by middleware. Static assets there still resolve, but
  *  the vercel.app URL is the canonical place we know is live during this
  *  pre-launch phase. */
 const LOGO_URL = "https://hilton-mtm-virid.vercel.app/logo-burgundy.png";
 
-/** Shared HTML chrome — premium concierge correspondence card. Real Hilton
+/** Shared HTML chrome: premium concierge correspondence card. Real Hilton
  *  monogram at the top on a cream plate, burgundy hairline accents, deep
  *  burgundy footer with the house address. Georgia + Arial fallbacks so
  *  the brand feel survives clients that strip webfonts. */
@@ -129,7 +129,7 @@ export async function sendWelcomeEmail(args: { to: string; name?: string }) {
   const heading = firstName ? `Welcome, ${firstName}.` : "Welcome.";
   const body = `
     <p>Thank you for joining the Hilton Made to Measure house. Your account is now active.</p>
-    <p>Three generations of tailors in Manama, working from the original Hilton bench. Every commission is cut from a paper pattern drawn for one body — the same way we have done it since 1970.</p>
+    <p>Three generations of tailors in Manama, working from the original Hilton bench. Every commission is cut from a paper pattern drawn for one body, the same way we have done it since 1970.</p>
     <p>When you are ready, design your first commission online, or book a private fitting at the atelier and we will do it together.</p>
   `;
   return send({
@@ -213,15 +213,15 @@ export async function sendOrderConfirmationEmail(args: {
   const firstName = args.name.split(/\s+/)[0] || "";
   const itemsGross = args.items.reduce((s, it) => s + it.price_num * it.qty, 0);
   const rows = args.items.map((it) => {
-    // 72px square thumbnail per line item. ERP product photos sometimes
-    // ship on a studio-white plate; emails can't run mix-blend tricks, so
-    // we just render the photo as-is against an ivory cell. The image
-    // column only renders when the order item actually has an image URL.
-    const thumbCell = it.image
-      ? `<td width="80" style="padding:16px 14px 16px 0;border-bottom:1px solid rgba(0,0,0,0.06);vertical-align:top">
-          <img src="${it.image}" width="72" height="72" alt="" style="display:block;width:72px;height:72px;object-fit:cover;background:${IVORY};border:1px solid rgba(0,0,0,0.08)">
-        </td>`
-      : `<td width="0" style="border-bottom:1px solid rgba(0,0,0,0.06);font-size:0;line-height:0">&nbsp;</td>`;
+    // 56px square product thumbnail to the LEFT of every line item. When the
+    // order item carries no image we still render a same-size neutral light-
+    // grey placeholder box so the name/price column stays aligned across rows.
+    // Table cell + inline styles only (no flex/grid); border-radius simply
+    // degrades to a square corner in Outlook, which is fine.
+    const thumb = it.image
+      ? `<img src="${it.image}" width="56" height="56" alt="" style="display:block;width:56px;height:56px;object-fit:cover;border:1px solid rgba(0,0,0,0.10);border-radius:6px;background:${IVORY}">`
+      : `<div style="width:56px;height:56px;border:1px solid rgba(0,0,0,0.10);border-radius:6px;background:#e9e6e1;font-size:0;line-height:0">&nbsp;</div>`;
+    const thumbCell = `<td width="72" style="padding:16px 16px 16px 0;border-bottom:1px solid rgba(0,0,0,0.06);vertical-align:top">${thumb}</td>`;
     return `
     <tr>
       ${thumbCell}
