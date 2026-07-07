@@ -13,11 +13,11 @@ describe("course shape", () => {
     expect(course.title).toBe("The Hilton Way");
     expect(course.intro.length).toBeGreaterThan(20);
   });
-  test("has seven modules", () => {
-    expect(course.modules).toHaveLength(7);
+  test("has nine modules", () => {
+    expect(course.modules).toHaveLength(9);
   });
-  test("module orders are 1..7 with no gaps", () => {
-    expect(modules.map((m) => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  test("module orders are 1..9 with no gaps", () => {
+    expect(modules.map((m) => m.order)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
   test("modules export is sorted by order", () => {
     const orders = modules.map((m) => m.order);
@@ -39,13 +39,15 @@ describe("slugs", () => {
       expect(new Set(slugs).size).toBe(slugs.length);
     }
   });
-  test("expected module slugs are present", () => {
-    const slugs = course.modules.map((m) => m.slug);
+  test("expected module slugs are present, in order", () => {
+    const slugs = modules.map((m) => m.slug);
     expect(slugs).toEqual([
       "the-hilton-standard",
       "understanding-the-craft",
       "the-client-experience",
       "the-cloth",
+      "fabric-mastery-climate",
+      "silhouette-structure-fit",
       "style-options",
       "reading-the-body",
       "the-fitting-process",
@@ -75,10 +77,10 @@ describe("lessons and slides", () => {
     expect(slides).toBeGreaterThanOrEqual(6);
     expect(slides).toBeLessThanOrEqual(8);
   });
-  test("modules 2 to 7 each have 3 to 5 lessons", () => {
+  test("every non-showcase module (order >= 2) has 3 to 6 lessons", () => {
     for (const m of course.modules.filter((x) => x.order >= 2)) {
       expect(m.lessons.length).toBeGreaterThanOrEqual(3);
-      expect(m.lessons.length).toBeLessThanOrEqual(5);
+      expect(m.lessons.length).toBeLessThanOrEqual(6);
     }
   });
   test("totalLessons matches the sum across modules", () => {
@@ -91,7 +93,7 @@ describe("quizzes", () => {
   test("every quiz passes at 80%", () => {
     for (const m of course.modules) expect(m.quiz.passPct).toBe(80);
   });
-  test("module 1 has 5 questions; modules 2 to 7 have 3 each", () => {
+  test("module 1 has 5 questions; every other module has 3 each", () => {
     expect(moduleBySlug("the-hilton-standard")!.quiz.questions.length).toBe(5);
     for (const m of course.modules.filter((x) => x.order >= 2)) {
       expect(m.quiz.questions.length).toBe(3);
