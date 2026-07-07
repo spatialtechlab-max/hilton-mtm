@@ -7,7 +7,7 @@
  * service-role key as a pepper) in mtm_login_otps and expire after one hour.
  */
 import { createHash, randomInt } from "crypto";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const ANON     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
@@ -80,12 +80,16 @@ export async function isAdminEmail(client: SupabaseClient, email: string): Promi
  *  Operators are store staff who use only the ERP image tool (mtm_operators);
  *  employees are internal staff enrolled in the learning platform
  *  (mtm_employees, /learn). All three sign in with email + password only. */
-export async function isOtpExemptEmail(client: SupabaseClient, email: string): Promise<boolean> {
+export async function isOtpExemptEmail(_client: SupabaseClient, email: string): Promise<boolean> {
   const e = normaliseEmail(email);
+  // Always check with the SERVICE ROLE, never the caller's client. The exemption
+  // must not depend on the signed-in user's RLS: an admin's own mtm_admins read
+  // can come back empty for some session types, which would wrongly gate them.
+  const svc = createClient(SUPA_URL, process.env.SUPABASE_SERVICE_ROLE_KEY ?? "", { auth: { persistSession: false } });
   const [adm, op, emp] = await Promise.all([
-    client.from("mtm_admins").select("email").ilike("email", e),
-    client.from("mtm_operators").select("email").ilike("email", e),
-    client.from("mtm_employees").select("email").ilike("email", e),
+    svc.from("mtm_admins").select("email").ilike("email", e),
+    svc.from("mtm_operators").select("email").ilike("email", e),
+    svc.from("mtm_employees").select("email").ilike("email", e),
   ]);
   return (
     (Array.isArray(adm.data) && adm.data.length > 0) ||
