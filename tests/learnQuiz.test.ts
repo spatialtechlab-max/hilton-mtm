@@ -1,40 +1,19 @@
 import { describe, expect, test } from "vitest";
 import {
-  countCorrect,
   scorePct,
   isPass,
-  gradeAttempt,
   keepBest,
   courseProgress,
   type ModuleProgress,
 } from "@/lib/learn/quiz";
-import { modules, type Module, type QuizQuestion } from "@/lib/learn/course";
+import { modules } from "@/lib/learn/course";
 
 /**
- * Learning-platform quiz scoring. Load-bearing: the dashboard, the module
- * player, and the admin tracker all read their numbers from these pure
- * functions, so a regression here mis-reports staff training completion.
+ * Learning-platform progress + generic scoring maths. Load-bearing: the
+ * dashboard, the module player, the exam scorer, and the admin tracker all read
+ * their numbers from these pure functions, so a regression here mis-reports
+ * staff training completion.
  */
-
-const Q = (answer: number): QuizQuestion => ({
-  q: "q",
-  options: ["a", "b", "c", "d"],
-  answer,
-  feedback: "f",
-});
-
-describe("countCorrect", () => {
-  const qs = [Q(0), Q(1), Q(2)];
-  test("counts exact matches", () => {
-    expect(countCorrect([0, 1, 2], qs)).toBe(3);
-    expect(countCorrect([0, 1, 0], qs)).toBe(2);
-    expect(countCorrect([1, 0, 1], qs)).toBe(0);
-  });
-  test("undefined / unanswered counts as wrong", () => {
-    expect(countCorrect([0, undefined, 2], qs)).toBe(2);
-    expect(countCorrect([], qs)).toBe(0);
-  });
-});
 
 describe("scorePct", () => {
   test("whole-number percentage", () => {
@@ -56,24 +35,6 @@ describe("isPass at the 80 line", () => {
     expect(isPass(80, 80)).toBe(true);
     expect(isPass(79, 80)).toBe(false);
     expect(isPass(100, 80)).toBe(true);
-  });
-});
-
-describe("gradeAttempt", () => {
-  const quiz = { passPct: 80, questions: [Q(0), Q(1), Q(2), Q(3), Q(0)] };
-  test("all correct passes at 100%", () => {
-    const r = gradeAttempt([0, 1, 2, 3, 0], quiz);
-    expect(r).toEqual({ correct: 5, total: 5, pct: 100, passed: true });
-  });
-  test("4 of 5 is exactly the pass line", () => {
-    const r = gradeAttempt([0, 1, 2, 3, 9], quiz);
-    expect(r.pct).toBe(80);
-    expect(r.passed).toBe(true);
-  });
-  test("3 of 5 fails", () => {
-    const r = gradeAttempt([0, 1, 2, 9, 9], quiz);
-    expect(r.pct).toBe(60);
-    expect(r.passed).toBe(false);
   });
 });
 
@@ -128,21 +89,5 @@ describe("courseProgress", () => {
     expect(r.pct).toBeLessThan(100);
     expect(r.lessonsDone).toBe(1);
     expect(r.modulesPassed).toBe(0);
-  });
-});
-
-describe("a module quiz is winnable and not trivially passable", () => {
-  test.each(modules)("$slug: a perfect attempt passes", (m: Module) => {
-    const perfect = m.quiz.questions.map((q) => q.answer);
-    expect(gradeAttempt(perfect, m.quiz).passed).toBe(true);
-  });
-  test.each(modules)("$slug: an all-zero attempt does not auto-pass", (m: Module) => {
-    // Not every answer is index 0, so blindly picking the first option must
-    // fall below the 80% line for a well-formed quiz.
-    const allZero = m.quiz.questions.map(() => 0);
-    const everyAnswerIsZero = m.quiz.questions.every((q) => q.answer === 0);
-    if (!everyAnswerIsZero) {
-      expect(gradeAttempt(allZero, m.quiz).passed).toBe(false);
-    }
   });
 });

@@ -19,21 +19,14 @@
 
 export type Slide = { heading: string; body: string; image?: string };
 export type Lesson = { slug: string; title: string; slides: Slide[] };
-/** answer = index into options of the correct choice. */
-export type QuizQuestion = { q: string; options: string[]; answer: number; feedback: string };
-/** passPct = the percentage needed to pass (we use 80 throughout). */
-export type Quiz = { passPct: number; questions: QuizQuestion[] };
 export type Module = {
   slug: string;
   order: number;
   title: string;
   summary: string;
   lessons: Lesson[];
-  quiz: Quiz;
 };
 export type Course = { slug: string; title: string; intro: string; modules: Module[] };
-
-const PASS_PCT = 80;
 
 export const course: Course = {
   slug: "the-hilton-way",
@@ -97,66 +90,6 @@ export const course: Course = {
           ],
         },
       ],
-      quiz: {
-        passPct: PASS_PCT,
-        questions: [
-          {
-            q: "A client walks in unsure of what he wants. What should you establish first?",
-            options: [
-              "His budget for the commission",
-              "Where and how often he will wear the garment",
-              "His preferred lapel shape",
-              "The fabric mill he likes",
-            ],
-            answer: 1,
-            feedback: "Purpose comes first. The occasion and frequency of wear guide every later choice.",
-          },
-          {
-            q: "How many options should you usually put in front of a client at a decision point?",
-            options: [
-              "As many as possible, so he feels in control",
-              "A confident recommendation plus one alternative",
-              "Exactly one, decided for him",
-              "At least five, to show the full range",
-            ],
-            answer: 1,
-            feedback: "Lead with two strong options. A guided choice reads as expertise; a long menu feels like work.",
-          },
-          {
-            q: "A client asks why a peak lapel matters. The best reply explains that it...",
-            options: [
-              "has a long history in British tailoring",
-              "is the most expensive lapel to cut",
-              "reads as more formal and adds presence",
-              "is required on every business suit",
-            ],
-            answer: 2,
-            feedback: "Speak in outcomes. Translate the detail into what it changes for the wearer.",
-          },
-          {
-            q: "What is the correct consultation sequence?",
-            options: [
-              "Fabric, then price, then fit, then occasion",
-              "Occasion, then fit, then jacket structure, then details",
-              "Details first, then fit, then occasion",
-              "Accessories, then trousers, then jacket, then fit",
-            ],
-            answer: 1,
-            feedback: "Move from the big decisions to the small ones: occasion, fit, structure, then finishing details.",
-          },
-          {
-            q: "A client loves a bold cloth he will rarely have the chance to wear. The Hilton approach is to...",
-            options: [
-              "sell it anyway, since the choice is his",
-              "balance taste with practicality and steer toward what he will actually wear",
-              "refuse the order outright",
-              "insist on the safest possible option every time",
-            ],
-            answer: 1,
-            feedback: "A beautiful option is the wrong option if it sits unworn. Match the recommendation to real life.",
-          },
-        ],
-      },
     },
 
     /* ────────────────── 2. Understanding the Craft (RTW / MTM / Bespoke) ────────────────── */
@@ -237,39 +170,6 @@ export const course: Course = {
           ],
         },
       ],
-      quiz: {
-        passPct: PASS_PCT,
-        questions: [
-          {
-            q: "What is the main limitation of ready-to-wear?",
-            options: [
-              "It is the most expensive option",
-              "The fit is pre-set and there is no personalisation",
-              "It takes weeks to arrive",
-              "It cannot be worn to the office",
-            ],
-            answer: 1,
-            feedback: "Ready-to-wear is made to a standard pattern. You take the fit as it comes.",
-          },
-          {
-            q: "Why does made-to-measure fit better than ready-to-wear but not as well as bespoke?",
-            options: [
-              "It uses cheaper cloth",
-              "It alters an existing pattern using flat measurements, not a pattern drafted for the body",
-              "It skips fittings entirely",
-              "It is only sold in summer",
-            ],
-            answer: 1,
-            feedback: "MTM alters a factory pattern to flat measurements taken by a salesman, so the fit has a ceiling.",
-          },
-          {
-            q: "A client wants the best possible fit and quality and is happy to wait. Which tier?",
-            options: ["Ready-to-wear", "Made-to-measure", "Bespoke", "Whichever is cheapest"],
-            answer: 2,
-            feedback: "Bespoke is built from a personal pattern over several fittings: best fit, longest life, full control.",
-          },
-        ],
-      },
     },
 
     /* ────────────────── 3. The Client Experience & Selling ────────────────── */
@@ -376,44 +276,6 @@ export const course: Course = {
           ],
         },
       ],
-      quiz: {
-        passPct: PASS_PCT,
-        questions: [
-          {
-            q: "What is the first step when a client arrives?",
-            options: [
-              "Quote a price",
-              "Greet him and establish rapport",
-              "Take his measurements",
-              "Show the most expensive cloth",
-            ],
-            answer: 1,
-            feedback: "Begin with a warm welcome and rapport. Selling comes after the client feels at ease.",
-          },
-          {
-            q: "When presenting fabric, what should you tie each option back to?",
-            options: [
-              "The mill's reputation",
-              "How and where the client will wear the garment",
-              "The current season's trend",
-              "The most profitable cloth",
-            ],
-            answer: 1,
-            feedback: "Relate every cloth to drape, durability, breathability, and the client's real use.",
-          },
-          {
-            q: "How should you describe a style option to a client?",
-            options: [
-              "As better in every case",
-              "With as much tailoring history as possible",
-              "By why it suits this client, occasion, and garment",
-              "By how fashionable it is right now",
-            ],
-            answer: 2,
-            feedback: "Never call an option universally better. Explain the benefit for this person and this purpose.",
-          },
-        ],
-      },
     },
 
     /* ────────────────── 4. The Cloth ────────────────── */
@@ -546,39 +408,6 @@ export const course: Course = {
           ],
         },
       ],
-      quiz: {
-        passPct: PASS_PCT,
-        questions: [
-          {
-            q: "Which wool is the smooth, tightly woven backbone of a business suit?",
-            options: ["Tweed", "Worsted", "Mohair", "Flannel"],
-            answer: 1,
-            feedback: "Worsted is smooth, hardwearing, and resists sagging, which makes it the staple suiting wool.",
-          },
-          {
-            q: "Which three colours are the true foundations of a business wardrobe?",
-            options: [
-              "Black, brown, and beige",
-              "Navy, charcoal, and mid-grey",
-              "Sky blue, tan, and white",
-              "Burgundy, green, and grey",
-            ],
-            answer: 1,
-            feedback: "Navy, charcoal, and mid-grey are the versatile, authoritative foundations. Near-black is best avoided.",
-          },
-          {
-            q: "A client needs a suit for hot weather. What do you steer toward?",
-            options: [
-              "Heavy near-black worsted",
-              "Lighter colours and weights, and breathable blends",
-              "Thick winter tweed",
-              "The darkest cloth available",
-            ],
-            answer: 1,
-            feedback: "Summer calls for lighter colours and weights and breathable cloths like wool-linen-silk blends.",
-          },
-        ],
-      },
     },
 
     /* ────────────────── 5. Fabric Mastery & Climate (NEW) ────────────────── */
@@ -648,40 +477,6 @@ export const course: Course = {
           ],
         },
       ],
-      /* Provisional placeholder quiz, to be replaced in the quiz redesign phase. */
-      quiz: {
-        passPct: PASS_PCT,
-        questions: [
-          {
-            q: "What does a higher Super number tell you about a wool cloth?",
-            options: [
-              "It is heavier and warmer",
-              "The yarn is finer and silkier, but the cloth is less durable and more wrinkle-prone",
-              "It is always the best choice for a daily suit",
-              "It is cheaper to produce",
-            ],
-            answer: 1,
-            feedback: "Higher Super number means a finer yarn: silkier and better draping, but more delicate and wrinkle-prone.",
-          },
-          {
-            q: "Which cloth is the ultimate summer business fabric for hot, humid climates?",
-            options: ["Flannel", "Heavy worsted tweed", "Fresco and high-twist wool", "Brushed cashmere"],
-            answer: 2,
-            feedback: "Fresco and high-twist wools have an open weave for airflow and resist wrinkling in the heat.",
-          },
-          {
-            q: "A client wants a Super 150s black suit for daily office wear. What do you do?",
-            options: [
-              "Sell it as requested",
-              "Steer him to a durable Super 120s in charcoal or navy and reserve the 150s for special occasions",
-              "Tell him black is the only professional colour",
-              "Refuse the commission",
-            ],
-            answer: 1,
-            feedback: "Black is too severe for daytime business and 150s is too delicate for daily wear. Pivot to a durable navy.",
-          },
-        ],
-      },
     },
 
     /* ────────────────── 6. Silhouette, Structure & Fit (NEW) ────────────────── */
@@ -793,40 +588,6 @@ export const course: Course = {
           ],
         },
       ],
-      /* Provisional placeholder quiz, to be replaced in the quiz redesign phase. */
-      quiz: {
-        passPct: PASS_PCT,
-        questions: [
-          {
-            q: "What is the hallmark of full-canvas construction compared with half-canvas?",
-            options: [
-              "The canvas is glued rather than stitched",
-              "The canvas runs the whole length of the jacket and moulds to the body over time",
-              "It has no canvas at all",
-              "The canvas only sits in the sleeves",
-            ],
-            answer: 1,
-            feedback: "Full-canvas runs shoulder to hem, moulds to the wearer, breathes, and lasts longest. Half-canvas stops at the chest.",
-          },
-          {
-            q: "Where should the jacket shoulder seam end on a well-fitting coat?",
-            options: [
-              "A few centimetres past the shoulder for room",
-              "Exactly where the collarbone meets the shoulder",
-              "Inside the shoulder, toward the neck",
-              "It does not matter, alterations fix it",
-            ],
-            answer: 1,
-            feedback: "The seam sits on the bone. Past it and the shoulder divots; too short and the lapels bow out.",
-          },
-          {
-            q: "Which trouser break is the safest, most classic choice for a standard business suit?",
-            options: ["No break", "Half (medium) break", "Full break", "Never break the trouser"],
-            answer: 1,
-            feedback: "The half break is one slight fold: the safest classic choice that flatters almost every client.",
-          },
-        ],
-      },
     },
 
     /* ────────────────── 7. Style Options A to Z ────────────────── */
@@ -974,34 +735,6 @@ export const course: Course = {
           ],
         },
       ],
-      quiz: {
-        passPct: PASS_PCT,
-        questions: [
-          {
-            q: "Which jacket fit suits most clients?",
-            options: ["Slim", "Tailored", "Classic", "Whichever is tightest"],
-            answer: 1,
-            feedback: "Tailored follows the body without squeezing: refined yet comfortable for most clients.",
-          },
-          {
-            q: "Which vent style do you recommend for most clients?",
-            options: [
-              "No vent, for the cleanest look",
-              "Single vent",
-              "Double vents, for movement and drape",
-              "It never matters",
-            ],
-            answer: 2,
-            feedback: "Double vents move well and drape cleanly, especially when hands go in the pockets.",
-          },
-          {
-            q: "When is a plain hem the only correct trouser finish?",
-            options: ["On flannel trousers", "On a tuxedo", "On tweed suits", "On casual chinos"],
-            answer: 1,
-            feedback: "Never put turn-ups on a tuxedo. A plain hem is the formal, correct finish there.",
-          },
-        ],
-      },
     },
 
     /* ────────────────── 8. Reading the Body & Fit ────────────────── */
@@ -1098,34 +831,6 @@ export const course: Course = {
           ],
         },
       ],
-      quiz: {
-        passPct: PASS_PCT,
-        questions: [
-          {
-            q: "Which fit is the right default for most clients?",
-            options: ["Slim", "Tailored", "Classic", "The tightest available"],
-            answer: 1,
-            feedback: "Tailored is tapered but comfortable: a sharp line without sacrificing ease.",
-          },
-          {
-            q: "To make a client look taller, you should...",
-            options: [
-              "add checks, turn-ups, and patch pockets",
-              "keep a close fit, a long lapel line, higher-rise trousers, and few interruptions",
-              "choose a pale, bright cloth",
-              "use a high button stance and a short lapel",
-            ],
-            answer: 1,
-            feedback: "An unbroken vertical line lengthens. Fine dark worsted and minimal interruptions add height.",
-          },
-          {
-            q: "Which collar flatters a narrow face?",
-            options: ["A point collar", "A spread collar", "A button-down collar", "A wing collar"],
-            answer: 1,
-            feedback: "A spread collar adds width to a narrow face. A point collar slims a rounder one.",
-          },
-        ],
-      },
     },
 
     /* ────────────────── 9. The Fitting & Measurement Process ────────────────── */
@@ -1237,44 +942,6 @@ export const course: Course = {
           ],
         },
       ],
-      quiz: {
-        passPct: PASS_PCT,
-        questions: [
-          {
-            q: "How much does Hilton take in advance at the point of sale?",
-            options: [
-              "The full amount",
-              "Fifty percent",
-              "Nothing until delivery",
-              "A fixed handling fee",
-            ],
-            answer: 1,
-            feedback: "Hilton takes fifty percent in advance and gives the client a trial date at the same moment.",
-          },
-          {
-            q: "When cutting cloth from the roll, how much extra should you allow?",
-            options: [
-              "No extra, cut to the exact length",
-              "About five centimetres extra",
-              "Double the length",
-              "As little as possible to save cloth",
-            ],
-            answer: 1,
-            feedback: "Always cut about five centimetres extra so there is cloth to adjust at trial.",
-          },
-          {
-            q: "Which set of points is used to measure a jacket?",
-            options: [
-              "Waist, hip, knee, bottom, length, thigh",
-              "Collar, chest, sleeve, length",
-              "Length, chest, stomach, hip and seat, shoulder, sleeves, plus biceps and wrist",
-              "Only chest and length",
-            ],
-            answer: 2,
-            feedback: "A jacket is read across length, chest, stomach, hip and seat, shoulder, and sleeves, finished by the biceps and wrist.",
-          },
-        ],
-      },
     },
   ],
 };

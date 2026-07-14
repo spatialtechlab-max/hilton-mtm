@@ -9,7 +9,9 @@ import {
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin, isEmployee } from "@/lib/admin";
 import { moduleBySlug, modules, type Module } from "@/lib/learn/course";
-import { gradeAttempt, keepBest, type ModuleProgress } from "@/lib/learn/quiz";
+import { keepBest, type ModuleProgress } from "@/lib/learn/quiz";
+import { buildAttempt, gradeExam, gradeQuestion, type AttemptQuestion } from "@/lib/learn/exam";
+import { examBySlug, EXAM_PASS_PCT } from "@/lib/learn/examBank";
 import { fetchModuleProgress, saveProgress } from "@/lib/learn/progressClient";
 
 type Phase = "lessons" | "quiz";
@@ -130,7 +132,7 @@ function Player({
 
   if (phase === "quiz") {
     return (
-      <QuizRunner
+      <ExamRunner
         mod={mod}
         bestScore={bestScore}
         passed={passed}
@@ -219,7 +221,7 @@ function Player({
   );
 }
 
-function QuizRunner({
+function ExamRunner({
   mod, bestScore, passed, onAttempt, onBackToLessons,
 }: {
   mod: Module;
@@ -228,23 +230,19 @@ function QuizRunner({
   onAttempt: (pct: number, didPass: boolean) => void;
   onBackToLessons: () => void;
 }) {
-  const questions = mod.quiz.questions;
+  const exam = examBySlug(mod.slug);
+  // One sitting: a random 5 of the module's 10 pool questions, each with its
+  // options shuffled. Re-rolled on retake so no two attempts are identical.
+  const [attempt, setAttempt] = useState<AttemptQuestion[]>(() => (exam ? buildAttempt(exam, Math.random) : []));
   const [qIdx, setQIdx] = useState(0);
-  const [answers, setAnswers] = useState<Array<number | undefined>>(() => questions.map(() => undefined));
-  const [revealed, setRevealed] = useState(false); // current question answered + feedback shown
+  // selections[i] = the option indices this staff member ticked for question i.
+  const [selections, setSelections] = useState<number[][]>(() => attempt.map(() => []));
+  // checked[i] = has the answer for question i been submitted and revealed.
+  const [checked, setChecked] = useState<boolean[]>(() => attempt.map(() => false));
   const [finished, setFinished] = useState(false);
   const reportedRef = useRef(false);
 
-  const q = questions[qIdx];
-  const chosen = answers[qIdx];
-
-  const choose = (optIdx: number) => {
-    if (revealed) return;
-    setAnswers((prev) => { const next = [...prev]; next[qIdx] = optIdx; return next; });
-    setRevealed(true);
-  };
-
-  const result = useMemo(() => gradeAttempt(answers, mod.quiz), [answers, mod.quiz]);
+  const result = useMemo(() => gradeExam(selections, attempt), [selections, attempt]);
 
   // Record the attempt once, when the results screen first shows.
   useEffect(() => {
@@ -255,11 +253,52 @@ function QuizRunner({
   }, [finished, result.pct, result.passed, onAttempt]);
 
   const retake = () => {
-    setAnswers(questions.map(() => undefined));
+    const next = exam ? buildAttempt(exam, Math.random) : [];
+    setAttempt(next);
+    setSelections(next.map(() => []));
+    setChecked(next.map(() => false));
     setQIdx(0);
-    setRevealed(false);
     setFinished(false);
     reportedRef.current = false;
+  };
+
+  if (!exam || attempt.length === 0) {
+    return (
+      <div>
+        <ModuleHeader mod={mod} />
+        <p className="mt-8 text-[0.95rem] text-[var(--color-charcoal-700)]">This module has no exam configured yet.</p>
+        <button type="button" onClick={onBackToLessons} className="mt-6 text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)]/25 px-5 py-3 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors">
+          <ArrowLeft size={14} strokeWidth={1.5} /> Back to lessons
+        </button>
+      </div>
+    );
+  }
+
+  const q = attempt[qIdx];
+  const sel = selections[qIdx] ?? [];
+  const isRevealed = checked[qIdx];
+  const isLastQ = qIdx === attempt.length - 1;
+  const questionRight = isRevealed && gradeQuestion(sel, q);
+
+  const toggle = (optIdx: number) => {
+    if (isRevealed) return;
+    setSelections((prev) => {
+      const next = prev.map((a) => a.slice());
+      if (q.multi) {
+        const cur = next[qIdx];
+        const at = cur.indexOf(optIdx);
+        if (at >= 0) cur.splice(at, 1);
+        else cur.push(optIdx);
+      } else {
+        next[qIdx] = [optIdx]; // single-select: one choice replaces the last
+      }
+      return next;
+    });
+  };
+
+  const check = () => {
+    if (isRevealed || sel.length === 0) return;
+    setChecked((prev) => { const n = [...prev]; n[qIdx] = true; return n; });
   };
 
   if (finished) {
@@ -274,7 +313,7 @@ function QuizRunner({
             {result.passed ? "Passed" : "Not quite yet"}
           </h2>
           <p className="mt-3 text-[0.95rem] text-[var(--color-charcoal-700)]">
-            You scored <strong className="tabular-nums">{result.pct}%</strong> ({result.correct} of {result.total} correct). The pass mark is {mod.quiz.passPct}%.
+            You scored <strong className="tabular-nums">{result.pct}%</strong> ({result.correct} of {result.total} correct). The pass mark is {EXAM_PASS_PCT}%.
           </p>
           <p className="mt-1 text-[0.82rem] text-[var(--color-charcoal-500)]">
             Best score kept: {keepBest(bestScore, result.pct)}%{passed || result.passed ? " · module passed" : ""}
@@ -285,7 +324,7 @@ function QuizRunner({
               onClick={retake}
               className="text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)] px-5 py-3 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors"
             >
-              <RotateCcw size={14} strokeWidth={1.5} /> Retake quiz
+              <RotateCcw size={14} strokeWidth={1.5} /> Retake with a new set
             </button>
             <Link
               href="/learn"
@@ -299,55 +338,63 @@ function QuizRunner({
     );
   }
 
-  const isLastQ = qIdx === questions.length - 1;
   return (
     <div>
       <ModuleHeader mod={mod} />
 
       <div className="mt-8 flex items-center justify-between gap-4 text-eyebrow text-[var(--color-charcoal-500)]">
         <span className="inline-flex items-center gap-2"><GraduationCap size={14} strokeWidth={1.6} /> Quiz</span>
-        <span className="tabular-nums">Question {qIdx + 1} of {questions.length}</span>
+        <span className="tabular-nums">Question {qIdx + 1} of {attempt.length}</span>
       </div>
       <div className="mt-2 h-1 bg-[var(--color-ivory-200)] overflow-hidden">
-        <div className="h-full bg-[var(--color-burgundy-700)] transition-all duration-300" style={{ width: `${((qIdx + 1) / questions.length) * 100}%` }} />
+        <div className="h-full bg-[var(--color-burgundy-700)] transition-all duration-300" style={{ width: `${((qIdx + 1) / attempt.length) * 100}%` }} />
       </div>
 
       <article className="mt-8 border border-black/10 bg-white p-8 lg:p-10">
-        <h2 className="text-display text-[clamp(1.4rem,2.6vw,1.9rem)] leading-tight text-[var(--color-charcoal-900)]">
-          {q.q}
+        <div className="text-eyebrow text-[var(--color-burgundy-700)]">
+          {q.multi ? "Select all that apply" : "Select one"}
+        </div>
+        <h2 className="mt-2 text-display text-[clamp(1.3rem,2.4vw,1.75rem)] leading-tight text-[var(--color-charcoal-900)]">
+          {q.scenario}
         </h2>
         <ul className="mt-6 space-y-3">
           {q.options.map((opt, i) => {
-            const isChosen = chosen === i;
-            const isCorrect = i === q.answer;
-            // After reveal: correct option is burgundy, a wrong chosen one is marked.
+            const isChosen = sel.includes(i);
+            const isCorrect = q.correct.includes(i);
+            // After reveal: every correct option is burgundy, a wrong ticked one is marked.
             let cls = "border-black/15 hover:border-[var(--color-burgundy-700)]";
-            if (revealed) {
+            if (isRevealed) {
               if (isCorrect) cls = "border-[var(--color-burgundy-700)] bg-[var(--color-burgundy-50)]";
               else if (isChosen) cls = "border-[var(--color-charcoal-900)]/40 bg-black/5";
               else cls = "border-black/10 opacity-70";
+            } else if (isChosen) {
+              cls = "border-[var(--color-burgundy-700)] bg-[var(--color-burgundy-50)]";
             }
             return (
               <li key={i}>
                 <button
                   type="button"
-                  onClick={() => choose(i)}
-                  disabled={revealed}
-                  className={`w-full text-left flex items-center justify-between gap-3 border px-4 py-3.5 text-[0.95rem] text-[var(--color-charcoal-900)] transition-colors ${cls} ${revealed ? "cursor-default" : ""}`}
+                  onClick={() => toggle(i)}
+                  disabled={isRevealed}
+                  className={`w-full text-left flex items-center gap-3 border px-4 py-3.5 text-[0.95rem] text-[var(--color-charcoal-900)] transition-colors ${cls} ${isRevealed ? "cursor-default" : ""}`}
                 >
-                  <span>{opt}</span>
-                  {revealed && isCorrect && <Check size={16} strokeWidth={2} className="text-[var(--color-burgundy-700)] shrink-0" />}
-                  {revealed && isChosen && !isCorrect && <X size={16} strokeWidth={2} className="text-[var(--color-charcoal-500)] shrink-0" />}
+                  {/* Selection control: round for single-select, square for multi-select. */}
+                  <span className={`shrink-0 inline-flex items-center justify-center w-5 h-5 border ${q.multi ? "rounded-[4px]" : "rounded-full"} ${isChosen || (isRevealed && isCorrect) ? "border-[var(--color-burgundy-700)]" : "border-[var(--color-charcoal-400)]"}`}>
+                    {isChosen && <span className={`w-2.5 h-2.5 ${q.multi ? "rounded-[2px]" : "rounded-full"} bg-[var(--color-burgundy-700)]`} />}
+                  </span>
+                  <span className="flex-1">{opt}</span>
+                  {isRevealed && isCorrect && <Check size={16} strokeWidth={2} className="text-[var(--color-burgundy-700)] shrink-0" />}
+                  {isRevealed && isChosen && !isCorrect && <X size={16} strokeWidth={2} className="text-[var(--color-charcoal-500)] shrink-0" />}
                 </button>
               </li>
             );
           })}
         </ul>
 
-        {revealed && (
-          <div className={`mt-5 border-l-2 pl-4 py-1 text-[0.9rem] leading-relaxed ${chosen === q.answer ? "border-[var(--color-burgundy-700)] text-[var(--color-charcoal-800)]" : "border-[var(--color-charcoal-400)] text-[var(--color-charcoal-700)]"}`}>
-            <span className="text-eyebrow text-[var(--color-burgundy-700)]">{chosen === q.answer ? "Correct" : "Not quite"}</span>
-            <p className="mt-1">{q.feedback}</p>
+        {isRevealed && (
+          <div className={`mt-5 border-l-2 pl-4 py-1 text-[0.9rem] leading-relaxed ${questionRight ? "border-[var(--color-burgundy-700)] text-[var(--color-charcoal-800)]" : "border-[var(--color-charcoal-400)] text-[var(--color-charcoal-700)]"}`}>
+            <span className="text-eyebrow text-[var(--color-burgundy-700)]">{questionRight ? "Correct" : q.multi ? "Not quite (you need every correct answer)" : "Not quite"}</span>
+            <p className="mt-1">{q.rationale}</p>
           </div>
         )}
       </article>
@@ -360,18 +407,24 @@ function QuizRunner({
         >
           <ArrowLeft size={14} strokeWidth={1.5} /> Back to lessons
         </button>
-        <button
-          type="button"
-          disabled={!revealed}
-          onClick={() => {
-            if (isLastQ) { setFinished(true); return; }
-            setQIdx((i) => i + 1);
-            setRevealed(false);
-          }}
-          className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-5 py-3 hover:bg-[var(--color-burgundy-800)] transition-colors disabled:opacity-40"
-        >
-          {isLastQ ? "See results" : "Next question"} <ArrowRight size={14} strokeWidth={1.5} />
-        </button>
+        {isRevealed ? (
+          <button
+            type="button"
+            onClick={() => { if (isLastQ) { setFinished(true); return; } setQIdx((i) => i + 1); }}
+            className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-5 py-3 hover:bg-[var(--color-burgundy-800)] transition-colors"
+          >
+            {isLastQ ? "See results" : "Next question"} <ArrowRight size={14} strokeWidth={1.5} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={sel.length === 0}
+            onClick={check}
+            className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)] px-5 py-3 hover:bg-[var(--color-burgundy-700)] transition-colors disabled:opacity-40"
+          >
+            Check answer <ArrowRight size={14} strokeWidth={1.5} />
+          </button>
+        )}
       </div>
     </div>
   );

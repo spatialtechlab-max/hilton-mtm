@@ -89,31 +89,8 @@ describe("lessons and slides", () => {
   });
 });
 
-describe("quizzes", () => {
-  test("every quiz passes at 80%", () => {
-    for (const m of course.modules) expect(m.quiz.passPct).toBe(80);
-  });
-  test("module 1 has 5 questions; every other module has 3 each", () => {
-    expect(moduleBySlug("the-hilton-standard")!.quiz.questions.length).toBe(5);
-    for (const m of course.modules.filter((x) => x.order >= 2)) {
-      expect(m.quiz.questions.length).toBe(3);
-    }
-  });
-  test("every question has >= 2 options, a valid answer index, and feedback", () => {
-    for (const m of course.modules) {
-      for (const q of m.quiz.questions) {
-        expect(q.options.length).toBeGreaterThanOrEqual(2);
-        expect(Number.isInteger(q.answer)).toBe(true);
-        expect(q.answer).toBeGreaterThanOrEqual(0);
-        expect(q.answer).toBeLessThan(q.options.length);
-        expect(q.q.trim().length).toBeGreaterThan(0);
-        expect(q.feedback.trim().length).toBeGreaterThan(0);
-        // No duplicate option text within a question.
-        expect(new Set(q.options).size).toBe(q.options.length);
-      }
-    }
-  });
-});
+// Quizzes now live in lib/learn/examBank.ts and are validated in tests/exam.test.ts.
+// course.ts holds teaching content only.
 
 describe("house style: no em-dashes anywhere", () => {
   test("no em-dash or en-dash in any authored text", () => {
@@ -131,11 +108,6 @@ describe("house style: no em-dashes anywhere", () => {
           check(`slide:${s.heading}`, s.heading);
           check(`slide-body:${s.heading}`, s.body);
         }
-      }
-      for (const q of m.quiz.questions) {
-        check(`q:${m.slug}`, q.q);
-        check(`feedback:${m.slug}`, q.feedback);
-        for (const o of q.options) check(`opt:${m.slug}`, o);
       }
     }
     expect(offenders).toEqual([]);

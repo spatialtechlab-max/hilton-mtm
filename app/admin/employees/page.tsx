@@ -10,6 +10,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { isAdmin } from "@/lib/admin";
 import { supabase } from "@/lib/supabase";
 import { modules } from "@/lib/learn/course";
+import { EXAM_PASS_PCT } from "@/lib/learn/examBank";
 import { courseProgress, type ModuleProgress } from "@/lib/learn/quiz";
 
 type ProgressRow = {
@@ -376,7 +377,7 @@ export default function AdminTeamAccessPage() {
         )}
         <p className="mt-3 text-[0.72rem] text-[var(--color-charcoal-400)]">
           Toggle a role on to grant it, off to revoke it. Turning off a person&rsquo;s last remaining role removes them from the roster; use the bin to remove every role at once.
-          For Training rows, L = lessons read, the percentage under it is the best quiz score (a tick means the {modules[0]?.quiz.passPct}% pass mark was met), and Overall blends lessons read with quizzes passed.
+          For Training rows, L = lessons read, the percentage under it is the best quiz score (a tick means the {EXAM_PASS_PCT}% pass mark was met), and Overall blends lessons read with quizzes passed.
         </p>
       </section>
     </Shell>

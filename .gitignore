@@ -18,3 +18,6 @@ public/products/*-bak/
 # TypeScript incremental build cache
 tsconfig.tsbuildinfo
 public/booklet/
+
+# Generated deliverables (exam answer key, email previews) — keep out of the public repo
+docs/

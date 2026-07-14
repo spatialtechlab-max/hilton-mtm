@@ -6,6 +6,7 @@ import { ArrowRight, GraduationCap, LogOut, Lock, CheckCircle2, Circle, Eye } fr
 import { useAuth } from "@/components/AuthProvider";
 import { isAdmin, isEmployee } from "@/lib/admin";
 import { course, modules } from "@/lib/learn/course";
+import { EXAM_PASS_PCT } from "@/lib/learn/examBank";
 import { courseProgress, moduleComplete, type ModuleProgress } from "@/lib/learn/quiz";
 import { fetchMyProgress, type ProgressByModule } from "@/lib/learn/progressClient";
 
@@ -153,7 +154,7 @@ export default function LearnDashboardPage() {
                       Quiz {p?.quiz_best_score != null ? `${p.quiz_best_score}%` : "not started"}
                     </span>
                     <span className={p?.quiz_passed ? "text-[var(--color-burgundy-700)]" : ""}>
-                      {p?.quiz_passed ? "Passed" : `Pass at ${m.quiz.passPct}%`}
+                      {p?.quiz_passed ? "Passed" : `Pass at ${EXAM_PASS_PCT}%`}
                     </span>
                     <span className="ml-auto inline-flex items-center gap-1.5 text-eyebrow text-[var(--color-burgundy-700)]">
                       {p ? "Continue" : "Start"} <ArrowRight size={13} strokeWidth={1.6} className="group-hover:translate-x-0.5 transition-transform" />
