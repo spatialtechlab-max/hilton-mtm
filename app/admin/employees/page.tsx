@@ -266,7 +266,7 @@ export default function AdminTeamAccessPage() {
           </div>
         </form>
         <p className="mt-3 text-[0.75rem] text-[var(--color-charcoal-500)]">
-          The person signs in at <code className="text-[0.72rem]">/account</code> with the same email and is routed by role (Operator → <code className="text-[0.72rem]">/admin/erp</code>, otherwise Training → <code className="text-[0.72rem]">/learn</code>). Both roles are exempt from the login code.
+          The person signs in at <code className="text-[0.72rem]">/account</code> with the same email and is routed by role (Operator → <code className="text-[0.72rem]">/admin/erp</code>, otherwise Training → <code className="text-[0.72rem]">/learn</code>). Operators sign in with just their password. Training staff must enter a one-time access code that appears here for you to read out; it expires in 10 minutes.
         </p>
       </section>
 
