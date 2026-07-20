@@ -65,15 +65,30 @@ export async function GET(req: Request) {
   if (!SUPA_URL || !SERVICE) return NextResponse.json({ error: "Service role not configured" }, { status: 500 });
 
   const admin = serviceClient();
-  const [opRes, empRes, progRes] = await Promise.all([
+  const nowIso = new Date().toISOString();
+  const [opRes, empRes, progRes, otpRes] = await Promise.all([
     admin.from("mtm_operators").select("email, created_at").order("created_at", { ascending: true }),
     admin.from("mtm_employees").select("email, full_name, added_at").order("added_at", { ascending: true }),
     admin
       .from("mtm_employee_progress")
       .select("email, module_slug, lessons_completed, quiz_best_score, quiz_attempts, quiz_passed, updated_at"),
+    // Live admin-relayed codes: staff who are mid-login and waiting for the admin
+    // to read out their code. Only unconsumed, unexpired relay codes.
+    admin
+      .from("mtm_login_otps")
+      .select("email, code_plain, expires_at")
+      .eq("relay", true)
+      .eq("consumed", false)
+      .gt("expires_at", nowIso),
   ]);
   if (opRes.error) return NextResponse.json({ error: opRes.error.message }, { status: 500 });
   if (empRes.error) return NextResponse.json({ error: empRes.error.message }, { status: 500 });
+
+  // Pending access code by lowercased email (at most one per email).
+  const codeByEmail = new Map<string, { code: string; expiresAt: string }>();
+  for (const o of (otpRes.data ?? []) as { email: string; code_plain: string | null; expires_at: string }[]) {
+    if (o.code_plain) codeByEmail.set((o.email ?? "").toLowerCase(), { code: o.code_plain, expiresAt: o.expires_at });
+  }
 
   // Progress rows grouped by lowercased email (only staff have these).
   const progByEmail = new Map<string, ProgressRow[]>();
@@ -135,6 +150,7 @@ export async function GET(req: Request) {
       isStaff: p.isStaff,
       progress: p.progress,
       lastActive: p.lastActive,
+      pendingCode: codeByEmail.get(p.email.toLowerCase()) ?? null,
     }));
 
   return NextResponse.json({ people });

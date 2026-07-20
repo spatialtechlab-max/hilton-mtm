@@ -587,7 +587,7 @@ export const examBank: ModuleExam[] = [
           0,
           1
         ],
-        "rationale": "Glen check reads sophisticated and windowpane adds width. Bird's eye is actually subtle (houndstooth is the bold one), and pinstripe lengthens and suits formal business, so C and D are both false."
+        "rationale": "Glen check reads sophisticated and windowpane adds width. Bird's eye is actually subtle (houndstooth is the bold one), and pinstripe lengthens and suits formal business, so the bird's eye and pinstripe options are both false."
       },
       {
         "id": "m4-q07",
@@ -630,7 +630,7 @@ export const examBank: ModuleExam[] = [
           0,
           1
         ],
-        "rationale": "Poplin and Oxford are placed correctly. Chambray is actually a lightweight, casual cloth that looks like denim, and linen does wrinkle, so C and D are both false."
+        "rationale": "Poplin and Oxford are placed correctly. Chambray is actually a lightweight, casual cloth that looks like denim, and linen does wrinkle, so the chambray and linen options are both false."
       },
       {
         "id": "m4-q10",
@@ -740,7 +740,7 @@ export const examBank: ModuleExam[] = [
           0,
           1
         ],
-        "rationale": "Fresco and linen and cotton suit the heat. Heavy worsted and heavy flannel both trap heat and belong to cool and temperate climates, so C and D are wrong."
+        "rationale": "Fresco and linen and cotton suit the heat. Heavy worsted and heavy flannel both trap heat and belong to cool and temperate climates, so the heavy worsted and heavy flannel options are wrong."
       },
       {
         "id": "m5-q07",
@@ -880,7 +880,7 @@ export const examBank: ModuleExam[] = [
           0,
           1
         ],
-        "rationale": "The sack suit is natural, straight, and single-vented. Double vents with a lower stance and a padded shoulder with a nipped waist both describe the British cut, so C and D are wrong."
+        "rationale": "The sack suit is natural, straight, and single-vented. Double vents with a lower stance and a padded shoulder with a nipped waist both describe the British cut, so the double-vent option and the padded-shoulder-with-nipped-waist option are wrong."
       },
       {
         "id": "m6-q06",
@@ -1004,7 +1004,7 @@ export const examBank: ModuleExam[] = [
           0,
           1
         ],
-        "rationale": "The peak is the bold, formal upgrade that broadens the chest. It is not a casual lapel, and the shawl, not the peak, is the one reserved for tuxedos, so C and D are wrong."
+        "rationale": "The peak is the bold, formal upgrade that broadens the chest. It is not a casual lapel, and the shawl, not the peak, is the one reserved for tuxedos, so the casual-lapel option and the tuxedo-only option are wrong."
       },
       {
         "id": "m7-q04",
@@ -1033,7 +1033,7 @@ export const examBank: ModuleExam[] = [
           0,
           1
         ],
-        "rationale": "Flap for business, jetted for evening. Patch pockets are the casual, relaxed choice (not the dressiest), and jetted are the dressy evening line (not the most casual), so C and D are both wrong."
+        "rationale": "Flap for business, jetted for evening. Patch pockets are the casual, relaxed choice (not the dressiest), and jetted are the dressy evening line (not the most casual), so the patch-is-dressiest option and the jetted-is-most-casual option are both wrong."
       },
       {
         "id": "m7-q06",
@@ -1160,7 +1160,7 @@ export const examBank: ModuleExam[] = [
           0,
           1
         ],
-        "rationale": "Treat a thin build like a tall one: add texture, weight, and horizontal breaks. A dark, unbroken, monochrome line does the opposite job (it adds height and slims), so C and D are wrong."
+        "rationale": "Treat a thin build like a tall one: add texture, weight, and horizontal breaks. A dark, unbroken, monochrome line does the opposite job (it adds height and slims), so the slim-monochrome option and the unbroken-vertical-line option are wrong."
       },
       {
         "id": "m8-q04",
@@ -1262,7 +1262,7 @@ export const examBank: ModuleExam[] = [
           0,
           1
         ],
-        "rationale": "Dark solids and fine verticals slim and lengthen. A bold windowpane adds width, and turn-ups and a contrast belt add horizontal breaks, so C and D both work against slimming."
+        "rationale": "Dark solids and fine verticals slim and lengthen. A bold windowpane adds width, and turn-ups and a contrast belt add horizontal breaks, so the bold-windowpane option and the turn-ups-and-belt option both work against slimming."
       }
     ]
   },
@@ -1386,7 +1386,7 @@ export const examBank: ModuleExam[] = [
           0,
           1
         ],
-        "rationale": "The Main book covers garments and stitching; the Alteration book is only for alterations, never new orders. The internal Textile book has no VAT number and must never carry a customer transaction, so C and D are wrong."
+        "rationale": "The Main book covers garments and stitching; the Alteration book is only for alterations, never new orders. The internal Textile book has no VAT number and must never carry a customer transaction, so the new-order-in-the-Alteration-book option and the Textile-book option are wrong."
       },
       {
         "id": "m9-q09",

@@ -28,6 +28,9 @@ export function AuthForm({
   // on a valid password, emails a code and moves to "otp" to enter it.
   const [step, setStep] = useState<"credentials" | "otp">("credentials");
   const [code, setCode] = useState("");
+  // Staff (learning platform) get an ADMIN-RELAYED code shown in the admin
+  // dashboard, not an emailed one. `relay` switches the copy accordingly.
+  const [relay, setRelay] = useState(false);
 
   const redirect = redirectTo ?? (typeof window !== "undefined" ? window.location.href : undefined);
 
@@ -61,8 +64,13 @@ export function AuthForm({
           return;
         }
         setCode("");
+        setRelay(data?.relay === true);
         setStep("otp");
-        setNotice("We've emailed you a 6-digit code. It expires in one hour.");
+        setNotice(
+          data?.relay === true
+            ? "Ask your manager for your 6-digit access code. It expires in 10 minutes."
+            : "We've emailed you a 6-digit code. It expires in one hour.",
+        );
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -123,7 +131,12 @@ export function AuthForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data?.error || "Couldn't resend the code."); return; }
-      setNotice("A new code is on its way. It expires in one hour.");
+      setRelay(data?.relay === true);
+      setNotice(
+        data?.relay === true
+          ? "A new code is now showing in your manager's dashboard. It expires in 10 minutes."
+          : "A new code is on its way. It expires in one hour.",
+      );
     } finally {
       setLoading(false);
     }
@@ -179,8 +192,14 @@ export function AuthForm({
         </div>
         <form onSubmit={handleVerifyOtp} className="space-y-4">
           <p className="text-[0.9rem] text-[var(--color-charcoal-500)] leading-relaxed">
-            We emailed a 6-digit code to <span className="text-[var(--color-charcoal-900)]">{email}</span>.
-            Enter it below to finish signing in.
+            {relay ? (
+              <>Ask your manager for the 6-digit access code for{" "}
+              <span className="text-[var(--color-charcoal-900)]">{email}</span>. It expires in 10 minutes.
+              Enter it below to finish signing in.</>
+            ) : (
+              <>We emailed a 6-digit code to <span className="text-[var(--color-charcoal-900)]">{email}</span>.
+              Enter it below to finish signing in.</>
+            )}
           </p>
           <label className="block">
             <span className="text-eyebrow text-[var(--color-charcoal-500)]">6-digit code</span>
@@ -233,7 +252,7 @@ export function AuthForm({
             disabled={loading}
             className="text-[var(--color-charcoal-500)] hover:text-[var(--color-burgundy-700)] transition-colors disabled:opacity-60"
           >
-            Resend code
+            {relay ? "Request a new code" : "Resend code"}
           </button>
         </div>
 

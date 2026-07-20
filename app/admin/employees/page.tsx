@@ -28,8 +28,19 @@ type Person = {
   isStaff: boolean;
   progress: ProgressRow[];
   lastActive: string | null;
+  // A live admin-relayed login code: set when this employee is mid-login and
+  // waiting for the admin to read it out. Null otherwise.
+  pendingCode: { code: string; expiresAt: string } | null;
 };
 type Role = "operator" | "staff";
+
+/** "expires in 8m" / "expires in 40s" for a pending access code. */
+function codeExpiryLabel(expiresAt: string): string {
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return "expired";
+  const mins = Math.floor(ms / 60000);
+  return mins >= 1 ? `expires in ${mins}m` : `expires in ${Math.ceil(ms / 1000)}s`;
+}
 
 export default function AdminTeamAccessPage() {
   const { user, loading } = useAuth();
@@ -58,23 +69,31 @@ export default function AdminTeamAccessPage() {
     return token ? { Authorization: `Bearer ${token}` } : null;
   }, []);
 
-  const load = useCallback(async () => {
-    setLoadingData(true); setError(null);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) { setLoadingData(true); setError(null); }
     try {
       const headers = await authHeader();
-      if (!headers) { setError("Sign in required."); setLoadingData(false); return; }
+      if (!headers) { if (!silent) setError("Sign in required."); if (!silent) setLoadingData(false); return; }
       const res = await fetch("/api/admin/access", { headers });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) { setError(body?.error || `Request failed (${res.status}).`); }
+      if (!res.ok) { if (!silent) setError(body?.error || `Request failed (${res.status}).`); }
       else setPeople((body.people ?? []) as Person[]);
     } catch {
-      setError("Could not load the team.");
+      if (!silent) setError("Could not load the team.");
     } finally {
-      setLoadingData(false);
+      if (!silent) setLoadingData(false);
     }
   }, [authHeader]);
 
   useEffect(() => { if (admin) load(); }, [admin, load]);
+
+  // Poll every 5s while an admin is on the page so a staffer's just-requested
+  // access code appears on the spot (and clears the moment they sign in).
+  useEffect(() => {
+    if (!admin) return;
+    const id = setInterval(() => { load(true); }, 5000);
+    return () => clearInterval(id);
+  }, [admin, load]);
 
   async function addPerson(e: React.FormEvent) {
     e.preventDefault();
@@ -184,7 +203,7 @@ export default function AdminTeamAccessPage() {
         </div>
         <button
           type="button"
-          onClick={load}
+          onClick={() => load()}
           disabled={loadingData || busy}
           className="self-start text-eyebrow inline-flex items-center gap-2 border border-[var(--color-charcoal-900)]/25 px-4 py-3 hover:border-[var(--color-burgundy-700)] hover:text-[var(--color-burgundy-700)] transition-colors disabled:opacity-50"
         >
@@ -301,6 +320,13 @@ export default function AdminTeamAccessPage() {
                       <td className="px-4 py-3 sticky left-0 bg-white whitespace-nowrap">
                         <div className="text-[var(--color-charcoal-900)]">{person.fullName || person.email.split("@")[0]}</div>
                         <div className="text-[0.72rem] text-[var(--color-charcoal-500)]">{person.email}</div>
+                        {person.pendingCode && (
+                          <div className="mt-2 inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-2.5 py-1.5 rounded">
+                            <span className="text-[0.62rem] uppercase tracking-[0.12em] opacity-80">Access code</span>
+                            <span className="text-[1.05rem] font-semibold tracking-[0.28em] tabular-nums">{person.pendingCode.code}</span>
+                            <span className="text-[0.62rem] opacity-80">{codeExpiryLabel(person.pendingCode.expiresAt)}</span>
+                          </div>
+                        )}
                       </td>
                       <td className="px-3 py-3 text-center">
                         <RoleToggle

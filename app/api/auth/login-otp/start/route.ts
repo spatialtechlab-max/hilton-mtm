@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendLoginOtpEmail } from "@/lib/email";
-import { verifyPassword, generateOtp, hashOtp, normaliseEmail, isOtpExemptEmail, OTP_TTL_MS } from "@/lib/loginOtp";
+import { verifyPassword, generateOtp, hashOtp, normaliseEmail, isOtpExemptEmail, isStaffEmail, issueRelayOtp, OTP_TTL_MS } from "@/lib/loginOtp";
 
 export const runtime = "nodejs";
 
@@ -34,6 +34,15 @@ export async function POST(req: Request) {
   // continues to the second factor below.
   if (await isOtpExemptEmail(admin, grant.email)) {
     return NextResponse.json({ otpRequired: false, accessToken: grant.accessToken, refreshToken: grant.refreshToken });
+  }
+
+  // Employees (learning platform) get an ADMIN-RELAYED code: minted here but
+  // never emailed. It surfaces in the admin's Team Access dashboard, the admin
+  // reads it out on the spot, and it expires in 10 minutes. This stops a staffer
+  // logging in off-site or handing the exam to someone else.
+  if (await isStaffEmail(grant.email)) {
+    await issueRelayOtp(admin, grant.email);
+    return NextResponse.json({ otpRequired: true, relay: true });
   }
 
   const code = generateOtp();
