@@ -5,33 +5,19 @@
  * This is deliberately different from lib/erp.ts (which filters to active
  * items and caches for the storefront): here nothing is dropped.
  *
- * Auth: admin JWT (email must be in mtm_admins). ERP keys stay server-side.
+ * Auth: admin OR operator JWT (the ERP image tool is the operator's surface).
+ * ERP keys stay server-side.
  */
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import type { ErpItem } from "@/lib/erp";
+import { assertStaff } from "@/lib/staffAuth";
 
 export const runtime = "nodejs";
-
-const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const ANON     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-async function assertAdmin(req: Request): Promise<{ ok: true; email: string } | { ok: false; status: number; msg: string }> {
-  if (!SUPA_URL || !ANON) return { ok: false, status: 500, msg: "Supabase env missing" };
-  const token = (req.headers.get("authorization") ?? "").replace(/^Bearer /, "");
-  if (!token) return { ok: false, status: 401, msg: "Sign in required." };
-  const userClient = createClient(SUPA_URL, ANON, { global: { headers: { Authorization: `Bearer ${token}` } } });
-  const { data: u, error } = await userClient.auth.getUser(token);
-  if (error || !u?.user?.email) return { ok: false, status: 401, msg: "Invalid session." };
-  const { data: allow } = await userClient.from("mtm_admins").select("email").eq("email", u.user.email);
-  if (!allow || allow.length === 0) return { ok: false, status: 403, msg: "Not authorised." };
-  return { ok: true, email: u.user.email };
-}
 
 type ErpResponse = { statusCode: number; data: { total: number; items: ErpItem[] } };
 
 export async function GET(req: Request) {
-  const gate = await assertAdmin(req);
+  const gate = await assertStaff(req);
   if (!gate.ok) return NextResponse.json({ error: gate.msg }, { status: gate.status });
 
   const base = process.env.ERP_BASE_URL;
