@@ -314,21 +314,33 @@ function ItemCard({ item, jsonOpen, onToggleJson }: { item: ErpItem; jsonOpen: b
   );
 }
 
+const SLOTS = ["swatch", "front", "back"] as const;
+type Slot = (typeof SLOTS)[number];
+const SLOT_LABEL: Record<Slot, string> = { swatch: "Swatch", front: "Front", back: "Back" };
+const MAX_BATCHES = 4;
+
 function GenPanel({ item }: { item: ErpItem }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [result, setResult] = useState<GenImages | null>(null);
+  // Every generation attempt is kept as a batch; the operator picks one image
+  // per slot (swatch/front/back) across all batches before pushing.
+  const [batches, setBatches] = useState<GenImages[]>([]);
+  const [sel, setSel] = useState<Record<Slot, number | null>>({ swatch: null, front: null, back: null });
   const [pushing, setPushing] = useState(false);
   const [pushed, setPushed] = useState(false);
   const [pushErr, setPushErr] = useState<string | null>(null);
   const [pushMsg, setPushMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
+  const multi = batches.length > 1;
+
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    setBusy(true); setErr(null); setResult(null);
+    if (batches.length >= MAX_BATCHES) { setErr(`You can generate up to ${MAX_BATCHES} batches. Pick your images and push, or refresh to start over.`); return; }
+    const newIdx = batches.length; // index the incoming batch will occupy
+    setBusy(true); setErr(null);
     setPushed(false); setPushErr(null); setPushMsg(null);
     try {
       const { data: s } = await supabase.auth.getSession();
@@ -340,7 +352,16 @@ function GenPanel({ item }: { item: ErpItem }) {
       const res = await fetch("/api/admin/erp-generate", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(data?.error || "Generation failed."); return; }
-      setResult(data.images as GenImages);
+      const images = data.images as GenImages;
+      setBatches((prev) => [...prev, images]);
+      // Auto-fill any slot that is still unpicked and this batch can cover. The
+      // first batch fills everything it has (so a clean batch needs zero clicks);
+      // later batches only fill the gaps, and the operator can re-pick any slot.
+      setSel((prev) => ({
+        swatch: prev.swatch ?? (images.swatch ? newIdx : null),
+        front: prev.front ?? (images.front ? newIdx : null),
+        back: prev.back ?? (images.back ? newIdx : null),
+      }));
     } catch {
       setErr("Generation failed. Please try again.");
     } finally {
@@ -348,8 +369,20 @@ function GenPanel({ item }: { item: ErpItem }) {
     }
   }
 
+  function pick(slot: Slot, batchIdx: number) {
+    setPushed(false); setPushErr(null); setPushMsg(null);
+    setSel((prev) => ({ ...prev, [slot]: batchIdx }));
+  }
+
+  const chosen: Record<Slot, string | null> = {
+    swatch: sel.swatch != null ? batches[sel.swatch]?.swatch ?? null : null,
+    front: sel.front != null ? batches[sel.front]?.front ?? null : null,
+    back: sel.back != null ? batches[sel.back]?.back ?? null : null,
+  };
+  const complete = !!(chosen.swatch && chosen.front && chosen.back);
+
   async function pushToErp() {
-    if (!result) return;
+    if (!complete) return;
     const barcode = String(item.barcode ?? "").trim();
     if (!barcode) { setPushErr("This item has no barcode in the ERP, so it can't be matched."); return; }
     setPushing(true); setPushErr(null); setPushMsg(null);
@@ -357,8 +390,8 @@ function GenPanel({ item }: { item: ErpItem }) {
       const { data: s } = await supabase.auth.getSession();
       const token = s.session?.access_token;
       if (!token) { setPushErr("Sign in required."); return; }
-      // Stage each generated image on the VPS, in catalogue order (front = hero).
-      const slots: Array<[string, string | null]> = [["front", result.front], ["back", result.back], ["swatch", result.swatch]];
+      // Stage the chosen images on the VPS, in catalogue order (front = hero).
+      const slots: Array<[Slot, string | null]> = [["front", chosen.front], ["back", chosen.back], ["swatch", chosen.swatch]];
       const urls: string[] = [];
       for (const [slot, dataUrl] of slots) {
         if (!dataUrl) continue;
@@ -371,7 +404,7 @@ function GenPanel({ item }: { item: ErpItem }) {
         if (!hr.ok || !hd.url) { setPushErr(hd?.error || `Could not stage the ${slot} image.`); return; }
         urls.push(hd.url as string);
       }
-      if (urls.length === 0) { setPushErr("No generated images to push."); return; }
+      if (urls.length === 0) { setPushErr("No images selected to push."); return; }
       const pr = await fetch("/api/admin/erp-push", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -388,8 +421,6 @@ function GenPanel({ item }: { item: ErpItem }) {
     }
   }
 
-  const out: Array<[string, string | null]> = result ? [["Swatch", result.swatch], ["Front", result.front], ["Back", result.back]] : [];
-
   return (
     <div className="mx-4 mb-4 border-t border-black/10 pt-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -397,42 +428,85 @@ function GenPanel({ item }: { item: ErpItem }) {
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          disabled={busy}
+          disabled={busy || batches.length >= MAX_BATCHES}
           className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)] px-4 py-2.5 hover:bg-[var(--color-burgundy-800)] transition-colors disabled:opacity-60"
         >
           {busy ? <Loader2 size={14} strokeWidth={1.5} className="animate-spin" /> : <Upload size={14} strokeWidth={1.5} />}
-          {busy ? "Generating…" : result ? "Upload another fabric" : "Upload fabric & generate"}
+          {busy ? "Generating…" : batches.length === 0 ? "Upload fabric & generate" : "Upload another fabric"}
         </button>
         <span className="text-[0.78rem] text-[var(--color-charcoal-500)] inline-flex items-center gap-1.5">
           <Sparkles size={12} strokeWidth={1.5} /> Phone photo of the cloth → clean swatch + front + back, on white.
+          {batches.length > 0 && <span className="tabular-nums">· batch {batches.length} of {MAX_BATCHES}</span>}
         </span>
       </div>
 
       {err && <p className="mt-3 text-[0.82rem] text-[var(--color-burgundy-700)] bg-[var(--color-burgundy-50)] border border-[var(--color-burgundy-700)]/20 px-3 py-2">{err}</p>}
       {busy && <p className="mt-3 text-[0.78rem] text-[var(--color-charcoal-500)]">Generating 3 images with the AI — this takes around a minute.</p>}
 
-      {result && (
-        <div className="mt-4">
-          <div className="grid grid-cols-3 gap-3 max-w-2xl">
-            {out.map(([label, src]) => (
-              <figure key={label} className="border border-black/10 bg-white">
-                {src ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={src} alt={label} className="w-full aspect-square object-contain bg-white" />
-                ) : (
-                  <div className="w-full aspect-square flex items-center justify-center text-[0.72rem] text-[var(--color-charcoal-400)]">not generated</div>
-                )}
-                <figcaption className="text-eyebrow text-center text-[var(--color-charcoal-500)] py-1.5">{label}</figcaption>
-              </figure>
-            ))}
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
+      {batches.length > 0 && (
+        <div className="mt-4 space-y-5">
+          {multi && (
+            <p className="text-[0.78rem] text-[var(--color-charcoal-500)]">
+              Pick the best <b>swatch</b>, <b>front</b> and <b>back</b> across the batches below (tap an image to choose it). All three must be chosen to push.
+            </p>
+          )}
+          {batches.map((b, bi) => (
+            <div key={bi}>
+              {multi && <div className="text-eyebrow text-[var(--color-charcoal-400)] mb-2">Batch {bi + 1}</div>}
+              <div className="grid grid-cols-3 gap-3 max-w-2xl">
+                {SLOTS.map((slot) => {
+                  const src = b[slot];
+                  const selected = sel[slot] === bi && !!src;
+                  const selectable = multi && !!src;
+                  return (
+                    <figure
+                      key={slot}
+                      onClick={selectable ? () => pick(slot, bi) : undefined}
+                      className={`relative border bg-white transition-colors ${
+                        selected ? "border-[var(--color-burgundy-700)] ring-2 ring-[var(--color-burgundy-700)]" : "border-black/10"
+                      } ${selectable ? "cursor-pointer hover:border-[var(--color-burgundy-700)]" : ""}`}
+                    >
+                      {src ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={src} alt={SLOT_LABEL[slot]} className="w-full aspect-square object-contain bg-white" />
+                      ) : (
+                        <div className="w-full aspect-square flex items-center justify-center text-[0.72rem] text-[var(--color-charcoal-400)]">not generated</div>
+                      )}
+                      {selected && (
+                        <span className="absolute top-1.5 right-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--color-burgundy-700)] text-[var(--color-ivory-100)]">
+                          <Check size={12} strokeWidth={2.5} />
+                        </span>
+                      )}
+                      <figcaption className={`text-eyebrow text-center py-1.5 ${selected ? "text-[var(--color-burgundy-700)]" : "text-[var(--color-charcoal-500)]"}`}>
+                        {SLOT_LABEL[slot]}{selected && multi ? " · chosen" : ""}
+                      </figcaption>
+                    </figure>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {multi && (
+            <div className="text-[0.75rem] text-[var(--color-charcoal-500)] flex flex-wrap gap-x-4 gap-y-1">
+              {SLOTS.map((slot) => (
+                <span key={slot} className="inline-flex items-center gap-1.5">
+                  {chosen[slot]
+                    ? <Check size={12} strokeWidth={2} className="text-[var(--color-burgundy-700)]" />
+                    : <span className="inline-block w-3 h-3 border border-[var(--color-charcoal-400)] rounded-full" />}
+                  {SLOT_LABEL[slot]}: {chosen[slot] ? `batch ${(sel[slot] ?? 0) + 1}` : "not chosen"}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={pushToErp}
-              disabled={pushing || pushed}
-              title="Stages the 3 images, pushes them into the ERP (matched by barcode), then deletes the temporary copies. The ERP rehosts them and the storefront shows them."
-              className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)] px-4 py-2 hover:bg-[var(--color-burgundy-700)] transition-colors disabled:opacity-50"
+              disabled={pushing || pushed || !complete}
+              title="Stages the chosen swatch, front and back, pushes them into the ERP (matched by barcode), then deletes the temporary copies."
+              className="text-eyebrow inline-flex items-center gap-2 bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)] px-4 py-2 hover:bg-[var(--color-burgundy-700)] transition-colors disabled:opacity-40"
             >
               {pushing ? <Loader2 size={14} strokeWidth={1.5} className="animate-spin" /> : pushed ? <Check size={14} strokeWidth={1.5} /> : <UploadCloud size={14} strokeWidth={1.5} />}
               {pushing ? "Pushing…" : pushed ? "Pushed — live" : "Push to ERP"}
@@ -441,8 +515,12 @@ function GenPanel({ item }: { item: ErpItem }) {
               <span className="text-[0.72rem] text-green-700">{pushMsg}</span>
             ) : pushErr ? (
               <span className="text-[0.72rem] text-[var(--color-burgundy-700)]">{pushErr}</span>
+            ) : !complete ? (
+              <span className="text-[0.72rem] text-[var(--color-charcoal-400)]">
+                {multi ? "Choose a swatch, a front and a back to enable the push." : "Waiting on all three images. Upload another fabric to fill any gap, then choose."}
+              </span>
             ) : (
-              <span className="text-[0.72rem] text-[var(--color-charcoal-400)]">Pushes the 3 images into the ERP (matched by barcode), which makes them live. The temporary copies are deleted right after.</span>
+              <span className="text-[0.72rem] text-[var(--color-charcoal-400)]">Pushes the chosen swatch, front and back into the ERP (matched by barcode). The temporary copies are deleted right after.</span>
             )}
           </div>
         </div>

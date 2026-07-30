@@ -95,6 +95,22 @@ function swatchPrompt(): string {
     "Keep the EXACT same colour, weave and pattern at true scale, with any check/stripe lines squared to the frame. Crisp, sharp focus, true colour, premium catalogue quality. Output a single image only."
   );
 }
+// Ref-less fallbacks: used only when the ERP has no photographed pose to copy,
+// so we can still return a front/back rather than "not generated".
+function frontNoRefPrompt(label: string): string {
+  return (
+    `You are a luxury menswear catalogue photographer. Produce a FRONT-view studio product photo of a ${label}, tailored entirely in the supplied fabric image, ` +
+    "centered and fully in frame on a pure-white (#FFFFFF) seamless background. " + FABRIC_FIDELITY + " " +
+    "Soft even studio lighting, sharp focus, catalogue quality, no shadow on the background. Output a single image only."
+  );
+}
+function backNoRefPrompt(label: string): string {
+  return (
+    `You are a luxury menswear catalogue photographer. Produce a BACK-view studio product photo of a ${label}, tailored entirely in the supplied fabric image, ` +
+    "centered and fully in frame on a pure-white (#FFFFFF) seamless background. " + FABRIC_FIDELITY + " " +
+    "Soft even studio lighting, sharp focus, catalogue quality. Output a single image only."
+  );
+}
 
 // ── OpenRouter ───────────────────────────────────────────────────────────
 const imgPart = (url: string) => ({ type: "image_url", image_url: { url } });
@@ -127,6 +143,18 @@ export function hasOpenRouterKey(): boolean {
   return !!OR_KEY;
 }
 
+/** Call the model, retrying transient empties/failures. A single OpenRouter call
+ *  sometimes returns no image (rate limit, hiccup); without a retry that slot
+ *  showed as "not generated". Up to `attempts` tries with a short backoff. */
+async function callWithRetry(content: unknown[], attempts = 3): Promise<string | null> {
+  for (let i = 0; i < attempts; i++) {
+    const url = await callOpenRouter(content);
+    if (url) return url;
+    if (i < attempts - 1) await new Promise((r) => setTimeout(r, 700 * (i + 1)));
+  }
+  return null;
+}
+
 /** Fetch an image URL and return it as a data: URL, so the model always gets
  *  the bytes (no dependency on it fetching an external ERP URL). Falls back to
  *  the original URL if the fetch fails. */
@@ -154,15 +182,25 @@ export async function generateThree(
   // not fetching external ERP URLs).
   const [frontRef, backRef] = await Promise.all([toDataUrl(donor.front), toDataUrl(donor.back)]);
 
-  const swatchP = callOpenRouter([txtPart(swatchPrompt()), imgPart(fabricDataUrl)]);
-  const frontP = frontRef
-    ? callOpenRouter([txtPart(frontPrompt(garment.label)), imgPart(frontRef), imgPart(fabricDataUrl)])
-    : Promise.resolve<string | null>(null);
-  const backP = backRef
-    ? callOpenRouter([txtPart(backPrompt(garment.label)), imgPart(backRef), imgPart(fabricDataUrl)])
-    : frontRef
-      ? callOpenRouter([txtPart(backFromFrontPrompt(garment.label)), imgPart(frontRef), imgPart(fabricDataUrl)])
-      : Promise.resolve<string | null>(null);
+  // Swatch only needs the fabric — always attempt.
+  const swatchP = callWithRetry([txtPart(swatchPrompt()), imgPart(fabricDataUrl)]);
+
+  // Front: copy a front pose if we have one, else generate ref-less so the slot
+  // still fills. (We never feed a back-view image as a front reference.)
+  const frontP = callWithRetry(
+    frontRef
+      ? [txtPart(frontPrompt(garment.label)), imgPart(frontRef), imgPart(fabricDataUrl)]
+      : [txtPart(frontNoRefPrompt(garment.label)), imgPart(fabricDataUrl)],
+  );
+
+  // Back: copy a back pose, else derive from a front pose, else ref-less.
+  const backP = callWithRetry(
+    backRef
+      ? [txtPart(backPrompt(garment.label)), imgPart(backRef), imgPart(fabricDataUrl)]
+      : frontRef
+        ? [txtPart(backFromFrontPrompt(garment.label)), imgPart(frontRef), imgPart(fabricDataUrl)]
+        : [txtPart(backNoRefPrompt(garment.label)), imgPart(fabricDataUrl)],
+  );
 
   const [swatch, front, back] = await Promise.all([swatchP, frontP, backP]);
   return { swatch, front, back };
