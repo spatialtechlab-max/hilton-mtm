@@ -303,7 +303,13 @@ function ItemCard({ item, jsonOpen, onToggleJson }: { item: ErpItem; jsonOpen: b
         ))}
       </dl>
 
-      {needs && isGarment(item.categoryName) && <GenPanel item={item} />}
+      {/* Available for every garment, not only the ones with no photo yet, so a
+          bad set can be redone. NOTE: update_item_images.php APPENDS (verified
+          2026-08-05 — pushing 1 image to an item holding 1 left it holding 2,
+          and an empty array is rejected 400). So a re-push stacks onto the old
+          images; the operator has to delete the originals in the ERP itself.
+          GenPanel spells that out before enabling Push. */}
+      {isGarment(item.categoryName) && <GenPanel item={item} hasExisting={!needs} />}
 
       {jsonOpen && (
         <pre className="mx-4 mb-4 p-3 bg-[var(--color-charcoal-900)] text-[var(--color-ivory-100)] text-[0.72rem] leading-relaxed overflow-x-auto rounded-sm">
@@ -319,7 +325,69 @@ type Slot = (typeof SLOTS)[number];
 const SLOT_LABEL: Record<Slot, string> = { swatch: "Swatch", front: "Front", back: "Back" };
 const MAX_BATCHES = 4;
 
-function GenPanel({ item }: { item: ErpItem }) {
+/** Shrink the operator's photo before it leaves the browser.
+ *
+ *  Vercel rejects any request body over 4.5 MB at the platform edge, before our
+ *  route runs — the reply is plain text, so the page could only ever print a
+ *  bare "Generation failed." A phone photo of cloth is routinely 3-8 MB (an
+ *  iPhone HEIC gets transcoded to a much larger JPEG on pick), which is what
+ *  the atelier kept hitting. 1600px at q0.85 lands under ~500 KB and is well
+ *  beyond what the model needs to read a weave. Falls back to the original
+ *  file if anything about the canvas path fails. */
+/** Re-encode a generated image as JPEG before it is staged for the ERP.
+ *
+ *  The model hands back PNG, which for a 1200px catalogue shot is ~2 MB. The
+ *  ERP stores whatever it downloads and the storefront serves it verbatim, so
+ *  a pushed tile was arriving 70x heavier than the atelier's own 27 KB photos
+ *  and took seconds to paint. JPEG at q0.9 is visually identical here (studio
+ *  shot, white ground, no transparency) at a fraction of the weight. */
+async function toJpeg(dataUrl: string): Promise<string> {
+  try {
+    const blob = await (await fetch(dataUrl)).blob();
+    const bitmap = await createImageBitmap(blob);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return dataUrl;
+    // White ground first: JPEG has no alpha, and a transparent PNG would
+    // otherwise flatten to black.
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close?.();
+    const out = canvas.toDataURL("image/jpeg", 0.9);
+    return out.length < dataUrl.length ? out : dataUrl;
+  } catch {
+    return dataUrl;
+  }
+}
+
+const MAX_EDGE = 1600;
+async function downscale(file: File): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+    const w = Math.round(bitmap.width * scale);
+    const h = Math.round(bitmap.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close?.();
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.85));
+    if (!blob) return file;
+    // A tiny source can come back bigger as JPEG; keep whichever is smaller.
+    if (blob.size >= file.size && file.size < 4_000_000) return file;
+    return new File([blob], "fabric.jpg", { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
+}
+
+function GenPanel({ item, hasExisting }: { item: ErpItem; hasExisting: boolean }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   // Every generation attempt is kept as a batch; the operator picks one image
@@ -348,10 +416,13 @@ function GenPanel({ item }: { item: ErpItem }) {
       if (!token) { setErr("Sign in required."); return; }
       const fd = new FormData();
       fd.append("itemId", String(item.id));
-      fd.append("fabric", file);
+      fd.append("fabric", await downscale(file));
       const res = await fetch("/api/admin/erp-generate", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setErr(data?.error || "Generation failed."); return; }
+      // A platform-level failure (413 too large, 504 timeout) returns plain text,
+      // not JSON, so `data.error` is empty. Name the status rather than printing
+      // a bare "Generation failed." that says nothing.
+      if (!res.ok) { setErr(data?.error || `Generation failed (server said ${res.status}). Please try again.`); return; }
       const images = data.images as GenImages;
       setBatches((prev) => [...prev, images]);
       // Auto-fill any slot that is still unpicked and this batch can cover. The
@@ -398,7 +469,7 @@ function GenPanel({ item }: { item: ErpItem }) {
         const hr = await fetch("/api/admin/erp-host", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ dataUrl, slot }),
+          body: JSON.stringify({ dataUrl: await toJpeg(dataUrl), slot }),
         });
         const hd = await hr.json().catch(() => ({}));
         if (!hr.ok || !hd.url) { setPushErr(hd?.error || `Could not stage the ${slot} image.`); return; }
@@ -518,6 +589,11 @@ function GenPanel({ item }: { item: ErpItem }) {
             ) : !complete ? (
               <span className="text-[0.72rem] text-[var(--color-charcoal-400)]">
                 {multi ? "Choose a swatch, a front and a back to enable the push." : "Waiting on all three images. Upload another fabric to fill any gap, then choose."}
+              </span>
+            ) : hasExisting ? (
+              <span className="text-[0.72rem] text-[var(--color-burgundy-700)]">
+                This product already has images. The ERP adds these alongside them rather than
+                replacing them, so remove the old ones in the ERP after pushing.
               </span>
             ) : (
               <span className="text-[0.72rem] text-[var(--color-charcoal-400)]">Pushes the chosen swatch, front and back into the ERP (matched by barcode). The temporary copies are deleted right after.</span>

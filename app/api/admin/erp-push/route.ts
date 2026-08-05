@@ -35,5 +35,13 @@ export async function POST(req: Request) {
   const ours = images.filter(isVpsUrl);
   const cleaned = (await Promise.all(ours.map(deleteFromVps))).filter(Boolean).length;
 
-  return NextResponse.json({ pushed: true, barcode, count: images.length, erpStatus: result.status, cleaned, staged: ours.length });
+  return NextResponse.json({
+    pushed: true,
+    barcode,
+    count: result.saved ?? images.length,
+    skipped: result.skipped ?? 0,
+    erpStatus: result.status,
+    cleaned,
+    staged: ours.length,
+  });
 }

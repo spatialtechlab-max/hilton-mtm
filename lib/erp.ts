@@ -196,13 +196,10 @@ function mapItem(item: ErpItem): LibraryItem {
   // gallery[0] blindly can land on a swatch. Sorting by the numeric
   // suffix in the filename gives us pic1 → pic2 → pic3 consistently,
   // which means the library tile always shows the garment hero.
-  const sortedGallery = [...cleanGallery].sort((a, b) => {
-    const n = (s: string) => {
-      const m = s.match(/_pic(\d+)_/);
-      return m ? Number(m[1]) : 999;
-    };
-    return n(a) - n(b);
-  });
+  // Images pushed through /api/admin/erp-push don't carry the `_pic1_` naming
+  // (the ERP renames them `item_<id>_<ts>_<n>`), so slotRank resolves both
+  // conventions to the same front → back → swatch order.
+  const sortedGallery = [...cleanGallery].sort((a, b) => slotRank(a) - slotRank(b));
 
   // The library tiles want the dressed garment as the hero image — they
   // read as "a shirt" / "a jacket" / "a tie", not as "a cloth" — so we
@@ -257,7 +254,27 @@ function mapItem(item: ErpItem): LibraryItem {
  *  picker where the swatch IS the right context. */
 function hasGarmentShot(item: ErpItem): boolean {
   const gallery = item.images ?? [];
-  return gallery.some((src) => /_pic1_/.test(src));
+  return gallery.some((src) => /_pic1_/.test(src) || apiPushIndex(src) === 0);
+}
+
+/** Images we push via /api/admin/erp-push come back from the ERP renamed
+ *  `item_<itemId>_<timestamp>_<n>.<ext>`, where `n` is the position in the
+ *  array we sent. `pushToErp` stages them front, back, swatch — so 0 is the
+ *  on-form hero, 1 the back, 2 the swatch. Returns null for anything that
+ *  isn't one of ours (i.e. the atelier's own `_pic*_` uploads). */
+export function apiPushIndex(src: string): number | null {
+  const m = /item_\d+_\d+_(\d+)\.[a-z0-9]+$/i.exec(src);
+  return m ? Number(m[1]) : null;
+}
+
+/** Front → back → swatch ordering across BOTH naming conventions, so the
+ *  library tile always leads with the dressed garment rather than the cloth. */
+export function slotRank(src: string): number {
+  const api = apiPushIndex(src);
+  if (api !== null) return api === 0 ? 0 : api === 1 ? 1 : 2;
+  const pic = /_pic(\d+)_/.exec(src);
+  if (pic) return Number(pic[1]) === 1 ? 0 : 1;
+  return 2; // `_pic_` cropped swatch, or anything unrecognised
 }
 
 /** Build LibrarySection[] for one ERP-backed slug from ERP.

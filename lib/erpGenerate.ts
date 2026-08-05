@@ -13,6 +13,8 @@
 const OR_KEY = process.env.OPENROUTER_API_KEY ?? "";
 const MODEL = "google/gemini-3-pro-image";
 
+import { apiPushIndex } from "@/lib/erp";
+
 export type Garment = { type: string; label: string };
 
 /** ERP categoryName (uppercased) → garment. Anything NOT here is an accessory
@@ -46,8 +48,14 @@ export function garmentForCategory(categoryName: string | undefined): Garment | 
 
 type ErpLike = { categoryName?: string; images?: string[] };
 const httpImgs = (it: ErpLike) => (it.images ?? []).filter((u) => typeof u === "string" && /^https?:\/\//i.test(u));
-const frontOf = (it: ErpLike) => httpImgs(it).find((u) => /_pic1_/.test(u)) ?? httpImgs(it)[0] ?? null;
-const backOf  = (it: ErpLike) => httpImgs(it).find((u) => /_pic2_|_pic3_/.test(u)) ?? null;
+// Donor poses come from either the atelier's own uploads (`_pic1_` / `_pic2_`)
+// or from a set we pushed earlier (`item_<id>_<ts>_<n>`, 0 = front, 1 = back).
+// Without the second case a category whose only photographed items came from
+// this tool would find no donor and fall back to the ref-less prompts.
+const frontOf = (it: ErpLike) =>
+  httpImgs(it).find((u) => /_pic1_/.test(u) || apiPushIndex(u) === 0) ?? httpImgs(it)[0] ?? null;
+const backOf = (it: ErpLike) =>
+  httpImgs(it).find((u) => /_pic2_|_pic3_/.test(u) || apiPushIndex(u) === 1) ?? null;
 
 /** A photographed reference (front + back URLs) for the item's category, or a
  *  fallback category. Returns nulls if nothing in the ERP can serve as a pose. */
