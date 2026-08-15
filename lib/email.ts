@@ -55,12 +55,14 @@ const IVORY_DARK = "#ece3d4";
 const CHARCOAL = "#1f1d1b";
 const CHARCOAL_500 = "#6b6663";
 
-/** Public URL for the brand mark used in transactional emails. We use the
- *  storefront's vercel.app deployment because hiltonmtm.com is host-routed
- *  to /coming-soon by middleware. Static assets there still resolve, but
- *  the vercel.app URL is the canonical place we know is live during this
- *  pre-launch phase. */
-const LOGO_URL = "https://hilton-mtm-virid.vercel.app/logo-burgundy.png";
+/** Public URL for the brand mark used in transactional emails.
+ *
+ *  This pointed at the vercel.app deployment while the apex was host-routed to
+ *  /coming-soon. The storefront now serves hiltonmtm.com directly from the VPS
+ *  and Vercel is being decommissioned, so the old URL would have quietly left
+ *  every order confirmation, welcome and password-reset email without a logo.
+ *  Email clients cannot resolve a relative path, so this has to stay absolute. */
+const LOGO_URL = "https://hiltonmtm.com/logo-burgundy.png";
 
 /** Shared HTML chrome: premium concierge correspondence card. Real Hilton
  *  monogram at the top on a cream plate, burgundy hairline accents, deep

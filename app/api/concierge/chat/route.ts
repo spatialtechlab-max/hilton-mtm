@@ -298,7 +298,7 @@ export async function POST(req: Request) {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
         // Surface the calling app to OpenRouter for usage analytics.
-        "HTTP-Referer": "https://hilton-mtm-virid.vercel.app",
+        "HTTP-Referer": "https://hiltonmtm.com",
         "X-Title": "Hilton MTM - Sebastian Concierge",
       },
       body: JSON.stringify({
