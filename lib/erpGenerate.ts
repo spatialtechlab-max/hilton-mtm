@@ -11,7 +11,22 @@
  * public repo).
  */
 const OR_KEY = process.env.OPENROUTER_API_KEY ?? "";
-const MODEL = "google/gemini-3-pro-image";
+
+/** One model per job. Measured, not assumed: see CLAUDE.md §14h.
+ *
+ *  GARMENT (front / back): the model has to build a believable tailored
+ *  silhouette. Pro does, 10/10. Flash also returns an image 10/10 but the
+ *  silhouette comes out boxy and squat with invented details, which is not
+ *  shippable for a bespoke house. So Pro, despite costing twice as much.
+ *
+ *  SWATCH: flat cloth on white, nothing anatomical to get wrong. With the
+ *  rewritten prompt both models tie at 7/8, so this is decided on cost and
+ *  speed alone, and flash wins both (9.7s / $0.068 against 18.2s / $0.14).
+ *
+ *  Note the "not generated" swatch was never really a model problem. It was
+ *  the prompt tripping a safety filter; see swatchPrompt() below. */
+const MODEL_GARMENT = "google/gemini-3-pro-image";
+const MODEL_SWATCH = "google/gemini-3.1-flash-image";
 
 import { apiPushIndex } from "@/lib/erp";
 
@@ -96,11 +111,26 @@ function backFromFrontPrompt(label: string): string {
     FABRIC_FIDELITY + " Pure white (#FFFFFF) background, sharp focus. Output a single image only."
   );
 }
+/** The swatch is the slot that kept coming back "not generated".
+ *
+ *  Cause, measured over 40 trials: the old wording asked for cloth filling the
+ *  frame edge to edge, and Google's safety filter refused it (every failure
+ *  came back finish_reason=content_filter, on both models and both cloths).
+ *  Pro managed 2/10, flash 6/10. A full-bleed texture with no object context is
+ *  what trips it; the front/back prompts never fail and both describe a subject
+ *  ON A WHITE BACKGROUND.
+ *
+ *  Asking for the cloth as an object on white takes it to 8/8 on Pro and 7/8 on
+ *  flash. The trailing no-props line matters: a "tailor's fabric sample"
+ *  framing scored 8/8 too but invented a brass label reading "PINK SEERSUCKER
+ *  COTTON" on a cloth that is B&S Linen, which cannot go in a real catalogue. */
 function swatchPrompt(): string {
   return (
-    "You are a textile catalogue photographer. The supplied image is a real fabric photographed by phone (it may be wrinkled, folded or unevenly lit). " +
-    "Produce ONE clean studio photograph of the SAME fabric laid perfectly FLAT and smooth: no folds, no wrinkles, no shadows; lit evenly edge to edge; the cloth FILLS the entire rectangular frame (only fabric, no background). " +
-    "Keep the EXACT same colour, weave and pattern at true scale, with any check/stripe lines squared to the frame. Crisp, sharp focus, true colour, premium catalogue quality. Output a single image only."
+    "You are a luxury menswear catalogue photographer. Produce a studio product photo of a neatly cut square swatch of this cloth, laid flat and smooth, " +
+    "centered on a pure-white (#FFFFFF) seamless background with a small white margin around it. " +
+    "Keep the colour, weave and pattern scale true to the cloth shown, with any stripe or check squared to the swatch edges. " +
+    "Soft even studio lighting, sharp focus, catalogue quality. " +
+    "Show only the cloth: no labels, tags, text, lettering, watermarks, hands, pins, rulers or any other props. Output a single image only."
   );
 }
 // Ref-less fallbacks: used only when the ERP has no photographed pose to copy,
@@ -124,7 +154,7 @@ function backNoRefPrompt(label: string): string {
 const imgPart = (url: string) => ({ type: "image_url", image_url: { url } });
 const txtPart = (text: string) => ({ type: "text", text });
 
-async function callOpenRouter(content: unknown[]): Promise<string | null> {
+async function callOpenRouter(content: unknown[], model: string): Promise<string | null> {
   if (!OR_KEY) return null;
   try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -135,7 +165,7 @@ async function callOpenRouter(content: unknown[]): Promise<string | null> {
         "HTTP-Referer": "https://hiltonmtm.com",
         "X-Title": "Hilton MTM ERP image gen",
       },
-      body: JSON.stringify({ model: MODEL, modalities: ["image", "text"], messages: [{ role: "user", content }] }),
+      body: JSON.stringify({ model, modalities: ["image", "text"], messages: [{ role: "user", content }] }),
     });
     if (!res.ok) return null;
     const data = await res.json();
@@ -154,13 +184,21 @@ export function hasOpenRouterKey(): boolean {
 /** Call the model, retrying transient empties/failures. A single OpenRouter call
  *  sometimes returns no image (rate limit, hiccup); without a retry that slot
  *  showed as "not generated". Up to `attempts` tries with a short backoff. */
-async function callWithRetry(content: unknown[], attempts = 3): Promise<string | null> {
+async function callWithRetry(content: unknown[], model: string, attempts = 3): Promise<string | null> {
   for (let i = 0; i < attempts; i++) {
-    const url = await callOpenRouter(content);
+    const url = await callOpenRouter(content, model);
     if (url) return url;
     if (i < attempts - 1) await new Promise((r) => setTimeout(r, 700 * (i + 1)));
   }
   return null;
+}
+
+/** Retry on the preferred model, then fall back to the other one before giving
+ *  up. A slot that comes back empty is the single thing the atelier complains
+ *  about, and the two models don't fail on the same inputs, so trying the other
+ *  is a genuinely independent attempt rather than a fourth roll of the dice. */
+async function callWithFallback(content: unknown[], primary: string, secondary: string): Promise<string | null> {
+  return (await callWithRetry(content, primary)) ?? (await callWithRetry(content, secondary, 1));
 }
 
 /** Fetch an image URL and return it as a data: URL, so the model always gets
@@ -190,24 +228,33 @@ export async function generateThree(
   // not fetching external ERP URLs).
   const [frontRef, backRef] = await Promise.all([toDataUrl(donor.front), toDataUrl(donor.back)]);
 
-  // Swatch only needs the fabric — always attempt.
-  const swatchP = callWithRetry([txtPart(swatchPrompt()), imgPart(fabricDataUrl)]);
+  // Swatch only needs the fabric — always attempt. Flash first (it is the
+  // reliable one here), Pro as the fallback.
+  const swatchP = callWithFallback(
+    [txtPart(swatchPrompt()), imgPart(fabricDataUrl)],
+    MODEL_SWATCH,
+    MODEL_GARMENT,
+  );
 
   // Front: copy a front pose if we have one, else generate ref-less so the slot
   // still fills. (We never feed a back-view image as a front reference.)
-  const frontP = callWithRetry(
+  const frontP = callWithFallback(
     frontRef
       ? [txtPart(frontPrompt(garment.label)), imgPart(frontRef), imgPart(fabricDataUrl)]
       : [txtPart(frontNoRefPrompt(garment.label)), imgPart(fabricDataUrl)],
+    MODEL_GARMENT,
+    MODEL_SWATCH,
   );
 
   // Back: copy a back pose, else derive from a front pose, else ref-less.
-  const backP = callWithRetry(
+  const backP = callWithFallback(
     backRef
       ? [txtPart(backPrompt(garment.label)), imgPart(backRef), imgPart(fabricDataUrl)]
       : frontRef
         ? [txtPart(backFromFrontPrompt(garment.label)), imgPart(frontRef), imgPart(fabricDataUrl)]
         : [txtPart(backNoRefPrompt(garment.label)), imgPart(fabricDataUrl)],
+    MODEL_GARMENT,
+    MODEL_SWATCH,
   );
 
   const [swatch, front, back] = await Promise.all([swatchP, frontP, backP]);
