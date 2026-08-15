@@ -15,6 +15,7 @@ import { randomUUID } from "crypto";
 import { computeOrderTotals, parseVatRate } from "@/lib/checkoutFees";
 import { getMpgsConfig, createCheckoutSession } from "@/lib/mpgs";
 import { missingMeasurements } from "@/lib/measurementRules";
+import { repriceCart } from "@/lib/serverPricing";
 import type { CartItem } from "@/lib/cart";
 import type { MeasurementValues } from "@/lib/customizer";
 
@@ -72,7 +73,29 @@ export async function POST(req: Request) {
   }
 
   // ── Price it server-side ──────────────────────────────────────────────
-  const grossSubtotal = items.reduce((s, i) => s + Number(i.priceNum) * Number(i.qty || 1), 0);
+  // Line prices are rebuilt from the ERP and the tier settings. They used to be
+  // summed from the browser's own `priceNum`, which meant a customer could edit
+  // the request and pay whatever they wanted: /verify then compared the capture
+  // against that same manipulated figure and agreed with it. See lib/serverPricing.
+  const repriced = await repriceCart(items);
+  if (!repriced.ok) {
+    return NextResponse.json({ error: repriced.error, sku: repriced.sku }, { status: 400 });
+  }
+  if (repriced.mismatches.length > 0) {
+    // Not necessarily an attack: a price can move while a bag sits in
+    // localStorage. Either way we charge our own number, and the customer is
+    // told rather than silently billed something other than they saw.
+    console.warn("[checkout] price mismatch", {
+      user: user.id,
+      lines: repriced.mismatches.map((m) => ({ sku: m.item.sku, claimed: m.clientClaimed, actual: m.unitPrice })),
+    });
+    return NextResponse.json({
+      error: "Prices in your bag are out of date. Please review your bag and try again.",
+      code: "price_changed",
+      lines: repriced.mismatches.map((m) => ({ sku: m.item.sku, name: m.item.name, was: m.clientClaimed, now: m.unitPrice })),
+    }, { status: 409 });
+  }
+  const grossSubtotal = repriced.subtotal;
 
   // Re-validate the discount against our own validate endpoint (identical rules).
   let discountSnapshot: { code: string; percent: number; amount: number } | null = null;
@@ -123,16 +146,21 @@ export async function POST(req: Request) {
     discount_percent: discountSnapshot?.percent ?? null,
     discount_amount: discountSnapshot?.amount ?? null,
   };
-  const lineRows = items.map((i) => ({
-    item_type: i.custom ? "commission" : "product",
-    sku: i.sku,
-    name: i.name,
-    type_label: i.type,
-    price_num: i.priceNum,
-    qty: i.qty,
-    image: i.image,
-    custom: i.custom ?? {},
-  }));
+  // Stored line prices come from the repricing, not the request, so the order
+  // record and the amount actually charged can never disagree.
+  const lineRows = repriced.items.map((p, idx) => {
+    const i = items[idx];
+    return {
+      item_type: i.custom ? "commission" : "product",
+      sku: i.sku,
+      name: i.name,
+      type_label: i.type,
+      price_num: p.unitPrice,
+      qty: p.qty,
+      image: i.image,
+      custom: i.custom ?? {},
+    };
+  });
 
   const orderRef = `hmtm${randomUUID().replace(/-/g, "")}`.slice(0, 40);
   const returnUrl = `${(SITE_URL || new URL(req.url).origin).replace(/\/$/, "")}/checkout/return?ref=${orderRef}`;
