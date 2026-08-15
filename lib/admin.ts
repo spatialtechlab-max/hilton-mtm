@@ -3,90 +3,78 @@
 import { supabase } from "./supabase";
 
 /**
- * Admin allowlist — backed by the Supabase `mtm_admins` table only. The list
- * is NOT shipped to the client bundle (no public env var). The shop owner
- * controls who's in `mtm_admins` from inside the database.
+ * Role checks for the signed-in user, backed by the mtm_admins /
+ * mtm_operators / mtm_employees tables.
  *
- * The authoritative write-access check lives in RLS; this helper just decides
- * whether the /admin UI is visible to a signed-in user.
+ * These helpers only decide whether a piece of UI is worth rendering. The
+ * authoritative check is RLS in the database and assertAdmin / assertStaff on
+ * the API routes; nothing here can grant access on its own.
+ *
+ * They used to SELECT the whole table and test membership in the browser,
+ * which meant the RLS policies had to allow reading every row. Any signed-in
+ * customer could therefore list every admin, operator and staff email address:
+ * a ready-made target list for phishing or credential stuffing. Each helper now
+ * asks only about its own address, so the policies can be narrowed to "you may
+ * see your own row" and enumeration stops being possible.
  */
 
-let cached: Set<string> | null = null;
-let inflight: Promise<Set<string>> | null = null;
+/** One cache per table, holding the answer for a single email. */
+type Answer = { email: string; member: boolean };
+const caches: Record<string, Answer | null> = { mtm_admins: null, mtm_operators: null, mtm_employees: null };
+const inflight: Record<string, Promise<boolean> | null> = { mtm_admins: null, mtm_operators: null, mtm_employees: null };
 
-async function loadAdmins(): Promise<Set<string>> {
-  const { data, error } = await supabase.from("mtm_admins").select("email");
-  if (error || !data) return new Set();
-  return new Set(data.map((r) => String(r.email).toLowerCase()));
+async function isMember(table: string, email: string | null | undefined): Promise<boolean> {
+  if (!email) return false;
+  const wanted = email.toLowerCase();
+
+  const cached = caches[table];
+  if (cached && cached.email === wanted) return cached.member;
+
+  // A different user signed in; the previous answer is meaningless.
+  if (cached && cached.email !== wanted) {
+    caches[table] = null;
+    inflight[table] = null;
+  }
+
+  if (!inflight[table]) {
+    inflight[table] = (async () => {
+      // Ask about this address only. RLS returns our row or nothing.
+      const { data, error } = await supabase.from(table).select("email").ilike("email", wanted).limit(1);
+      if (error) return false;
+      return (data ?? []).length > 0;
+    })();
+  }
+  const member = await inflight[table]!;
+  caches[table] = { email: wanted, member };
+  inflight[table] = null;
+  return member;
 }
 
-/** Returns true if the email is in the mtm_admins table. Memoised per page load. */
+function reset(table: string) {
+  caches[table] = null;
+  inflight[table] = null;
+}
+
+/** True if this email is on the admin allowlist. */
 export async function isAdmin(email: string | null | undefined): Promise<boolean> {
-  if (!email) return false;
-  if (!cached) {
-    inflight = inflight ?? loadAdmins();
-    cached = await inflight;
-  }
-  return cached.has(email.toLowerCase());
+  return isMember("mtm_admins", email);
 }
-
-/** Clear the cache (e.g. after admin list edits). */
 export function resetAdminCache() {
-  cached = null;
-  inflight = null;
+  reset("mtm_admins");
 }
 
-// ── Operators ──────────────────────────────────────────────────────────────
-// Limited-access store staff (mtm_operators). They reach ONLY the ERP image
-// tool, never the rest of admin. Same memoised, client-visible pattern.
-let opCached: Set<string> | null = null;
-let opInflight: Promise<Set<string>> | null = null;
-
-async function loadOperators(): Promise<Set<string>> {
-  const { data, error } = await supabase.from("mtm_operators").select("email");
-  if (error || !data) return new Set();
-  return new Set(data.map((r) => String(r.email).toLowerCase()));
-}
-
-/** Returns true if the email is in the mtm_operators table. */
+/** Limited-access store staff. They reach ONLY the ERP image tool. */
 export async function isOperator(email: string | null | undefined): Promise<boolean> {
-  if (!email) return false;
-  if (!opCached) {
-    opInflight = opInflight ?? loadOperators();
-    opCached = await opInflight;
-  }
-  return opCached.has(email.toLowerCase());
+  return isMember("mtm_operators", email);
 }
-
 export function resetOperatorCache() {
-  opCached = null;
-  opInflight = null;
+  reset("mtm_operators");
 }
 
-// ── Employees ────────────────────────────────────────────────────────────────
-// Internal staff enrolled in the Employee Learning Platform (mtm_employees).
-// They reach ONLY /learn, never the rest of admin. Same memoised,
-// client-visible pattern as admins and operators.
-let empCached: Set<string> | null = null;
-let empInflight: Promise<Set<string>> | null = null;
-
-async function loadEmployees(): Promise<Set<string>> {
-  const { data, error } = await supabase.from("mtm_employees").select("email");
-  if (error || !data) return new Set();
-  return new Set(data.map((r) => String(r.email).toLowerCase()));
-}
-
-/** Returns true if the email is in the mtm_employees table. */
+/** Internal staff enrolled in the Employee Learning Platform. They reach ONLY /learn. */
 export async function isEmployee(email: string | null | undefined): Promise<boolean> {
-  if (!email) return false;
-  if (!empCached) {
-    empInflight = empInflight ?? loadEmployees();
-    empCached = await empInflight;
-  }
-  return empCached.has(email.toLowerCase());
+  return isMember("mtm_employees", email);
 }
-
 export function resetEmployeeCache() {
-  empCached = null;
-  empInflight = null;
+  reset("mtm_employees");
 }
