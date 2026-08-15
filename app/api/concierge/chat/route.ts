@@ -8,6 +8,7 @@
  * the bot never goes silent in front of a customer.
  */
 import { NextResponse } from "next/server";
+import { rateLimit, clientIp } from "@/lib/rateLimit";
 import { createClient } from "@supabase/supabase-js";
 import { getInventory, summarizeInventory, findFabric, type Inventory } from "@/lib/inventorySummary";
 import { getClimateBrief, climateBlockForPrompt, type ClimateBrief } from "@/lib/climate";
@@ -225,6 +226,23 @@ const FALLBACK_REPLY = "Forgive me — Sebastian's line is briefly down. Allow m
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  // Every call here spends the atelier's OpenRouter balance, and the route is
+  // deliberately open to signed-out browsers because Sebastian is part of the
+  // shopping experience. Open plus billable means a stranger could run the
+  // balance down, so anonymous callers get a tight allowance and signed-in
+  // customers a larger one.
+  const ip = clientIp(req);
+  const signedIn = (req.headers.get("authorization") ?? "").startsWith("Bearer ");
+  const limited = signedIn
+    ? rateLimit(`concierge:auth:${ip}`, 40, 60 * 60_000)
+    : rateLimit(`concierge:anon:${ip}`, 12, 60 * 60_000);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { reply: "I am helping a number of guests at the moment. Please give me a minute and ask again." },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfter) } },
+    );
+  }
+
   let messages: ChatMessage[] = [];
   try {
     const body = await req.json();

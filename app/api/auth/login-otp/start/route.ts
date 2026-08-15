@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendLoginOtpEmail } from "@/lib/email";
+import { rateLimit, clientIp, tooMany } from "@/lib/rateLimit";
 import { verifyPassword, generateOtp, hashOtp, normaliseEmail, isOtpExemptEmail, isStaffEmail, issueRelayOtp, OTP_TTL_MS } from "@/lib/loginOtp";
 
 export const runtime = "nodejs";
@@ -21,6 +22,16 @@ export async function POST(req: Request) {
   const email = String(body?.email ?? "");
   const password = String(body?.password ?? "");
   if (!email || !password) return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
+
+  // This route checks the password on every call, so without a limit it is a
+  // brute-force oracle against the admin, operator and staff accounts. Counted
+  // per IP and per account: per-IP alone lets a botnet spread the guessing, and
+  // per-account alone lets one host lock a victim out.
+  const ip = clientIp(req);
+  const perIp = rateLimit(`otp-start:ip:${ip}`, 10, 15 * 60_000);
+  if (!perIp.ok) return tooMany(perIp.retryAfter);
+  const perAccount = rateLimit(`otp-start:acct:${email.toLowerCase()}`, 5, 15 * 60_000);
+  if (!perAccount.ok) return tooMany(perAccount.retryAfter, "Too many sign-in attempts. Please wait a few minutes.");
 
   // Verify the password first — only email a code if the credentials are valid.
   const grant = await verifyPassword(email, password);

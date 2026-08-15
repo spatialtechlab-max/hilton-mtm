@@ -9,12 +9,19 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendPasswordResetEmail } from "@/lib/email";
+import { rateLimit, clientIp, tooMany } from "@/lib/rateLimit";
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE  = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export async function POST(req: Request) {
   if (!SUPA_URL || !SERVICE) return NextResponse.json({ ok: true });
+
+  // Unauthenticated and it sends mail, so without a limit it is a way to bomb
+  // someone's inbox and burn the Resend quota. Per IP and per target address.
+  const ip = clientIp(req);
+  const perIp = rateLimit(`pwreset:ip:${ip}`, 5, 15 * 60_000);
+  if (!perIp.ok) return tooMany(perIp.retryAfter);
 
   let email = "";
   let redirectTo = "";

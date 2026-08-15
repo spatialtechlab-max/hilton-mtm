@@ -6,6 +6,7 @@
  * uses the service-role key to look up the row.
  */
 import { NextResponse } from "next/server";
+import { rateLimit, clientIp, tooMany } from "@/lib/rateLimit";
 import { createClient } from "@supabase/supabase-js";
 
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -16,6 +17,12 @@ export async function POST(req: Request) {
   if (!SUPA_URL || !SERVICE) {
     return NextResponse.json({ valid: false, reason: "Service unavailable." }, { status: 500 });
   }
+
+  // The code space is 5 characters (36^3 x 100), small enough to enumerate at
+  // speed. Rate limited so guessing a live promo code is not practical.
+  const ip = clientIp(req);
+  const limited = rateLimit(`discount:${ip}`, 20, 60_000);
+  if (!limited.ok) return tooMany(limited.retryAfter);
 
   const body = await req.json().catch(() => ({}));
   const codeRaw = typeof body?.code === "string" ? body.code : "";
