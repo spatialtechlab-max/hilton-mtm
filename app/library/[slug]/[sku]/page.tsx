@@ -12,6 +12,7 @@ import {
   type CustomizeCategory, type ProductHit, type Library,
 } from "@/lib/libraries";
 import { fetchErpItems, sectionsFromErp, isErpBacked } from "@/lib/erp";
+import { SHIPPING_FEE } from "@/lib/checkoutFees";
 import { createClient } from "@supabase/supabase-js";
 
 /** Map an ERP categoryName onto the customizer's garment slug, so every
@@ -56,6 +57,44 @@ async function customizerStepCount(slug: string): Promise<number | null> {
   } catch {
     return null;
   }
+}
+
+/** The countries the atelier delivers to free of charge.
+ *
+ *  The PDP used to promise "complimentary worldwide delivery on orders over
+ *  BHD 150", which was wrong twice over: free shipping is decided purely by
+ *  destination country (mtm_free_shipping_countries), never by order value, so
+ *  a customer outside the list was charged the flat fee no matter how much they
+ *  spent. The sentence was also hard-coded, so the "Free shipping threshold"
+ *  field in /admin/settings changed nothing.
+ *
+ *  Reading the real list means the promise on the page is the rule the checkout
+ *  actually applies, and it follows the atelier's edits on /admin/shipping.
+ *  lib/shippingZones is a client module, hence the direct query here. */
+async function freeShippingCountries(): Promise<string[]> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return [];
+  try {
+    const sb = createClient(url, key);
+    const { data, error } = await sb.from("mtm_free_shipping_countries").select("country");
+    if (error || !data) return [];
+    // Stored case-insensitively ("bahrain"), so present it properly.
+    return (data as { country: string }[])
+      .map((r) => (r.country ?? "").trim())
+      .filter(Boolean)
+      .map((c) => c.replace(/\b[a-z]/g, (m) => m.toUpperCase()))
+      .sort((a, b) => a.localeCompare(b));
+  } catch {
+    return [];
+  }
+}
+
+/** "Bahrain, the UAE and the USA" — a readable list, never a bare array. */
+function listSentence(items: string[]): string {
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0];
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
 /**
@@ -189,6 +228,7 @@ export default async function ProductPage({
   if (!hit) notFound();
 
   const { item, library, section, customize } = hit;
+  const freeCountries = await freeShippingCountries();
   const gallery = productGallery(item);
   const contain = (item.media.kind === "photo" && item.media.src.startsWith("/products/"));
 
@@ -364,7 +404,9 @@ export default async function ProductPage({
               <Truck size={15} strokeWidth={1.5} /> Shipping
             </div>
             <p className="mt-3 text-[0.95rem] text-[var(--color-charcoal-700)] leading-relaxed">
-              Complimentary worldwide delivery on orders over BHD 150. Allow 2–4 weeks for the make.
+              {freeCountries.length > 0
+                ? `Complimentary delivery to ${listSentence(freeCountries)}. Elsewhere a flat BHD ${SHIPPING_FEE} applies. Allow 2–4 weeks for the make.`
+                : `A flat BHD ${SHIPPING_FEE} delivery fee applies. Allow 2–4 weeks for the make.`}
             </p>
           </div>
           <div>
