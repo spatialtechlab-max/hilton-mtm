@@ -107,7 +107,11 @@ describe("sectionsFromErp", () => {
       images: [`${ERP}/3103_pic3_cropped.jpg`, `${ERP}/3103_pic1_cropped.jpg`],
     });
     const secs = sectionsFromErp("cloths", [jumbled] as never[]);
-    expect(secs[0].items[0].media.src).toContain("_pic1_");
+    const media = secs[0].items[0].media;
+    // media is a union (photo | tie swatch); only the photo variant has a src.
+    expect(media.kind).toBe("photo");
+    if (media.kind !== "photo") throw new Error("expected a photo hero");
+    expect(media.src).toContain("_pic1_");
   });
 
   it("returns no sections when nothing matches, rather than an empty shell", () => {
