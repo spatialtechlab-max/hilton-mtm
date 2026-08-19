@@ -26,7 +26,11 @@ function round2(n: number): number {
  *  clamps to a sane 0–100%. */
 export function parseVatRate(value: string | null | undefined): number {
   if (value == null) return VAT_RATE;
-  const cleaned = String(value).replace(/[^0-9.]/g, "");
+  // Strip only the percent sign and surrounding space. The old version removed
+  // every non-digit, which took the minus sign with it, so "-5" arrived here as
+  // "5" and the negative guard below could never fire: a typo of "-5" silently
+  // went live as 5% VAT instead of falling back to the default.
+  const cleaned = String(value).replace(/%/g, "").trim();
   if (cleaned === "") return VAT_RATE;
   const pct = Number.parseFloat(cleaned);
   if (!Number.isFinite(pct) || pct < 0) return VAT_RATE;
