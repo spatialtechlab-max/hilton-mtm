@@ -16,6 +16,7 @@ import { computeOrderTotals, parseVatRate } from "@/lib/checkoutFees";
 import { getMpgsConfig, createCheckoutSession } from "@/lib/mpgs";
 import { missingMeasurements } from "@/lib/measurementRules";
 import { repriceCart } from "@/lib/serverPricing";
+import { validateDiscount } from "@/lib/discountServer";
 import type { CartItem } from "@/lib/cart";
 import type { MeasurementValues } from "@/lib/customizer";
 
@@ -97,20 +98,19 @@ export async function POST(req: Request) {
   }
   const grossSubtotal = repriced.subtotal;
 
-  // Re-validate the discount against our own validate endpoint (identical rules).
+  // Re-validate the discount here rather than trusting the cart. This used to
+  // POST to our own /api/discount-codes/validate and swallow any failure with
+  // a silent fall-through to full price, which meant a working code could be
+  // quietly ignored and the customer overcharged. Same rules, called directly.
   let discountSnapshot: { code: string; percent: number; amount: number } | null = null;
   if (discountCode) {
-    try {
-      const vr = await fetch(new URL("/api/discount-codes/validate", req.url), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: discountCode, subtotal: grossSubtotal }),
-      });
-      const vb = await vr.json().catch(() => ({}));
-      if (vr.ok && vb?.valid) {
-        discountSnapshot = { code: String(vb.code), percent: Number(vb.percent_off), amount: Number(vb.amount) };
-      }
-    } catch { /* fall through at full price */ }
+    const d = await validateDiscount(discountCode, grossSubtotal);
+    if (d.valid) {
+      discountSnapshot = { code: d.code, percent: d.percent_off, amount: d.amount };
+    } else {
+      // Tell the customer why instead of charging full price without comment.
+      return NextResponse.json({ error: d.reason, code: "discount_invalid" }, { status: 400 });
+    }
   }
 
   const subtotal = discountSnapshot
