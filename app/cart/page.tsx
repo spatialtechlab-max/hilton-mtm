@@ -230,6 +230,9 @@ export default function CartPage() {
     if (!user) return;
     setPlacing(true);
     setError(null);
+    // Set when we hand the browser to an external gateway, so the spinner
+    // survives until the page actually unloads.
+    let leaving = false;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
@@ -251,7 +254,12 @@ export default function CartPage() {
             city:      p.city,
             country:   p.country,
           };
-      const res = await fetch("/api/payments/mpgs/session", {
+      // Two rails, one bag. Both routes price the cart through the same
+      // lib/checkoutPrep, so the total is identical either way; they differ
+      // only in how the customer reaches the card form. MPGS embeds it on this
+      // page, BENEFIT hosts it on their own domain and we navigate there.
+      const benefit = payMethod === "benefitpay";
+      const res = await fetch(benefit ? "/api/payments/benefit/session" : "/api/payments/mpgs/session", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -263,6 +271,20 @@ export default function CartPage() {
         }),
       });
       const body = await res.json().catch(() => ({}));
+
+      if (benefit) {
+        if (!res.ok || !body.redirectUrl) {
+          setError(body?.error ?? "Could not start the BenefitPay payment. Please try again.");
+          return;
+        }
+        // Leaving the site. Navigation is not instant, so hold the spinner
+        // instead of letting the button flash back to "Continue with
+        // BenefitPay" and invite a second click on a live transaction.
+        leaving = true;
+        window.location.href = body.redirectUrl;
+        return;
+      }
+
       if (!res.ok || !body.sessionId) {
         setError(body?.error ?? "Could not start payment. Please try again.");
         return;
@@ -271,7 +293,7 @@ export default function CartPage() {
     } catch {
       setError("Could not reach the payment service. Please try again.");
     } finally {
-      setPlacing(false);
+      if (!leaving) setPlacing(false);
     }
   }
 
@@ -332,7 +354,13 @@ export default function CartPage() {
                       fill
                       sizes="128px"
                       className={it.contain ? "object-contain p-3" : "object-cover"}
-                      unoptimized={it.image.includes("erp.hiltontailoringhouse.com")}
+                      // Optional-chained on purpose. The type says image is
+                      // always a string and both add-to-cart paths default it,
+                      // but carts live in localStorage across deploys, so a row
+                      // written by an older build can still arrive without one.
+                      // Losing a thumbnail is fine; white-screening the whole
+                      // cart over it is not.
+                      unoptimized={it.image?.includes("erp.hiltontailoringhouse.com") ?? false}
                     />
                   </Link>
 
@@ -672,7 +700,8 @@ export default function CartPage() {
               <button
                 type="button"
                 onClick={() => {
-                  if (payMethod === "benefitpay") { setError(null); setBenefitOpen(true); return; }
+                  // BenefitPay used to open a "coming soon" note here. It is a
+                  // real rail now and goes through the same checkout as cards.
                   startCheckout();
                 }}
                 disabled={placing || authLoading}
